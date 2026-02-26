@@ -1,0 +1,26 @@
+# Rust build output
+**/target/
+
+# Node / Tauri
+**/node_modules/
+
+# Built installers — use GitHub Releases for distribution
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# Test/sample data files — not needed to build or run
+test files/
+testoutputs/
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+*.code-workspace

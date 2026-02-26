@@ -1,0 +1,51 @@
+[package]
+name = "tauri-appsonarsniffer"
+version = "0.775.0"
+description = "SonarSniffer by NautiDog Sailing"
+authors = ["NautiDog Sailing"]
+edition = "2021"
+default-run = "tauri-appsonarsniffer"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "tauri_appsonarsniffer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "2"
+image = { version = "0.25", default-features = false, features = ["png"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+rfd = "0.15"
+gif = "0.13"
+sha2 = "0.10"
+
+[features]
+default = []
+video-gstreamer = ["dep:gstreamer", "dep:gstreamer-app"]
+
+[[bin]]
+name = "probe_cli"
+path = "src/bin/probe_cli.rs"
+
+[dependencies.gstreamer]
+version = "0.23"
+optional = true
+
+[dependencies.gstreamer-app]
+version = "0.23"
+optional = true
+

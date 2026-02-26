@@ -1,0 +1,12 @@
+{
+  "batch_id": "1772060923",
+  "total_files": 4943,
+  "processed_files": 1312,
+  "current_batch": 78,
+  "total_batches": 78,
+  "batch_size": 64,
+  "status": "running",
+  "started_at": "2026-02-25 18:08:43",
+  "last_updated": "2026-02-25 18:27:41",
+  "errors": []
+}

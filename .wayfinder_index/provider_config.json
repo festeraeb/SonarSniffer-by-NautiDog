@@ -1,0 +1,5 @@
+{
+  "provider": "llama",
+  "local_model": "embeddinggemma-300m-f16",
+  "local_endpoint": "http://localhost:5002"
+}

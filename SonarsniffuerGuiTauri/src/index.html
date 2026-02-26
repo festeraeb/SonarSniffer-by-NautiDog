@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SonarSniffer GUI</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div class="brand-row">
+          <img src="/assets/sonar_sniffer_vizsla.svg" class="logo sniffer" alt="Sonar Sniffer Vizsla logo" />
+          <div class="brand-text">
+            <h1 class="sniffer-title">Sonar Sniffer</h1>
+            <div class="sniffer-sub">by <span class="nautidog">NautiDog Sailing</span></div>
+          </div>
+        </div>
+        <p class="hero-desc">
+          Echo-locating sonar pings, Vizsla style.<br>
+          <span class="hero-desc-small">Run Sonar Files and locate real-world sample corpora for SL2/SL3/DAT/JSF/XTF validation.</span>
+        </p>
+      </header>
+
+      <div id="trial-banner" class="trial-banner" style="display:none">
+        <span id="trial-banner-text"></span>
+      </div>
+
+      <section class="panel" id="panel-parser">
+        <h2>Parser Pipeline</h2>
+        <form id="rsd-form" class="panel-form">
+          <div class="picker-row">
+            <button type="button" id="file-btn">Select Sonar File</button>
+            <span id="file-label" class="path-label">No file selected</span>
+          </div>
+
+          <div class="options-grid">
+            <label><input type="checkbox" id="video-opt" checked /> Video Export</label>
+            <label><input type="checkbox" id="kml-opt" checked /> KML Export</label>
+            <label><input type="checkbox" id="kmz-opt" checked /> KMZ Export</label>
+            <label><input type="checkbox" id="mbtiles-opt" checked /> MBTiles</label>
+            <label><input type="checkbox" id="mosaic-opt" checked /> Mosaic PNG</label>
+            <label><input type="checkbox" id="waterfall-opt" checked /> Waterfall PNG</label>
+            <label><input type="checkbox" id="arcgis-opt" checked /> ArcGIS Sidecar</label>
+            <label><input type="checkbox" id="viewer-opt" checked /> Viewer Bundle</label>
+          </div>
+
+          <div class="colormap-row">
+            <label for="colormap-opt" class="colormap-label">Colour palette:</label>
+            <select id="colormap-opt">
+              <option value="amber" selected>Amber (default)</option>
+              <option value="sonar">Sonar</option>
+              <option value="grayscale">Grayscale</option>
+              <option value="ocean">Ocean</option>
+              <option value="inferno">Inferno</option>
+              <option value="iron">Iron</option>
+              <option value="rainbow">Rainbow</option>
+              <option value="plasma">Plasma</option>
+            </select>
+            <label style="margin-left:12px"><input type="checkbox" id="remove-water-column-opt" /> Remove water column</label>
+          </div>
+
+          <div class="picker-row">
+            <button type="button" id="output-dir-btn">Browse…</button>
+            <input type="text" id="output-dir" placeholder="Optional output directory" />
+          </div>
+
+          <button type="submit" id="run-btn">Run Parser</button>
+        </form>
+        <div id="video-progress-section" class="video-progress-section" style="display:none">
+          <div class="video-progress-header">
+            <span id="video-progress-label">Rendering video…</span>
+            <span id="video-progress-pct">0%</span>
+          </div>
+          <div class="video-progress-bar-track">
+            <div id="video-progress-bar" class="video-progress-bar-fill" style="width:0%"></div>
+          </div>
+          <p id="video-progress-warn" class="video-progress-warn">⚠ Closing the app will cancel this export.
+          </p>
+        </div>
+        <div id="output-summary" class="result-box"></div>
+      </section>
+
+      <details class="panel advanced-menu" id="panel-firmware">
+        <summary><strong>Advanced</strong> (Firmware Analysis)</summary>
+        <div>
+          <form id="firmware-form" class="panel-form">
+            <div class="picker-row">
+              <button type="button" id="firmware-btn">Select Firmware File</button>
+              <span id="firmware-label" class="path-label">No file selected</span>
+            </div>
+            <button type="submit" id="firmware-run-btn">Analyze Firmware</button>
+          </form>
+          <pre id="firmware-summary" class="result-box"></pre>
+        </div>
+      </details>
+
+      <section class="panel" id="panel-corpus">
+        <h2>Corpus Discovery</h2>
+        <form id="corpus-form" class="panel-form">
+          <div class="picker-row">
+            <button type="button" id="corpus-btn">Select Corpus Folder</button>
+            <span id="corpus-label" class="path-label">No folder selected</span>
+          </div>
+          <button type="submit" id="corpus-run-btn">Scan For Real Samples</button>
+        </form>
+        <pre id="corpus-summary" class="result-box"></pre>
+      </section>
+    </main>
+
+    <!-- License gate overlay — shown when trial has expired -->
+    <div id="license-overlay" class="license-overlay" style="display:none" aria-modal="true" role="dialog">
+      <div class="license-card">
+        <div class="license-logo">
+          <img src="/assets/sonar_sniffer_vizsla.svg" alt="SonarSniffer" width="64" height="64" />
+        </div>
+        <h2 class="license-title">SonarSniffer Trial Expired</h2>
+        <p class="license-msg">Your 30-day free trial has ended.<br>Enter your license key to continue, or contact <strong>NautiDog Sailing</strong> to obtain one.</p>
+        <form id="license-form" class="license-form">
+          <input
+            type="text"
+            id="license-key-input"
+            class="license-key-input"
+            placeholder="Enter license key"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+          />
+          <button type="submit" class="license-submit-btn">Activate</button>
+        </form>
+        <p id="license-error" class="license-error" style="display:none"></p>
+        <p class="license-contact">Contact: <a href="mailto:info@nautidog.sailing">NautiDog Sailing</a></p>
+      </div>
+    </div>
+  </body>
+</html>
