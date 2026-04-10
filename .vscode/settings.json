@@ -1,0 +1,40 @@
+{
+    "git.ignoreLimitWarning": true,
+
+    "files.watcherExclude": {
+        "**/target/**": true,
+        "**/test files/**": true,
+        "**/.idea/**": true,
+        "**/target/debug/**": true,
+        "**/target/release/**": true,
+        "**/target/incremental/**": true
+    },
+
+    "files.exclude": {
+        "**/target": true,
+        "**/.idea": true
+    },
+
+    "search.exclude": {
+        "**/target": true,
+        "**/test files": true,
+        "**/.idea": true,
+        "**/*.rsd": true,
+        "**/*.RSD": true,
+        "**/*.mbtiles": true
+    },
+
+    "rust-analyzer.server.extraEnv": {
+        "RUST_ANALYZER_MEMORY_USAGE_PER_QUERY_BUDGET": "1024"
+    },
+    "rust-analyzer.cachePriming.enable": false,
+    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.diagnostics.experimental.enable": false,
+    "rust-analyzer.cargo.buildScripts.rebuildOnSave": false,
+
+    "editor.formatOnSave": true,
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    }
+}

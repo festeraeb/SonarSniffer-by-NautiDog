@@ -1,0 +1,13 @@
+/target/
+/soundtiles/target/
+/src-tauri/target/
+
+# All test data files - not source code
+/test files/
+
+# IDE
+/.idea/
+*.iml
+
+# Generated
+/src-tauri/gen/schemas/
