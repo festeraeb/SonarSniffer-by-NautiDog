@@ -28,6 +28,7 @@ use outputs::{build_outputs, PipelineOptions, estimate_curvelet_threshold};
 use format_detector::detect_and_parse;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use video::VideoExportResult;
@@ -59,7 +60,11 @@ fn setup_bundled_gstreamer() {
     };
 
     // Candidate search order
-    let mut candidates = vec![exe_dir.join("gstreamer")];
+    let mut candidates = vec![
+        exe_dir.join("gstreamer"),
+        exe_dir.join("resources").join("gstreamer"),
+        exe_dir.join("_up_").join("gstreamer"),
+    ];
     if let Ok(env_root) = std::env::var("GSTREAMER_1_0_ROOT_MSVC_X86_64") {
         candidates.push(std::path::PathBuf::from(env_root));
     }
@@ -165,6 +170,14 @@ struct CorpusScanResponse {
     status: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct SidecarRunResponse {
+    executable: String,
+    stdout: String,
+    stderr: String,
+    exit_code: i32,
+}
+
 #[tauri::command]
 fn check_license(app: tauri::AppHandle) -> license::LicenseStatus {
     let data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
@@ -188,6 +201,41 @@ fn activate_license(key: String, app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn run_soundtiles(
+    input: String,
+    channel: Option<String>,
+    tiles: Option<usize>,
+    verbose: Option<bool>,
+    app: tauri::AppHandle,
+) -> Result<SidecarRunResponse, String> {
+    let exe = locate_soundtiles_sidecar(&app)?;
+
+    let mut command = Command::new(&exe);
+    command.arg("--input").arg(&input);
+
+    if let Some(channel) = channel.filter(|value| !value.trim().is_empty()) {
+        command.arg("--channel").arg(channel);
+    }
+    if let Some(tiles) = tiles {
+        command.arg("--tiles").arg(tiles.to_string());
+    }
+    if verbose.unwrap_or(false) {
+        command.arg("--verbose");
+    }
+
+    let output = command
+        .output()
+        .map_err(|e| format!("Failed to run SoundTiles: {e}"))?;
+
+    Ok(SidecarRunResponse {
+        executable: exe.display().to_string(),
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        exit_code: output.status.code().unwrap_or(-1),
+    })
+}
+
+#[tauri::command]
 fn pick_input_file() -> Option<String> {
     rfd::FileDialog::new()
         .add_filter("Sonar logs", &[
@@ -203,6 +251,35 @@ fn pick_input_file() -> Option<String> {
         ])
         .pick_file()
         .map(|path| path.display().to_string())
+}
+
+fn locate_soundtiles_sidecar(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let name = if cfg!(target_os = "windows") {
+        "soundtiles-x86_64-pc-windows-msvc.exe"
+    } else if cfg!(target_os = "macos") {
+        "soundtiles-aarch64-apple-darwin"
+    } else {
+        "soundtiles-x86_64-unknown-linux-gnu"
+    };
+
+    let mut candidates = Vec::new();
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        candidates.push(resource_dir.join(name));
+        candidates.push(resource_dir.join("binaries").join(name));
+    }
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            candidates.push(exe_dir.join(name));
+            candidates.push(exe_dir.join("binaries").join(name));
+            candidates.push(exe_dir.join("resources").join(name));
+            candidates.push(exe_dir.join("resources").join("binaries").join(name));
+        }
+    }
+
+    candidates
+        .into_iter()
+        .find(|candidate| candidate.exists())
+        .ok_or_else(|| format!("Bundled SoundTiles executable not found: {name}"))
 }
 
 #[tauri::command]
@@ -742,6 +819,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
             check_license,
             activate_license,
+            run_soundtiles,
             pick_input_file,
             pick_any_file,
             pick_folder,

@@ -1,6 +1,9 @@
 /target/
 /soundtiles/target/
 /src-tauri/target/
+/src-tauri/binaries/*.exe
+/src-tauri/gstreamer/*
+!/src-tauri/gstreamer/.gitkeep
 
 # All test data files - not source code
 /test files/

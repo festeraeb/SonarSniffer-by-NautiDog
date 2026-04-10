@@ -14,6 +14,7 @@ const EXPECTED_KEY_HASH: &str =
     "8df52de3a661c6c96071a26e1b4e44e1d60907b05a6c74d640ef964d9f5b8725";
 const LICENSE_SALT: &str = "sonarsniffer-license-v1";
 const TRIAL_DAYS: i64 = 30;
+const DEFAULT_CONTACT_EMAIL: &str = "support@nautidogsailing.com";
 
 // ── Persisted license file ────────────────────────────────────────────────────
 
@@ -33,12 +34,28 @@ pub struct LicenseStatus {
     pub state: String,
     /// Days left in trial; -1 when state is `"unlocked"`.
     pub days_remaining: i64,
+    /// Email address shown to users for obtaining a permanent key.
+    pub contact_email: String,
+    /// Public builds require the user to enter a key after the trial expires.
+    pub key_required: bool,
+    /// Private builds bypass licensing entirely.
+    pub private_build: bool,
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /// Read (or initialise) the license file and return the current status.
 pub fn check_license(app_data_dir: PathBuf) -> LicenseStatus {
+    if is_private_build() {
+        return LicenseStatus {
+            state: "unlocked".to_string(),
+            days_remaining: -1,
+            contact_email: contact_email(),
+            key_required: false,
+            private_build: true,
+        };
+    }
+
     let path = license_path(&app_data_dir);
 
     let lf: LicenseFile = if path.exists() {
@@ -58,6 +75,9 @@ pub fn check_license(app_data_dir: PathBuf) -> LicenseStatus {
         return LicenseStatus {
             state: "unlocked".to_string(),
             days_remaining: -1,
+            contact_email: contact_email(),
+            key_required: false,
+            private_build: false,
         };
     }
 
@@ -68,17 +88,27 @@ pub fn check_license(app_data_dir: PathBuf) -> LicenseStatus {
         LicenseStatus {
             state: "trial".to_string(),
             days_remaining: remaining,
+            contact_email: contact_email(),
+            key_required: false,
+            private_build: false,
         }
     } else {
         LicenseStatus {
             state: "expired".to_string(),
             days_remaining: 0,
+            contact_email: contact_email(),
+            key_required: true,
+            private_build: false,
         }
     }
 }
 
 /// Validate `key` and, if correct, mark the license as permanently unlocked.
 pub fn activate_license(key: String, app_data_dir: PathBuf) -> Result<(), String> {
+    if is_private_build() {
+        return Ok(());
+    }
+
     let salted = format!("{LICENSE_SALT}:{}", key.trim());
     let mut hasher = Sha256::new();
     hasher.update(salted.as_bytes());
@@ -114,6 +144,19 @@ pub fn activate_license(key: String, app_data_dir: PathBuf) -> Result<(), String
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+fn is_private_build() -> bool {
+    matches!(
+        option_env!("SONARSNIFFER_PRIVATE_BUILD"),
+        Some("1") | Some("true") | Some("TRUE") | Some("yes") | Some("YES")
+    )
+}
+
+fn contact_email() -> String {
+    option_env!("SONARSNIFFER_LICENSE_EMAIL")
+        .unwrap_or(DEFAULT_CONTACT_EMAIL)
+        .to_string()
+}
 
 fn license_path(app_data_dir: &PathBuf) -> PathBuf {
     app_data_dir.join("license.json")

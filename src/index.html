@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SonarSniffer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">NautiDog Sailing</p>
+        <h1>SonarSniffer Launcher</h1>
+        <p class="lede">One desktop package for SonarSniffer parsing, SoundTiles mosaic processing, and GStreamer-backed video export.</p>
+      </div>
+      <div class="hero-badge" id="buildFlavorBadge">Public Build</div>
+    </header>
+
+    <main class="grid">
+      <section class="card accent">
+        <h2>License</h2>
+        <p id="licenseSummary">Checking license status...</p>
+        <p id="licenseContact" class="muted"></p>
+        <div class="field-row">
+          <input id="licenseKey" type="text" placeholder="Enter license key">
+          <button id="activateLicenseBtn">Activate</button>
+        </div>
+        <p id="licenseMessage" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>Dependencies</h2>
+        <p id="dependencySummary">Checking GStreamer runtime...</p>
+        <button id="refreshDepsBtn">Refresh Dependency Check</button>
+      </section>
+
+      <section class="card wide">
+        <h2>Run SonarSniffer Pipeline</h2>
+        <div class="field-grid">
+          <label>
+            Input file
+            <div class="field-row">
+              <input id="pipelineInput" type="text" placeholder="Select an RSD/SL2/XTF file">
+              <button id="browsePipelineBtn">Browse</button>
+            </div>
+          </label>
+          <label>
+            Output folder
+            <div class="field-row">
+              <input id="outputFolder" type="text" placeholder="Optional output folder override">
+              <button id="browseFolderBtn">Browse</button>
+            </div>
+          </label>
+        </div>
+        <div class="field-grid compact">
+          <label><input id="enableVideo" type="checkbox"> Export enhanced video</label>
+          <label><input id="enableMosaic" type="checkbox" checked> Enable mosaic outputs</label>
+          <label><input id="enableCurvelet" type="checkbox" checked> Enable curvelet denoising</label>
+        </div>
+        <button id="runPipelineBtn" class="primary">Run SonarSniffer</button>
+        <pre id="pipelineOutput" class="console"></pre>
+      </section>
+
+      <section class="card wide">
+        <h2>Run SoundTiles Mosaic</h2>
+        <div class="field-grid">
+          <label>
+            Input file
+            <div class="field-row">
+              <input id="soundtilesInput" type="text" placeholder="Select an RSD file for SoundTiles">
+              <button id="browseSoundtilesBtn">Browse</button>
+            </div>
+          </label>
+          <label>
+            Channel
+            <input id="soundtilesChannel" type="text" value="auto" placeholder="auto / 4 / 5 / 993">
+          </label>
+          <label>
+            Tiles
+            <input id="soundtilesTiles" type="number" min="1" value="20">
+          </label>
+        </div>
+        <div class="field-grid compact">
+          <label><input id="soundtilesVerbose" type="checkbox" checked> Verbose output</label>
+        </div>
+        <button id="runSoundtilesBtn" class="primary">Run SoundTiles</button>
+        <pre id="soundtilesOutput" class="console"></pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
