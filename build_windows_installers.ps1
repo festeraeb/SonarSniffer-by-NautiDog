@@ -165,7 +165,7 @@ if (-not (Test-Path `$MsiPath)) {
     Fail "MSI not found: `$MsiPath"
 }
 
-`$msiExit = (Start-Process msiexec.exe -ArgumentList "/i", "`"`$MsiPath`"", "/passive", "/norestart" -Wait -PassThru).ExitCode
+`$msiExit = (Start-Process msiexec.exe -ArgumentList "/i", `$MsiPath, "/passive", "/norestart" -Wait -PassThru).ExitCode
 if (`$msiExit -ne 0) {
     Fail "MSI install failed with exit code `$msiExit"
 }
