@@ -68,6 +68,148 @@ function Ensure-PkgConfigOnPath() {
     }
 }
 
+function New-BootstrapInstallerScript([string]$MsiPath, [string]$Flavor, [string]$Email) {
+    $bootstrapPath = [IO.Path]::ChangeExtension($MsiPath, ".install.ps1")
+    $msiFileName = [IO.Path]::GetFileName($MsiPath)
+
+    $content = @"
+#Requires -Version 5.1
+[CmdletBinding()]
+param(
+    [string]`$MsiPath = "`$PSScriptRoot\\$msiFileName"
+)
+
+Set-StrictMode -Version Latest
+`$ErrorActionPreference = "Stop"
+
+function Write-Step([string]`$Message) { Write-Host "`n=== `$Message ===" -ForegroundColor Cyan }
+function Pass([string]`$Message) { Write-Host "OK: `$Message" -ForegroundColor Green }
+function Fail([string]`$Message) { Write-Host "ERROR: `$Message" -ForegroundColor Red; exit 1 }
+function Warn([string]`$Message) { Write-Host "WARN: `$Message" -ForegroundColor Yellow }
+
+function Ensure-Elevated {
+    `$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    `$principal = New-Object Security.Principal.WindowsPrincipal(`$identity)
+    if (-not `$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Fail "Run this installer script as Administrator."
+    }
+}
+
+function Install-WingetPackage([string]`$Id, [string]`$Name) {
+    Write-Step "Installing `$Name"
+    & winget install --id `$Id --accept-package-agreements --accept-source-agreements --disable-interactivity
+    if (`$LASTEXITCODE -ne 0) {
+        Warn "winget install for `$Name returned code `$LASTEXITCODE (continuing)"
+    } else {
+        Pass "`$Name installed or already present"
+    }
+}
+
+function Resolve-GStreamerRoot {
+    `$candidates = @()
+    if (`$env:GSTREAMER_1_0_ROOT_MSVC_X86_64) { `$candidates += `$env:GSTREAMER_1_0_ROOT_MSVC_X86_64 }
+    `$regPath = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+        Where-Object { `$_.DisplayName -match 'GStreamer' } |
+        Select-Object -First 1 -ExpandProperty InstallLocation)
+    if (`$regPath) { `$candidates += `$regPath }
+    `$candidates += (Join-Path `$env:LOCALAPPDATA "Programs\\gstreamer\\1.0\\msvc_x86_64")
+    `$candidates += "C:\\gstreamer\\1.0\\msvc_x86_64"
+    `$candidates += "C:\\Program Files\\gstreamer\\1.0\\msvc_x86_64"
+
+    foreach (`$candidate in `$candidates) {
+        if (`$candidate -and (Test-Path (Join-Path `$candidate "bin"))) {
+            return (Resolve-Path `$candidate).Path
+        }
+    }
+    return `$null
+}
+
+function Resolve-AppInstallDir {
+    `$candidates = @(
+        (Join-Path `$env:ProgramFiles "SonarSniffer"),
+        (Join-Path `$env:LOCALAPPDATA "Programs\\SonarSniffer")
+    )
+
+    `$regInstall = Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+        Where-Object { `$_.DisplayName -match '^SonarSniffer' } |
+        Select-Object -First 1 -ExpandProperty InstallLocation
+    if (`$regInstall) { `$candidates = @(`$regInstall) + `$candidates }
+
+    foreach (`$candidate in `$candidates) {
+        if (`$candidate -and (Test-Path (Join-Path `$candidate "tauri-appsonarsniffer.exe"))) {
+            return (Resolve-Path `$candidate).Path
+        }
+    }
+
+    foreach (`$candidate in `$candidates) {
+        if (`$candidate -and (Test-Path `$candidate)) {
+            return (Resolve-Path `$candidate).Path
+        }
+    }
+
+    return `$null
+}
+
+Ensure-Elevated
+
+if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Fail "winget is required for prerequisite install."
+}
+
+Install-WingetPackage "Microsoft.VCRedist.2015+.x64" "Microsoft Visual C++ Runtime"
+Install-WingetPackage "Microsoft.EdgeWebView2Runtime" "Microsoft Edge WebView2 Runtime"
+Install-WingetPackage "gstreamerproject.gstreamer" "GStreamer Runtime"
+
+Write-Step "Installing SonarSniffer MSI"
+if (-not (Test-Path `$MsiPath)) {
+    Fail "MSI not found: `$MsiPath"
+}
+
+`$msiExit = (Start-Process msiexec.exe -ArgumentList "/i", "`"`$MsiPath`"", "/passive", "/norestart" -Wait -PassThru).ExitCode
+if (`$msiExit -ne 0) {
+    Fail "MSI install failed with exit code `$msiExit"
+}
+Pass "MSI installed"
+
+Write-Step "Hardening GStreamer DLL placement"
+`$gstRoot = Resolve-GStreamerRoot
+if (-not `$gstRoot) {
+    Warn "GStreamer install path not found. Video mode may not work."
+    exit 0
+}
+
+`$appDir = Resolve-AppInstallDir
+if (-not `$appDir) {
+    Warn "Could not auto-detect SonarSniffer install directory."
+    Warn "Detected GStreamer root: `$gstRoot"
+    exit 0
+}
+
+`$gstBin = Join-Path `$gstRoot "bin"
+`$dstGst = Join-Path `$appDir "gstreamer"
+New-Item -ItemType Directory -Force -Path `$dstGst | Out-Null
+
+if (Test-Path `$dstGst) {
+    Remove-Item -Recurse -Force `$dstGst
+}
+New-Item -ItemType Directory -Force -Path `$dstGst | Out-Null
+Copy-Item (Join-Path `$gstRoot "*") `$dstGst -Recurse -Force
+
+Get-ChildItem `$gstBin -Filter *.dll -File | ForEach-Object {
+    Copy-Item `$_.FullName (Join-Path `$appDir `$_.Name) -Force
+}
+
+Pass "Copied GStreamer runtime to `$appDir and `$appDir\\gstreamer"
+
+Write-Step "Done"
+Pass "SonarSniffer ($Flavor) installed with prerequisites"
+Write-Host "Contact for production licensing: $Email"
+"@
+
+    Set-Content -Path $bootstrapPath -Value $content -Encoding UTF8
+    return $bootstrapPath
+}
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 $shortTemp = "C:\sonarsniffer-temp"
@@ -187,4 +329,9 @@ foreach ($artifact in $artifacts) {
     $renamed = Join-Path $artifact.DirectoryName (([IO.Path]::GetFileNameWithoutExtension($artifact.Name)) + "-" + $BuildFlavor + $artifact.Extension)
     Copy-Item $artifact.FullName $renamed -Force
     Write-Host $renamed -ForegroundColor White
+
+    if ($renamed.ToLowerInvariant().EndsWith(".msi")) {
+        $bootstrap = New-BootstrapInstallerScript -MsiPath $renamed -Flavor $BuildFlavor -Email $LicenseEmail
+        Write-Host $bootstrap -ForegroundColor DarkCyan
+    }
 }
