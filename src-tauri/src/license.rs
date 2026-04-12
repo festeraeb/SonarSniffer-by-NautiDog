@@ -10,8 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 // SHA-256("sonarsniffer-license-v1:<permanent_key>") — raw key is not in source.
-const EXPECTED_KEY_HASH: &str =
-    "8df52de3a661c6c96071a26e1b4e44e1d60907b05a6c74d640ef964d9f5b8725";
+const EXPECTED_KEY_HASH: &str = "8df52de3a661c6c96071a26e1b4e44e1d60907b05a6c74d640ef964d9f5b8725";
 const LICENSE_SALT: &str = "sonarsniffer-license-v1";
 const TRIAL_DAYS: i64 = 30;
 const DEFAULT_CONTACT_EMAIL: &str = "support@nautidogsailing.com";
@@ -134,11 +133,8 @@ pub fn activate_license(key: String, app_data_dir: PathBuf) -> Result<(), String
 
     lf.unlocked = true;
     let _ = std::fs::create_dir_all(&app_data_dir);
-    std::fs::write(
-        &path,
-        serde_json::to_string_pretty(&lf).unwrap_or_default(),
-    )
-    .map_err(|e| format!("Could not save license: {e}"))?;
+    std::fs::write(&path, serde_json::to_string_pretty(&lf).unwrap_or_default())
+        .map_err(|e| format!("Could not save license: {e}"))?;
 
     Ok(())
 }

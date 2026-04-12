@@ -219,7 +219,8 @@ $env:TMP = $shortTemp
 $env:SONARSNIFFER_LICENSE_EMAIL = $LicenseEmail
 if ($BuildFlavor -eq "private") {
     $env:SONARSNIFFER_PRIVATE_BUILD = "1"
-} else {
+}
+else {
     Remove-Item Env:SONARSNIFFER_PRIVATE_BUILD -ErrorAction SilentlyContinue
 }
 
@@ -245,7 +246,8 @@ try {
         $tauriInstalled = $true
         Pass $tauriVersion
     }
-} catch {
+}
+catch {
 }
 
 if (-not $tauriInstalled) {
@@ -286,13 +288,15 @@ if ($gstSource) {
     $env:GSTREAMER_1_0_ROOT_MSVC_X86_64 = $gstSource
     $env:PATH = (Join-Path $gstSource "bin") + ";" + $env:PATH
     Pass "GStreamer staged from $gstSource"
-} elseif ($AllowMissingGStreamer) {
+}
+elseif ($AllowMissingGStreamer) {
     if (Test-Path $gstDest) {
         Remove-Item -Recurse -Force $gstDest
     }
     New-Item -ItemType Directory -Force -Path $gstDest | Out-Null
     Write-Host "WARN: GStreamer not found. Installer will build without bundled runtime and video may fall back to GIF." -ForegroundColor Yellow
-} else {
+}
+else {
     Fail "GStreamer SDK/runtime not found. Install it first or pass -AllowMissingGStreamer."
 }
 
@@ -313,11 +317,11 @@ $bundleRoot = Join-Path $root "target\release\bundle"
 $artifacts = @()
 if ($Bundle -in @("msi", "both")) {
     $artifacts += Get-ChildItem (Join-Path $bundleRoot "msi") -Filter *.msi -ErrorAction SilentlyContinue |
-        Where-Object { $_.BaseName -notmatch "-(public|private)(-(public|private))?$" }
+    Where-Object { $_.BaseName -notmatch "-(public|private)(-(public|private))?$" }
 }
 if ($Bundle -in @("nsis", "both")) {
     $artifacts += Get-ChildItem (Join-Path $bundleRoot "nsis") -Filter *.exe -ErrorAction SilentlyContinue |
-        Where-Object { $_.BaseName -notmatch "-(public|private)(-(public|private))?$" }
+    Where-Object { $_.BaseName -notmatch "-(public|private)(-(public|private))?$" }
 }
 
 Write-Step "Installer artifacts"

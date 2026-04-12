@@ -52,7 +52,8 @@ body {
   text-transform: uppercase;
 }
 
-h1, h2 {
+h1,
+h2 {
   margin: 0;
 }
 
@@ -170,6 +171,7 @@ button.primary {
 }
 
 @media (max-width: 900px) {
+
   .grid,
   .field-grid {
     grid-template-columns: 1fr;

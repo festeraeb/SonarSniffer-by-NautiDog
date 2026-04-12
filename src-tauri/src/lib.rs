@@ -1,31 +1,31 @@
-mod corpus_scan;
-pub mod garmin_rsd_parser;
-pub mod firmware_lookup;
-pub mod healing_api;
+pub mod cerulean_parser;
 pub mod channel_alignment;
 pub mod channel_discovery;
-pub mod probing;
-pub mod egn;
-pub mod outputs;
-pub mod mosaic;
+mod corpus_scan;
 pub mod curvelet_diag;
+mod deps;
+pub mod egn;
+pub mod firmware_lookup;
+pub mod format_detector;
+pub mod garmin_rsd_parser;
+pub mod healing_api;
+pub mod humminbird_parser;
+pub mod jsf_parser;
+mod license;
+pub mod lowrance_parser;
+pub mod mosaic;
+pub mod outputs;
+pub mod probing;
+mod static_server;
+mod target_detection;
 mod video;
 mod video_enhanced;
-pub mod lowrance_parser;
-pub mod humminbird_parser;
 pub mod xtf_parser;
-pub mod cerulean_parser;
-pub mod jsf_parser;
-pub mod format_detector;
-mod license;
-mod deps;
-mod target_detection;
-mod static_server;
 
 use corpus_scan::CorpusScanResult;
-use outputs::{build_outputs, PipelineOptions, estimate_curvelet_threshold};
 #[allow(unused_imports)]
 use format_detector::detect_and_parse;
+use outputs::{build_outputs, estimate_curvelet_threshold, PipelineOptions};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -54,7 +54,10 @@ fn video_filename() -> &'static str {
 ///   4. `C:\Program Files\gstreamer\1.0\msvc_x86_64` — alternate installer path
 #[cfg(target_os = "windows")]
 fn setup_bundled_gstreamer() {
-    let exe_dir = match std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
+    let exe_dir = match std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
         Some(d) => d,
         None => return,
     };
@@ -69,7 +72,9 @@ fn setup_bundled_gstreamer() {
         candidates.push(std::path::PathBuf::from(env_root));
     }
     candidates.push(std::path::PathBuf::from(r"C:\gstreamer\1.0\msvc_x86_64"));
-    candidates.push(std::path::PathBuf::from(r"C:\Program Files\gstreamer\1.0\msvc_x86_64"));
+    candidates.push(std::path::PathBuf::from(
+        r"C:\Program Files\gstreamer\1.0\msvc_x86_64",
+    ));
 
     for gst_dir in &candidates {
         let gst_bin = gst_dir.join("bin");
@@ -98,7 +103,10 @@ fn setup_bundled_gstreamer() {
 /// Plugins need GST_PLUGIN_PATH set at runtime.
 #[cfg(target_os = "macos")]
 fn setup_bundled_gstreamer() {
-    let exe_dir = match std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
+    let exe_dir = match std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
         Some(d) => d,
         None => return,
     };
@@ -120,11 +128,15 @@ fn setup_bundled_gstreamer() {
         std::env::set_var("GST_PLUGIN_PATH", &pd);
         std::env::set_var("GST_PLUGIN_SYSTEM_PATH", &pd);
     }
-    eprintln!("[gstreamer] Bundled GStreamer detected at {}", gst_dir.display());
+    eprintln!(
+        "[gstreamer] Bundled GStreamer detected at {}",
+        gst_dir.display()
+    );
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-fn setup_bundled_gstreamer() { /* no-op on Linux — system GStreamer used */ }
+fn setup_bundled_gstreamer() { /* no-op on Linux — system GStreamer used */
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PipelineResponse {
@@ -180,7 +192,10 @@ struct SidecarRunResponse {
 
 #[tauri::command]
 fn check_license(app: tauri::AppHandle) -> license::LicenseStatus {
-    let data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
     license::check_license(data_dir)
 }
 
@@ -196,7 +211,10 @@ fn install_gstreamer() -> Result<String, String> {
 
 #[tauri::command]
 fn activate_license(key: String, app: tauri::AppHandle) -> Result<(), String> {
-    let data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
     license::activate_license(key, data_dir)
 }
 
@@ -238,17 +256,13 @@ fn run_soundtiles(
 #[tauri::command]
 fn pick_input_file() -> Option<String> {
     rfd::FileDialog::new()
-        .add_filter("Sonar logs", &[
-            "rsd", "RSD",
-            "sl2", "SL2",
-            "sl3", "SL3",
-            "dat", "DAT",
-            "son", "SON",
-            "xtf", "XTF",
-            "jsf", "JSF",
-            "svlog", "SVLOG",
-            "bin",
-        ])
+        .add_filter(
+            "Sonar logs",
+            &[
+                "rsd", "RSD", "sl2", "SL2", "sl3", "SL3", "dat", "DAT", "son", "SON", "xtf", "XTF",
+                "jsf", "JSF", "svlog", "SVLOG", "bin",
+            ],
+        )
         .pick_file()
         .map(|path| path.display().to_string())
 }
@@ -297,10 +311,16 @@ fn pick_folder() -> Option<String> {
 }
 
 #[tauri::command]
-async fn run_sonar_pipeline(file_name: String, options: Option<PipelineOptions>, app: tauri::AppHandle) -> Result<PipelineResponse, String> {
+async fn run_sonar_pipeline(
+    file_name: String,
+    options: Option<PipelineOptions>,
+    app: tauri::AppHandle,
+) -> Result<PipelineResponse, String> {
     tauri::async_runtime::spawn_blocking(move || {
         run_pipeline_internal(&file_name, options, Some(app))
-    }).await.map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -309,12 +329,22 @@ struct PipelineProgress {
     pct: u8,
 }
 
-pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, app: Option<tauri::AppHandle>) -> PipelineResponse {
+pub fn run_pipeline_internal(
+    file_name: &str,
+    options: Option<PipelineOptions>,
+    app: Option<tauri::AppHandle>,
+) -> PipelineResponse {
     let mut options = options.unwrap_or_default();
     let path = Path::new(file_name);
 
     if let Some(a) = &app {
-        let _ = a.emit("pipeline-progress", PipelineProgress { step: "Parsing file...".into(), pct: 5 });
+        let _ = a.emit(
+            "pipeline-progress",
+            PipelineProgress {
+                step: "Parsing file...".into(),
+                pct: 5,
+            },
+        );
     }
 
     // ── Detect format and parse ───────────────────────────────────────────
@@ -332,15 +362,25 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
             let hprobe = probing::probe_file_bytes(&raw);
             eprintln!(
                 "[heuristic_probe] hardware={} gen={:?} alignment={}B confidence={:.2} records={}",
-                hprobe.hardware, hprobe.generation, hprobe.record_alignment_bytes,
-                hprobe.confidence, hprobe.records_decoded,
+                hprobe.hardware,
+                hprobe.generation,
+                hprobe.record_alignment_bytes,
+                hprobe.confidence,
+                hprobe.records_decoded,
             );
             for cp in &hprobe.channels {
-                let gain = cp.hardware_gain_raw.map(|g| format!(" gain_raw={}", g)).unwrap_or_default();
+                let gain = cp
+                    .hardware_gain_raw
+                    .map(|g| format!(" gain_raw={}", g))
+                    .unwrap_or_default();
                 eprintln!(
                     "[heuristic_probe]   ch{} bit={:?} nadir={:?} role={:?} flip={:?}{}",
-                    cp.channel_id, cp.bit_depth, cp.nadir_edge, cp.suggested_role,
-                    cp.flip_status, gain,
+                    cp.channel_id,
+                    cp.bit_depth,
+                    cp.nadir_edge,
+                    cp.suggested_role,
+                    cp.flip_status,
+                    gain,
                 );
             }
         }
@@ -349,7 +389,13 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
     let mut status_notes: Vec<String> = Vec::new();
 
     if let Some(a) = &app {
-        let _ = a.emit("pipeline-progress", PipelineProgress { step: "Detecting targets...".into(), pct: 40 });
+        let _ = a.emit(
+            "pipeline-progress",
+            PipelineProgress {
+                step: "Detecting targets...".into(),
+                pct: 40,
+            },
+        );
     }
 
     // ── Target detection (runs before outputs so results can be included) ──
@@ -383,7 +429,13 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
 
     let outputs = if parse.error_message.is_none() {
         if let Some(a) = &app {
-            let _ = a.emit("pipeline-progress", PipelineProgress { step: "Applying Curvelet filter...".into(), pct: 50 });
+            let _ = a.emit(
+                "pipeline-progress",
+                PipelineProgress {
+                    step: "Applying Curvelet filter...".into(),
+                    pct: 50,
+                },
+            );
         }
         // ── Auto-compute curvelet threshold before building any outputs ─────────
         if options.curvelet_denoise && options.curvelet_auto {
@@ -392,9 +444,15 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
         }
 
         if let Some(a) = &app {
-            let _ = a.emit("pipeline-progress", PipelineProgress { step: "Generating Geographic Map Data...".into(), pct: 60 });
+            let _ = a.emit(
+                "pipeline-progress",
+                PipelineProgress {
+                    step: "Generating Geographic Map Data...".into(),
+                    pct: 60,
+                },
+            );
         }
-        
+
         // Pass app down to build_outputs if we want more granular progress
         match build_outputs(path, &parse, &options, detections.as_ref(), app.clone()) {
             Ok(o) => Some(o),
@@ -411,7 +469,9 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
     // Returns [min, max, avg] in the user's chosen unit system.
     let use_metric = options.unit_system == "metric";
     let depth_stats = {
-        let depths: Vec<f32> = parse.pings.iter()
+        let depths: Vec<f32> = parse
+            .pings
+            .iter()
             .map(|p| if use_metric { p.depth_m } else { p.depth_ft })
             .filter(|&d| d > 0.0)
             .collect();
@@ -426,7 +486,9 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
     };
 
     let temp_stats = {
-        let temps: Vec<f32> = parse.pings.iter()
+        let temps: Vec<f32> = parse
+            .pings
+            .iter()
             .filter_map(|p| p.temp_c)
             .filter(|t| *t > 0.0)
             .collect();
@@ -463,24 +525,39 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
         let pings_for_video = std::mem::take(&mut parse.pings);
         let vid_dir_clone = vid_dir.clone();
         let app_progress = app.clone();
-        let app_done     = app.clone();
+        let app_done = app.clone();
         let vid_options = options.clone();
         std::thread::spawn(move || {
             let on_progress: Box<dyn Fn(u32, u32) + Send> = Box::new(move |frame, total| {
                 if let Some(ref h) = app_progress {
-                    let pct = if total > 0 { frame.saturating_mul(100) / total } else { 0 };
-                    let _ = h.emit("video-progress", serde_json::json!({
-                        "frame": frame, "total": total, "pct": pct
-                    }));
+                    let pct = if total > 0 {
+                        frame.saturating_mul(100) / total
+                    } else {
+                        0
+                    };
+                    let _ = h.emit(
+                        "video-progress",
+                        serde_json::json!({
+                            "frame": frame, "total": total, "pct": pct
+                        }),
+                    );
                 }
             });
-            let result = video::run_video_export_pings(pings_for_video, &vid_dir_clone, on_progress, &vid_options);
+            let result = video::run_video_export_pings(
+                pings_for_video,
+                &vid_dir_clone,
+                on_progress,
+                &vid_options,
+            );
             if let Some(ref h) = app_done {
-                let _ = h.emit("video-complete", serde_json::json!({
-                    "status": result.status,
-                    "output_path": result.output_path,
-                    "ok": result.output_path.is_some()
-                }));
+                let _ = h.emit(
+                    "video-complete",
+                    serde_json::json!({
+                        "status": result.status,
+                        "output_path": result.output_path,
+                        "ok": result.output_path.is_some()
+                    }),
+                );
             }
         });
         video_rendering = true;
@@ -514,7 +591,13 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
     // and composite scanline groupings without relying on hardcoded channel maps.
     let channel_discovery = if parse.error_message.is_none() && !parse.pings.is_empty() {
         if let Some(a) = &app {
-            let _ = a.emit("pipeline-progress", PipelineProgress { step: "Discovering channels...".into(), pct: 15 });
+            let _ = a.emit(
+                "pipeline-progress",
+                PipelineProgress {
+                    step: "Discovering channels...".into(),
+                    pct: 15,
+                },
+            );
         }
         Some(channel_discovery::discover_and_profile(&parse))
     } else {
@@ -534,7 +617,11 @@ pub fn run_pipeline_internal(file_name: &str, options: Option<PipelineOptions>, 
         detections,
         device_fingerprint,
         channel_alignment,
-        curvelet_threshold_used: if options.curvelet_denoise { options.curvelet_threshold } else { 0.0 },
+        curvelet_threshold_used: if options.curvelet_denoise {
+            options.curvelet_threshold
+        } else {
+            0.0
+        },
         channel_discovery,
     }
 }
@@ -578,7 +665,10 @@ fn scan_corpus_directory(root_dir: &str) -> CorpusScanResponse {
             scan.hits.len()
         )
     } else {
-        format!("Corpus scan complete ({} matched files)", scan.matched_files)
+        format!(
+            "Corpus scan complete ({} matched files)",
+            scan.matched_files
+        )
     };
 
     CorpusScanResponse { scan, status }
@@ -609,38 +699,55 @@ async fn run_batch_pipeline(
 
     for (i, file) in files.iter().enumerate() {
         // Notify frontend we are starting this file
-        let _ = app.emit("batch-progress", serde_json::json!({
-            "index": i,
-            "total": total,
-            "file": file,
-            "state": "running",
-        }));
+        let _ = app.emit(
+            "batch-progress",
+            serde_json::json!({
+                "index": i,
+                "total": total,
+                "file": file,
+                "state": "running",
+            }),
+        );
 
         let file_clone = file.clone();
         let opts_clone = options.clone();
-        let app_clone  = app.clone();
+        let app_clone = app.clone();
 
         let outcome = tauri::async_runtime::spawn_blocking(move || {
             run_pipeline_internal(&file_clone, Some(opts_clone), Some(app_clone))
-        }).await;
+        })
+        .await;
 
         match outcome {
             Ok(resp) => {
                 let out_dir = resp.outputs.as_ref().map(|o| o.output_dir.clone());
-                results.push(BatchJobResult { file: file.clone(), ok: true, error: None, output_dir: out_dir });
+                results.push(BatchJobResult {
+                    file: file.clone(),
+                    ok: true,
+                    error: None,
+                    output_dir: out_dir,
+                });
             }
             Err(e) => {
-                results.push(BatchJobResult { file: file.clone(), ok: false, error: Some(e.to_string()), output_dir: None });
+                results.push(BatchJobResult {
+                    file: file.clone(),
+                    ok: false,
+                    error: Some(e.to_string()),
+                    output_dir: None,
+                });
             }
         }
 
         // Notify done
-        let _ = app.emit("batch-progress", serde_json::json!({
-            "index": i + 1,
-            "total": total,
-            "file": file,
-            "state": "done",
-        }));
+        let _ = app.emit(
+            "batch-progress",
+            serde_json::json!({
+                "index": i + 1,
+                "total": total,
+                "file": file,
+                "state": "done",
+            }),
+        );
     }
 
     Ok(results)
@@ -699,10 +806,16 @@ fn preview_curvelet(file_name: &str, threshold: f32) -> Result<CurveletPreviewRe
         eprintln!("[curvelet] preview_curvelet: no pings parsed from {file_name}");
         return Err("No pings in file".to_string());
     }
-    eprintln!("[curvelet] preview_curvelet: {} pings, calling curvelet_preview_png", parse.pings.len());
+    eprintln!(
+        "[curvelet] preview_curvelet: {} pings, calling curvelet_preview_png",
+        parse.pings.len()
+    );
     let (before_png, after_png, suggested) = outputs::curvelet_preview_png(&parse, threshold);
-    eprintln!("[curvelet] preview_curvelet: done — suggested={suggested:.4} before={}B after={}B",
-        before_png.len(), after_png.len());
+    eprintln!(
+        "[curvelet] preview_curvelet: done — suggested={suggested:.4} before={}B after={}B",
+        before_png.len(),
+        after_png.len()
+    );
     use base64::Engine as _;
     let enc = base64::engine::general_purpose::STANDARD;
     Ok(CurveletPreviewResponse {
@@ -745,7 +858,9 @@ fn discover_channels(file_name: &str) -> Result<channel_discovery::DiscoveryResu
     let detected = format_detector::detect_and_parse(path);
     let parse = detected.parse;
     if parse.pings.is_empty() {
-        return Err(parse.error_message.unwrap_or_else(|| "No pings in file".to_string()));
+        return Err(parse
+            .error_message
+            .unwrap_or_else(|| "No pings in file".to_string()));
     }
     Ok(channel_discovery::discover_and_profile(&parse))
 }
@@ -763,7 +878,9 @@ fn render_mosaic(
     let detected = format_detector::detect_and_parse(path);
     let parse = detected.parse;
     if parse.pings.is_empty() {
-        return Err(parse.error_message.unwrap_or_else(|| "No pings in file".to_string()));
+        return Err(parse
+            .error_message
+            .unwrap_or_else(|| "No pings in file".to_string()));
     }
     let discovery = channel_discovery::discover_and_profile(&parse);
 
@@ -816,7 +933,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(ViewerServerState(Mutex::new(None)))
-    .invoke_handler(tauri::generate_handler![
+        .invoke_handler(tauri::generate_handler![
             check_license,
             activate_license,
             run_soundtiles,
@@ -843,4 +960,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
