@@ -1,0 +1,33 @@
+{
+  "area": {
+    "name": "Interior Alaska Taiga (Fairbanks/Nenana)",
+    "bbox": [
+      64.3,
+      -148.5,
+      65.0,
+      -147.0
+    ],
+    "terrain": "Dense boreal forest \u2014 black/white spruce, birch",
+    "depth": "Canopy 8\u201320m, SAR C-band penetration ~5m",
+    "sar_mode": "VV+VH IW GRD",
+    "challenge": "Species density, damp soil \u2192 high backscatter background"
+  },
+  "scan_date": "2026-04-16T07:18:28.283267+00:00",
+  "passes_run": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "candidates": [
+    {
+      "lat": 64.65,
+      "lon": -147.75,
+      "pass": "area_center",
+      "score": 0.5,
+      "color": "ffffff",
+      "desc": "Coverage confirmed for Interior Alaska Taiga (Fairbanks/Nenana). SAR tiles need download for pixel-level analysis. Recommend: Sentinel-1 IW GRD + ALOS-2 L-band for deep canopy."
+    }
+  ]
+}

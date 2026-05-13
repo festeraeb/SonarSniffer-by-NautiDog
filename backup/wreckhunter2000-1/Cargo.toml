@@ -1,0 +1,4 @@
+[workspace]
+members = ["cesarops-mcp-steered", "nautivecs", "cesarops-forge-v2", "cesarops-inference"]
+exclude = ["model-team-tool"]
+resolver = "2"

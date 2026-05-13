@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CESAROPS Mission Control</title>
+  <style>
+    :root { --bg: #f4f4f9; --text: #1a1a1a; --primary: #0057b7; --success: #28a745; --warn: #ffc107; --font: 'Lexend', sans-serif; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 2.5rem; text-align: center; margin-bottom: 20px; }
+    .modes { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+    .mode-btn { min-height: 60px; min-width: 120px; padding: 15px 25px; font-size: 1.2rem; border: none; border-radius: 8px; cursor: pointer; background: var(--primary); color: white; transition: transform 0.1s; }
+    .mode-btn:hover { transform: scale(1.05); }
+    .mode-btn.active { background: var(--success); }
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; }
+    input[type="text"] { flex: 1; padding: 12px; font-size: 1rem; border: 2px solid #ccc; border-radius: 6px; }
+    .voice-btn { min-height: 60px; min-width: 60px; background: var(--warn); border: none; border-radius: 6px; cursor: pointer; font-size: 1.5rem; }
+    .voice-btn.listening { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    #progress { width: 100%; max-width: 600px; background: #e0e0e0; border-radius: 6px; overflow: hidden; height: 30px; margin-bottom: 20px; position: relative; }
+    #progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+    #progress-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; line-height: 30px; font-weight: bold; }
+    #output { width: 100%; max-width: 600px; min-height: 100px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ccc; white-space: pre-wrap; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1>CESAROPS Mission Control</h1>
+  <div class="modes">
+    <button class="mode-btn" data-mode="CODE">CODE</button>
+    <button class="mode-btn" data-mode="SCAN">SCAN</button>
+    <button class="mode-btn" data-mode="RESEARCH">RESEARCH</button>
+  </div>
+  <div class="controls">
+    <input type="text" id="user-input" placeholder="Enter task or speak...">
+    <button class="voice-btn" id="voice-btn">🎤</button>
+  </div>
+  <div id="progress"><div id="progress-bar"></div><div id="progress-text">Ready</div></div>
+  <div id="output"></div>
+  <script>
+    let currentMode = 'CODE';
+    let ws = null;
+    const modes = document.querySelectorAll('.mode-btn');
+    const input = document.getElementById('user-input');
+    const voiceBtn = document.getElementById('voice-btn');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const output = document.getElementById('output');
+
+    // Auto-detect host for WebSocket if running in Tauri
+    // In Tauri, location.host will be the configured devUrl or build URL
+    const wsHost = window.location.hostname || '100.72.182.77';
+    const wsPort = window.location.port || '3000';
+
+    modes.forEach(btn => btn.addEventListener('click', () => {
+      modes.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+      submitTask();
+    }));
+
+    function connectWS() {
+      // Use WSS if https, WS if http
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${wsHost}:${wsPort}/ws`);
+      
+      ws.onopen = () => {
+        progressText.textContent = '🟢 Connected';
+      };
+
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if(data.type === 'progress') {
+          progressText.textContent = data.detail || data.step;
+          progressBar.style.width = `${(data.step/data.total)*100}%`;
+        } else if(data.type === 'llm_token') {
+          output.textContent += data.text;
+        } else if(data.type === 'result') {
+          output.textContent = JSON.stringify(data.data, null, 2);
+          progressText.textContent = '✅ Done';
+          progressBar.style.width = '100%';
+        }
+      };
+
+      ws.onerror = (err) => {
+        progressText.textContent = '❌ Connection Error';
+        console.error("WS Error", err);
+      };
+    }
+    connectWS();
+
+    function submitTask() {
+      const payload = { mode: currentMode, input: input.value };
+      fetch('/task', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+        .then(() => {
+          output.textContent = '';
+          progressText.textContent = '🔄 Planning...';
+          progressBar.style.width = '10%';
+        })
+        .catch(err => {
+          progressText.textContent = '❌ Task Failed';
+          console.error("Task Error", err);
+        });
+    }
+
+    if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      voiceBtn.addEventListener('click', () => {
+        if(recognition.isListening) { recognition.stop(); voiceBtn.classList.remove('listening'); }
+        else { recognition.start(); voiceBtn.classList.add('listening'); }
+      });
+      recognition.onresult = (e) => {
+        let transcript = '';
+        for(let i=e.resultIndex; i<e.results.length; i++) transcript += e.results[i][0].transcript;
+        input.value = transcript;
+        if(e.results[0].isFinal) submitTask();
+      };
+      recognition.onend = () => voiceBtn.classList.remove('listening');
+    }
+  </script>
+</body>
+</html>
+```
+
+###

@@ -1,0 +1,37 @@
+﻿{
+  "name": "Model Team Tool (Standalone)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [260, 280]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/node/model-team-tool && REASONING_BASE_URL=${REASONING_BASE_URL:-http://host.docker.internal:5001/v1} CODING_BASE_URL=${CODING_BASE_URL:-http://host.docker.internal:5002/v1} ./model-team-tool --task \"Refactor llm_worker prompts\" --output outputs/latest.json"
+      },
+      "id": "2",
+      "name": "Run Model Team Tool",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [560, 280]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Model Team Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

@@ -1,0 +1,23 @@
+version: '3.8'
+
+volumes:
+  n8n_data:
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n_core
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/New_York
+      # Feel free to add database variables here if we decide to use Postgres instead of SQLite
+    volumes:
+      - n8n_data:/home/node/.n8n
+    # command: /bin/sh -c "n8n start"

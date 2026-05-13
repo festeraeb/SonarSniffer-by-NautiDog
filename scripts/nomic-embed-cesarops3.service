@@ -1,0 +1,24 @@
+[Unit]
+Description=Nomic Embed Text - Dedicated Embedding Server on cesarops3 P1000/P106
+After=network.target
+
+[Service]
+Type=simple
+User=cesarops
+# Run embedding model on the P1000/P106 GPU
+ExecStart=/home/cesarops/koboldcpp \
+    --model /home/cesarops/models/nomic-embed-text-v1.5.Q8_0.gguf \
+    --port 5558 \
+    --threads 4 \
+    --contextsize 2048 \
+    --usecublas 1 \
+    --gpulayers 99 \
+    --quiet
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nomic-embed
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,50 @@
+[[groups.mounts]]
+type = "shell"
+commands = ["mount -a", "systemctl start local-fs.target"]
+
+[[groups.network]]
+type = "process"
+name = "cloudflared"
+binary = "/usr/bin/cloudflared"
+args = ["proxy-dns", "--no-autoupdate"]
+working_dir = "/tmp"
+health_check = "pid"
+restart_policy = "always"
+
+[[groups.infra]]
+type = "process"
+name = "smbd"
+binary = "/usr/bin/smbd"
+args = ["--foreground"]
+working_dir = "/var/lib/samba"
+health_check = "pid"
+restart_policy = "always"
+
+[[groups.llm]]
+type = "process"
+name = "koboldcpp"
+binary = "/usr/local/bin/koboldcpp"
+args = ["--model", "/models/llama.gguf", "--port", "5001"]
+working_dir = "/opt/llm"
+health_check = "url"
+health_url = "http://localhost:5001/v1/models"
+restart_policy = "always"
+
+[[groups.apps]]
+type = "process"
+name = "nautivecs-server"
+binary = "/usr/bin/nautivecs-server"
+args = []
+working_dir = "/opt/apps"
+health_check = "url"
+health_url = "http://localhost:8080/health"
+restart_policy = "always"
+
+[[groups.agent]]
+type = "process"
+name = "cesarops-agent"
+binary = "/usr/local/bin/cesarops-agent"
+args = ["--layer", "2"]
+working_dir = "/opt/agent"
+health_check = "pid"
+restart_policy = "always"

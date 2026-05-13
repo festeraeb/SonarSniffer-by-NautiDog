@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CesarOps Cluster Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 2rem;
+            font-size: 1.1rem;
+        }
+        h1 { color: #00d4ff; margin-bottom: 1rem; font-size: 2rem; }
+        h2 { color: #4caf50; margin: 2rem 0 1rem 0; font-size: 1.4rem; }
+        h3 { color: #ff9800; margin: 1.5rem 0 0.8rem 0; font-size: 1.2rem; }
+
+        .card {
+            background: #16213e;
+            border: 2px solid #0f3460;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .card-title { font-size: 1.3rem; font-weight: bold; }
+
+        .status-dot {
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .dot-green { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+        .dot-red { background: #f44336; }
+        .dot-yellow { background: #ff9800; }
+        .dot-off { background: #555; }
+
+        .row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin: 0.8rem 0;
+            flex-wrap: wrap;
+        }
+        label {
+            font-size: 1rem;
+            color: #aaa;
+            min-width: 80px;
+        }
+        select, input[type="text"] {
+            padding: 0.7rem 1rem;
+            font-size: 1.1rem;
+            border: 2px solid #0f3460;
+            border-radius: 10px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-width: 250px;
+        }
+        select:focus, input:focus { border-color: #00d4ff; outline: none; }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { opacity: 0.85; transform: scale(1.02); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .btn-start { background: #4caf50; color: white; }
+        .btn-stop { background: #f44336; color: white; }
+        .btn-apply { background: #00d4ff; color: #1a1a2e; }
+        .btn-back { background: #333; color: #aaa; border: 1px solid #555; }
+        .btn-preset {
+            background: linear-gradient(135deg, #ff6b00, #ff9800);
+            color: white;
+            font-size: 1.3rem;
+            padding: 1rem 2.5rem;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);
+        }
+        .btn-preset:hover { box-shadow: 0 6px 20px rgba(255, 107, 0, 0.5); }
+        .btn-preset.active {
+            background: linear-gradient(135deg, #4caf50, #66bb6a);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        .btn-configure {
+            background: #333;
+            color: #ff9800;
+            border: 2px solid #ff9800;
+            font-size: 1rem;
+            padding: 0.6rem 1.2rem;
+        }
+
+        .preset-summary {
+            background: #0a0a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            color: #666;
+            font-size: 0.95rem;
+        }
+        .preset-summary.locked {
+            border-color: #4caf50;
+            color: #888;
+        }
+        .preset-summary .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #222;
+        }
+        .preset-summary .item:last-child { border-bottom: none; }
+        .preset-summary .item-label { color: #666; }
+        .preset-summary .item-value { color: #888; font-family: monospace; }
+
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .node-card {
+            background: #0f1a2e;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        .node-card.online { border-color: #4caf50; }
+        .node-card.offline { border-color: #555; opacity: 0.6; }
+        .node-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .node-ip { color: #666; font-size: 0.85rem; font-family: monospace; }
+        .node-gpu { color: #00d4ff; font-size: 0.9rem; margin-top: 0.3rem; }
+        .node-services { margin-top: 0.5rem; font-size: 0.8rem; color: #888; }
+
+        .gpu-group {
+            background: #0f1a2e;
+            border: 2px solid #0f3460;
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin: 0.8rem 0;
+        }
+        .gpu-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        .gpu-group-title { color: #00d4ff; font-weight: bold; }
+        .gpu-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        .gpu-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #ff9800);
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+
+        .log-box {
+            background: #0a0a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.95rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: #00d4ff; text-decoration: none; font-size: 1rem; }
+        .nav a:hover { text-decoration: underline; }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .mode-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-left: 1rem;
+        }
+        .mode-badge.scanning { background: #1b4332; color: #4caf50; }
+        .mode-badge.freeform { background: #4a1500; color: #ffb380; }
+
+        .refresh-spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid #555;
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/">&#8592; Back to Chat</a>
+    </div>
+
+    <!-- ============ MAIN VIEW ============ -->
+    <div id="view-main" class="view active">
+        <h1>Cluster Control Panel <span class="mode-badge scanning" id="mode-badge">SCANNING</span></h1>
+
+        <!-- PRESET BUTTON -->
+        <div class="card" style="text-align:center; padding:2rem;">
+            <button class="btn-preset active" id="btn-preset" onclick="togglePreset()">
+                CESAROPS
+            </button>
+            <p style="margin-top:0.8rem; color:#888; font-size:0.9rem;" id="preset-status">
+                Locked in for SAR scanning. All resources allocated.
+            </p>
+            <button class="btn-configure" onclick="showView('view-configure')" style="margin-top:1rem;">
+                Configure
+            </button>
+        </div>
+
+        <!-- PRESET SUMMARY (greyed out, read-only) -->
+        <div class="preset-summary locked" id="preset-display">
+            <div class="item"><span class="item-label">P100 Group</span><span class="item-value" id="ps-p100">Unified 32GB &#8212; SAR Pipeline</span></div>
+            <div class="item"><span class="item-label">P100 #1</span><span class="item-value" id="ps-gpu0">Qwen3.6 35B (coder)</span></div>
+            <div class="item"><span class="item-label">P100 #2</span><span class="item-value" id="ps-gpu1">KV Cache / Overflow</span></div>
+            <div class="item"><span class="item-label">Cesarops2 (1070)</span><span class="item-value" id="ps-1070">14B Corrector</span></div>
+            <div class="item"><span class="item-label">Cesarops3 (1060)</span><span class="item-value" id="ps-1060">R1 7B Thinker</span></div>
+            <div class="item"><span class="item-label">Nautik9 Laptop</span><span class="item-value" id="ps-laptop">Idle / Available</span></div>
+            <div class="item"><span class="item-label">T440 CPU</span><span class="item-value" id="ps-cpu">Bootstrap 1.5B + Nautivecs</span></div>
+        </div>
+
+        <!-- LIVE NETWORK DISCOVERY -->
+        <h2>Network Nodes <span class="refresh-spinner" id="discovery-spinner"></span></h2>
+        <div class="node-grid" id="node-grid"></div>
+
+        <!-- GPU STATUS -->
+        <h2>Local GPUs</h2>
+        <div id="gpu-status"></div>
+
+        <!-- QUICK LINKS -->
+        <h2>Command Center</h2>
+        <div class="card" style="background:#0f3460">
+            <div class="row" style="flex-wrap:wrap; gap:0.5rem">
+                <a href="/" style="padding:0.6rem 1.2rem; background:#1b4332; color:#4caf50; border-radius:8px; text-decoration:none; font-weight:bold">Forge Chat</a>
+                <a href="http://100.102.158.111:5678" target="_blank" style="padding:0.6rem 1.2rem; background:#2d1b4e; color:#d4a5ff; border-radius:8px; text-decoration:none; font-weight:bold">n8n Router</a>
+                <a href="http://100.102.158.111:5555/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#4a1500; color:#ffb380; border-radius:8px; text-decoration:none; font-weight:bold">Corrector (14B)</a>
+                <a href="http://localhost:5001/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">Qwen3.6 (P100s)</a>
+                <a href="http://100.105.77.74:5002/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">R1 (1060)</a>
+                <a href="http://localhost:5557/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">Thinker (CPU)</a>
+            </div>
+        </div>
+
+        <!-- LOG -->
+        <h2>Activity Log</h2>
+        <div class="log-box" id="log">Waiting for actions...</div>
+    </div>
+
+    <!-- ============ CONFIGURE VIEW (submenu) ============ -->
+    <div id="view-configure" class="view">
+        <h1>Configure</h1>
+        <button class="btn-back" onclick="showView('view-main')" style="margin-bottom:1.5rem;">&#8592; Back to Main</button>
+
+        <!-- P100 GROUPING -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">P100 Allocation Mode</span>
+            </div>
+            <div class="row">
+                <label>Mode:</label>
+                <select id="cfg-p100-mode" aria-label="P100 allocation mode">
+                    <option value="unified">Unified 32GB (single model spans both)</option>
+                    <option value="split">Split (independent 16GB each)</option>
+                </select>
+            </div>
+            <p style="color:#666; font-size:0.85rem; margin-top:0.5rem;">
+                Unified: one large model uses both P100s. Split: GPU0 runs one task, GPU1 reserved for KV cache or a second model.
+            </p>
+        </div>
+
+        <!-- GPU0 Assignment -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">P100 #1 (GPU 0)</span>
+            </div>
+            <div class="row">
+                <label>Role:</label>
+                <select id="cfg-gpu0-role" aria-label="GPU 0 role">
+                    <option value="coder">Coder (generation)</option>
+                    <option value="thinker">Thinker (reasoning)</option>
+                    <option value="sar-pipeline">SAR Pipeline</option>
+                    <option value="kv-cache">KV Cache Only</option>
+                    <option value="idle">Idle</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Model:</label>
+                <select id="cfg-gpu0-model" class="cfg-model-dropdown" aria-label="GPU 0 model">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- GPU1 Assignment -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">P100 #2 (GPU 1)</span>
+            </div>
+            <div class="row">
+                <label>Role:</label>
+                <select id="cfg-gpu1-role" aria-label="GPU 1 role">
+                    <option value="kv-cache">KV Cache / Overflow</option>
+                    <option value="coder">Coder (generation)</option>
+                    <option value="thinker">Thinker (reasoning)</option>
+                    <option value="sar-pipeline">SAR Pipeline</option>
+                    <option value="idle">Idle</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Model:</label>
+                <select id="cfg-gpu1-model" class="cfg-model-dropdown" aria-label="GPU 1 model">
+                    <option value="">-- Same as GPU0 (unified) --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Remote Nodes -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Remote Nodes</span>
+            </div>
+            <div class="row">
+                <label>Cesarops2 (1070):</label>
+                <select id="cfg-1070-role" aria-label="1070 role">
+                    <option value="corrector">Corrector (14B)</option>
+                    <option value="thinker">Thinker</option>
+                    <option value="idle">Idle</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Cesarops3 (1060):</label>
+                <select id="cfg-1060-role" aria-label="1060 role">
+                    <option value="thinker">Thinker (R1 7B)</option>
+                    <option value="scout">Scout (general)</option>
+                    <option value="idle">Idle</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Nautik9 Laptop:</label>
+                <select id="cfg-laptop-role" aria-label="Laptop role">
+                    <option value="idle">Idle / Available</option>
+                    <option value="thinker">Thinker</option>
+                    <option value="scout">Scout</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- SAVE -->
+        <div class="row" style="margin-top:2rem; gap:1rem;">
+            <button class="btn-apply" onclick="savePresetConfig()">Save CESAROPS</button>
+            <button class="btn-back" onclick="showView('view-main')">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let presetActive = true;
+        let discoveryInterval = null;
+        let monitorInterval = null;
+
+        // ---- VIEW SWITCHING ----
+        function showView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'view-configure') loadConfigureView();
+        }
+
+        // ---- PRESET TOGGLE ----
+        function togglePreset() {
+            if (presetActive) {
+                // Deactivate preset -> freeform mode
+                presetActive = false;
+                document.getElementById('btn-preset').classList.remove('active');
+                document.getElementById('btn-preset').textContent = 'CESAROPS';
+                document.getElementById('preset-status').textContent = 'Freeform mode. Resources available for coding/testing.';
+                document.getElementById('mode-badge').textContent = 'FREEFORM';
+                document.getElementById('mode-badge').className = 'mode-badge freeform';
+                document.getElementById('preset-display').classList.remove('locked');
+                log('CESAROPS deactivated. Freeform mode.');
+                fetch('/cluster/preset/deactivate', { method: 'POST' });
+            } else {
+                // Activate preset -> scanning mode
+                presetActive = true;
+                document.getElementById('btn-preset').classList.add('active');
+                document.getElementById('btn-preset').textContent = 'CESAROPS';
+                document.getElementById('preset-status').textContent = 'Locked in for SAR scanning. All resources allocated.';
+                document.getElementById('mode-badge').textContent = 'SCANNING';
+                document.getElementById('mode-badge').className = 'mode-badge scanning';
+                document.getElementById('preset-display').classList.add('locked');
+                log('CESAROPS activated. Locking resources for SAR scanning.');
+                fetch('/cluster/preset/activate', { method: 'POST' });
+            }
+        }
+
+        // ---- DISCOVERY ----
+        async function refreshDiscovery() {
+            const spinner = document.getElementById('discovery-spinner');
+            spinner.style.display = 'inline-block';
+            try {
+                const resp = await fetch('/cluster/discover');
+                const nodes = await resp.json();
+                renderNodes(nodes);
+            } catch(e) {
+                log('Discovery failed: ' + e.message);
+            }
+            setTimeout(() => { spinner.style.display = 'none'; }, 500);
+        }
+
+        function renderNodes(nodes) {
+            const grid = document.getElementById('node-grid');
+            grid.innerHTML = nodes.map(n => {
+                const cls = n.online ? 'online' : 'offline';
+                const dot = n.online ? 'dot-green' : 'dot-off';
+                const services = (n.ports || []).map(p =>
+                    `<span style="color:${p.online ? '#4caf50' : '#555'}">:${p.port} ${p.online ? '&#10003;' : '&#10007;'}</span>`
+                ).join(' ');
+                const gpu = n.gpu || '';
+                return `
+                <div class="node-card ${cls}">
+                    <div class="node-name"><span class="status-dot ${dot}"></span>${n.name}</div>
+                    <div class="node-ip">${n.ip}</div>
+                    ${gpu ? `<div class="node-gpu">${gpu}</div>` : ''}
+                    <div class="node-services">${services}</div>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- GPU MONITOR ----
+        async function refreshGpuStatus() {
+            try {
+                const resp = await fetch('/monitor');
+                const data = await resp.json();
+                renderGpus(data.gpus || []);
+            } catch(e) {}
+        }
+
+        function renderGpus(gpus) {
+            const container = document.getElementById('gpu-status');
+            container.innerHTML = gpus.map((g, i) => {
+                const pct = g.memory_total_mb > 0 ? Math.round((g.memory_used_mb / g.memory_total_mb) * 100) : 0;
+                return `
+                <div class="gpu-group">
+                    <div class="gpu-group-header">
+                        <span class="gpu-group-title">GPU ${g.index}: ${g.name}</span>
+                        <span style="color:#888">${g.temperature_c}C | ${g.utilization_pct}% util | ${g.power_draw_w}W</span>
+                    </div>
+                    <div style="color:#aaa; font-size:0.9rem;">VRAM: ${g.memory_used_mb}MB / ${g.memory_total_mb}MB (${pct}%)</div>
+                    <div class="gpu-bar"><div class="gpu-bar-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- CONFIGURE VIEW ----
+        async function loadConfigureView() {
+            try {
+                const resp = await fetch('/cluster/models');
+                const models = await resp.json();
+                document.querySelectorAll('.cfg-model-dropdown').forEach(sel => {
+                    const current = sel.dataset.current || '';
+                    sel.innerHTML = '<option value="">-- None --</option>' +
+                        models.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m.split('/').pop()}</option>`).join('');
+                });
+            } catch(e) {
+                log('Failed to load models: ' + e.message);
+            }
+
+            // Load current preset config
+            try {
+                const resp = await fetch('/cluster/preset/config');
+                const preset = await resp.json();
+                if (preset.p100_mode) document.getElementById('cfg-p100-mode').value = preset.p100_mode;
+                if (preset.gpu0_role) document.getElementById('cfg-gpu0-role').value = preset.gpu0_role;
+                if (preset.gpu1_role) document.getElementById('cfg-gpu1-role').value = preset.gpu1_role;
+                if (preset.node_1070) document.getElementById('cfg-1070-role').value = preset.node_1070;
+                if (preset.node_1060) document.getElementById('cfg-1060-role').value = preset.node_1060;
+                if (preset.node_laptop) document.getElementById('cfg-laptop-role').value = preset.node_laptop;
+            } catch(e) {}
+        }
+
+        async function savePresetConfig() {
+            const preset = {
+                p100_mode: document.getElementById('cfg-p100-mode').value,
+                gpu0_role: document.getElementById('cfg-gpu0-role').value,
+                gpu0_model: document.getElementById('cfg-gpu0-model').value,
+                gpu1_role: document.getElementById('cfg-gpu1-role').value,
+                gpu1_model: document.getElementById('cfg-gpu1-model').value,
+                node_1070: document.getElementById('cfg-1070-role').value,
+                node_1060: document.getElementById('cfg-1060-role').value,
+                node_laptop: document.getElementById('cfg-laptop-role').value,
+            };
+
+            try {
+                const resp = await fetch('/cluster/preset/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(preset)
+                });
+                const result = await resp.json();
+                log(result.message || 'CESAROPS config saved.');
+                updatePresetDisplay(preset);
+                showView('view-main');
+            } catch(e) {
+                log('Failed to save preset: ' + e.message);
+            }
+        }
+
+        function updatePresetDisplay(preset) {
+            const modeLabel = preset.p100_mode === 'unified' ? 'Unified 32GB' : 'Split 16GB + 16GB';
+            document.getElementById('ps-p100').textContent = modeLabel + ' \u2014 ' + (preset.gpu0_role || 'SAR Pipeline');
+            document.getElementById('ps-gpu0').textContent = preset.gpu0_role || 'Coder';
+            document.getElementById('ps-gpu1').textContent = preset.gpu1_role || 'KV Cache';
+            document.getElementById('ps-1070').textContent = preset.node_1070 || 'Corrector';
+            document.getElementById('ps-1060').textContent = preset.node_1060 || 'Thinker';
+            document.getElementById('ps-laptop').textContent = preset.node_laptop || 'Idle';
+        }
+
+        // ---- LOG ----
+        function log(msg) {
+            const el = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            el.textContent = `[${time}] ${msg}\n` + el.textContent;
+        }
+
+        // ---- INIT ----
+        refreshDiscovery();
+        refreshGpuStatus();
+        discoveryInterval = setInterval(refreshDiscovery, 30000);
+        monitorInterval = setInterval(refreshGpuStatus, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"execute_objective","arguments":{"objective":"Read steering/whitepaper-context.md for corrections and metrics. Then rewrite the white paper 'Segmented Accuracy Steering' with academic depth, code snippets, and the actual run data. Reference steering/design.md and steering/requirements.md for architecture details."}}}

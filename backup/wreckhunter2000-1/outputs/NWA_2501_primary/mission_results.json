@@ -1,0 +1,21 @@
+{
+  "mission": "NWA_2501_primary — NWA_2501_primary",
+  "bbox": [
+    43.05,
+    -86.85,
+    43.35,
+    -86.45
+  ],
+  "passes_enabled": [
+    "standard",
+    "nauticuvs",
+    "hydrocarbon",
+    "thermal",
+    "swir_silt_erasure"
+  ],
+  "total_detections": 0,
+  "hc_count": 0,
+  "known_hits": 0,
+  "detections": [],
+  "timestamp": "2026-04-14 12:10:37"
+}

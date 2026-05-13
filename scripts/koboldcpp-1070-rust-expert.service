@@ -1,0 +1,51 @@
+# ── Preset: GTX 1070 — Fortytwo Rust-Coder-14B (Xenon/i7 node) ──────────────
+# GTX 1070 8GB VRAM — i7 node (10.0.0.56) or Xenon
+# Best for: Rust-specific code generation, Copilot/Roo Code integration
+# Token speed: ~6-10 T/s (Q6_K on 8GB)
+# Port: 5002 (separate from the T440 main instance on 5001)
+#
+# Model choice:
+#   Q6_K (12GB) — needs CPU offload for ~4GB, still fast with 8GB on GPU
+#   Q8_0 (15GB) — needs more CPU offload, slower but highest quality
+#   Recommendation: Q6_K for best speed/quality balance on 8GB VRAM
+#
+# Install on i7/Xenon:
+#   sudo cp scripts/koboldcpp-1070-rust-expert.service /etc/systemd/system/koboldcpp-rust.service
+#   sudo systemctl daemon-reload && sudo systemctl enable koboldcpp-rust && sudo systemctl start koboldcpp-rust
+
+[Unit]
+Description=KoboldCPP — Fortytwo Rust-Coder-14B on GTX 1070
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=cesarops
+WorkingDirectory=/home/cesarops
+
+# Q6_K: 12GB total — ~8GB on GPU, ~4GB CPU offload
+# gpulayers 28 puts ~8GB on the 1070, rest on CPU RAM (fast enough)
+ExecStart=/home/cesarops/koboldcpp \
+    --model /mnt/data-external/cesarops/models/Fortytwo_Strand-Rust-Coder-14B-v1-Q6_K.gguf \
+    --port 5002 \
+    --host 0.0.0.0 \
+    --gpulayers 28 \
+    --usecublas \
+    --contextsize 4096 \
+    --threads 12 \
+    --multiuser 2
+
+# To use Q8_0 instead (higher quality, slower):
+# --model /mnt/data-external/cesarops/models/Fortytwo_Strand-Rust-Coder-14B-v1-Q8_0.gguf
+# --gpulayers 18
+
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=120
+StartLimitBurst=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=koboldcpp-rust
+
+[Install]
+WantedBy=multi-user.target

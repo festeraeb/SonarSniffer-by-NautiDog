@@ -1,0 +1,41 @@
+# ── Preset: Dual P100 — Qwen2.5-Coder-32B ────────────────────────────────────
+# Both T440 P100s (32GB total VRAM)
+# Best for: heavy coding tasks, long context, complex analysis
+# Token speed: ~8-12 T/s
+# Port: 5001
+#
+# Install:
+#   sudo cp scripts/koboldcpp-dual-p100-32b.service /etc/systemd/system/koboldcpp.service
+#   sudo systemctl daemon-reload && sudo systemctl enable koboldcpp && sudo systemctl start koboldcpp
+
+[Unit]
+Description=KoboldCPP — Qwen2.5-Coder-32B on dual P100 (T440)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=cesarops
+WorkingDirectory=/home/cesarops
+
+# 32B Q4_K_M: ~18GB — fits across both P100s with room for KV cache
+ExecStart=/home/cesarops/koboldcpp \
+    --model /home/cesarops/models/qwen2.5-coder-32b-instruct-q4_k_m.gguf \
+    --port 5001 \
+    --host 0.0.0.0 \
+    --gpulayers 64 \
+    --usecublas \
+    --contextsize 8192 \
+    --threads 16 \
+    --multiuser 4
+
+Restart=always
+RestartSec=15
+StartLimitIntervalSec=180
+StartLimitBurst=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=koboldcpp
+
+[Install]
+WantedBy=multi-user.target

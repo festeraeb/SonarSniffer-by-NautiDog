@@ -1,0 +1,50 @@
+# ── Preset: Single P100 — Qwen2.5-14B (main) + Phi-3-mini (speculative) ──────
+# T440 GPU0 only (16GB VRAM)
+# Best for: fast coding completions, reasoning-assisted generation
+# Token speed: ~18-25 T/s (speculative decoding with Phi-3 draft)
+# Port: 5001
+#
+# KoboldCPP speculative decoding: main model generates, draft model proposes
+# tokens ahead — accepted tokens are free, rejected tokens cost one step.
+# Phi-3-mini (2.3GB) fits alongside Qwen-14B (8.4GB) in 16GB.
+#
+# Install:
+#   sudo cp scripts/koboldcpp-single-p100-14b.service /etc/systemd/system/koboldcpp.service
+#   sudo systemctl daemon-reload && sudo systemctl enable koboldcpp && sudo systemctl start koboldcpp
+
+[Unit]
+Description=KoboldCPP — Qwen2.5-14B + Phi-3 speculative on single P100 (T440)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=cesarops
+WorkingDirectory=/home/cesarops
+
+# Main model: Qwen2.5-Coder-14B on GPU0 (8.4GB)
+# Draft model: Phi-3-mini for speculative decoding (2.3GB)
+# Total VRAM: ~11GB — fits in 16GB with KV cache headroom
+ExecStart=/home/cesarops/koboldcpp \
+    --model /home/cesarops/models/qwen2.5-coder-14b-instruct-q4_k_m.gguf \
+    --port 5001 \
+    --host 0.0.0.0 \
+    --gpulayers 48 \
+    --usecublas \
+    --contextsize 4096 \
+    --threads 16 \
+    --multiuser 4 \
+    --draftmodel /home/cesarops/models/Phi-3-mini-4k-instruct-Q4_K_M.gguf \
+    --draftgpulayers 32 \
+    --draftamount 8
+
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=120
+StartLimitBurst=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=koboldcpp
+
+[Install]
+WantedBy=multi-user.target

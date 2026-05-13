@@ -1,0 +1,8 @@
+{
+  "bbox_name": null,
+  "tools": [
+    "thermal",
+    "optical"
+  ],
+  "sensitivity": 2.0
+}

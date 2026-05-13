@@ -1,0 +1,25 @@
+[Unit]
+Description=CESAROPS Thought Engine Daemon
+After=network.target koboldcpp.service
+Wants=koboldcpp.service
+
+[Service]
+Type=simple
+User=cesarops
+Group=cesarops
+WorkingDirectory=/home/cesarops/thought-engine
+ExecStart=/home/cesarops/thought_engine_venv/bin/python /home/cesarops/thought-engine/thought_engine.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+Environment=THOUGHT_ENGINE_PORT=5556
+Environment=KOBOLD_BASE_URL=http://localhost:5555/v1
+Environment=NAUTIVECS_URL=http://100.72.182.77:5003
+Environment=CESAROPS_API_URL=http://100.72.182.77:5001
+
+[Install]
+WantedBy=multi-user.target

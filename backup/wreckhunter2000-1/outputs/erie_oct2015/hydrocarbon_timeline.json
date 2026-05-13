@@ -1,0 +1,25 @@
+{
+  "first_detection_date": "2015-10-01",
+  "first_detection_count": 284,
+  "source_coords": {
+    "lat": 41.89019,
+    "lon": -79.65909
+  },
+  "total_hc_detections": 284,
+  "daily_counts": {
+    "2015-10-01": 284
+  },
+  "all_dates_with_hc": [
+    "2015-10-01"
+  ],
+  "daily_scan_summary": [
+    {
+      "date": "2015-10-01",
+      "condition": "storm",
+      "total_detections": 2844,
+      "hydrocarbon_count": 284,
+      "mb2_zone_count": 302,
+      "tiff_count": 17
+    }
+  ]
+}

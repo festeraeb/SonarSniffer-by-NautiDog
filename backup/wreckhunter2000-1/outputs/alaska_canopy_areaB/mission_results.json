@@ -1,0 +1,20 @@
+{
+  "mission": "alaska_canopy_areaB — alaska_canopy_areaB",
+  "bbox": [
+    63.25,
+    -149.5,
+    63.75,
+    -148.0
+  ],
+  "passes_enabled": [
+    "standard",
+    "nauticuvs",
+    "hydrocarbon",
+    "swir_silt_erasure"
+  ],
+  "total_detections": 0,
+  "hc_count": 0,
+  "known_hits": 0,
+  "detections": [],
+  "timestamp": "2026-04-14 12:09:24"
+}

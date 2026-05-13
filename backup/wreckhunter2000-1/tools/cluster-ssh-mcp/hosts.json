@@ -1,0 +1,22 @@
+{
+  "t440_dual_p100": {
+    "host": "10.0.0.61",
+    "users": ["cesarops", "cesarios"],
+    "port": 22
+  },
+  "xeon": {
+    "host": "100.102.158.111",
+    "users": ["cesarops1"],
+    "port": 22
+  },
+  "p1000": {
+    "host": "100.105.77.74",
+    "users": ["cesarops"],
+    "port": 22
+  },
+  "gtx1060": {
+    "host": "10.0.0.204",
+    "users": ["cesarops"],
+    "port": 22
+  }
+}

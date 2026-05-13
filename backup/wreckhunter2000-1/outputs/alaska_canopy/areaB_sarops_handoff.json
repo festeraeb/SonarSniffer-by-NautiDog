@@ -1,0 +1,13 @@
+{
+  "sarops_sectors": [
+    {
+      "lat": 63.5,
+      "lon": -148.75,
+      "probability_weight": 0.16666666666666666,
+      "detection_method": "area_center",
+      "description": "Coverage confirmed for Denali Foothills (Spruce/Tundra Transition). SAR tiles need download for pixel-level analysis. Recommend: Sentinel-1 IW GRD + ALOS-2 L-band for deep canopy.",
+      "recommended_followup": "helicopter visual"
+    }
+  ],
+  "crs": "WGS84"
+}

@@ -1,0 +1,55 @@
+# /etc/systemd/system/searxng-native.service
+#
+# Native systemd service for SearXNG search engine.
+# Installed by scripts/deploy_native_search.sh
+#
+# Usage:
+#   sudo systemctl enable searxng-native
+#   sudo systemctl start searxng-native
+#   journalctl -u searxng-native -f
+
+[Unit]
+Description=CESAROPS Sovereign SearXNG Search Engine
+Documentation=https://docs.searxng.org/
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/mnt/data-external/cesarops
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+Environment=SEARXNG_SETTINGS_PATH=/mnt/data-external/cesarops/searxng-settings.yml
+Environment=PATH=/mnt/data-external/cesarops/searxng-venv/bin:/usr/local/bin:/usr/bin:/bin
+
+# Start command
+ExecStart=/mnt/data-external/cesarops/searxng-venv/bin/python -m searxng --host 127.0.0.1 --port 8888
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=searxng-native
+
+# Security hardening (no Docker needed — native Linux security)
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/mnt/data-external/cesarops
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

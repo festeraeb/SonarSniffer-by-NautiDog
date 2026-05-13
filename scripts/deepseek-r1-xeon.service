@@ -1,0 +1,27 @@
+[Unit]
+Description=DeepSeek-R1 Researcher on Xeon DDR4 (CPU-only, Socket 1)
+After=network.target
+
+[Service]
+Type=simple
+User=cesarops
+# Pin to Socket 1 (Cores 8-15) — leaves Socket 0 free for P100 feeding
+ExecStart=/usr/bin/numactl --cpunodebind=1 --membind=1 \
+    /home/cesarops/koboldcpp \
+    --model /mnt/data-external/cesarops/models/DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.gguf \
+    --port 5557 \
+    --threads 8 \
+    --contextsize 8192 \
+    --usecublas 0 \
+    --blasbatchsize 1 \
+    --quiet
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=deepseek-r1-xeon
+# Limit to Socket 1 memory
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

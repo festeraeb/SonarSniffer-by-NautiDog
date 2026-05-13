@@ -1,0 +1,1 @@
+{"query": "Write a Rust function called calculate_ndwi that takes two f32 slices (green band and nir band) and returns a Vec of f32 containing the NDWI water index. The formula is (green - nir) / (green + nir). Handle division by zero by returning 0.0. Include a unit test."}

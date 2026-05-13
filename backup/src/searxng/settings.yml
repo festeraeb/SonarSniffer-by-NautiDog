@@ -1,0 +1,136 @@
+# SearXNG Settings for CESAROPS Sovereign Search
+# Installed at: /mnt/data-external/cesarops/searxng-settings.yml
+#
+# This configuration enables JSON API, restricts access to localhost,
+# and curates a set of reliable search engines suitable for technical research.
+
+use_default_settings: true
+
+general:
+  instance_name: "CESAROPS Sovereign Search"
+  debug: false
+  privacypolicy_enabled: false
+  open_metrics: false
+
+search:
+  safe_search: 0          # 0=off, 1=moderate, 2=strict
+  autocomplete: "google"   # Autocomplete provider
+  default_lang: "en"       # Default language
+  formats:
+    - html                 # HTML results (for browser testing)
+    - json                 # JSON results (for programmatic access)
+
+server:
+  port: 8888
+  bind_address: "127.0.0.1"  # Localhost only — no public access
+  secret_key: "{{SECRET_KEY}}"  # Replaced by deploy script
+  limiter: false           # No rate limiting (internal use only)
+  method: "GET"            # Use GET requests (more cacheable)
+  image_proxy: false       # Don't proxy images
+  http_protocol_version: "1.1"
+
+ui:
+  static_use_hash: true
+  default_theme: simple
+  theme_args:
+    style_simple_auto: true
+
+outgoing:
+  request_timeout: 8.0
+  max_request_timeout: 15.0
+  useragent_prefix: ["CESAROPS", ""]
+  pool_connections: 10
+  pool_maxsize: 10
+  keepalive_expiry: 5.0
+
+# ── Enabled Engines ───────────────────────────────────────────────────────────
+engines:
+  # Primary search engines
+  - name: google
+    engine: google
+    shortcut: g
+    disabled: false
+
+  - name: bing
+    engine: bing
+    shortcut: b
+    disabled: false
+
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+
+  - name: brave
+    engine: brave
+    shortcut: br
+    disabled: false
+    api_key: "${BRAVE_API_KEY:-}"
+
+  # Academic and technical sources
+  - name: arxiv
+    engine: arxiv
+    shortcut: arx
+    disabled: false
+
+  - name: semantic_scholar
+    engine: semantic_scholar
+    shortcut: ss
+    disabled: false
+
+  - name: crossref
+    engine: crossref
+    shortcut: cr
+    disabled: false
+
+  - name: pubmed
+    engine: pubmed
+    shortcut: pm
+    disabled: false
+
+  - name: wolframalpha
+    engine: wolframalpha
+    shortcut: wa
+    disabled: false
+    api_key: "${WOLFRAM_API_KEY:-}"
+
+  # Q&A and code
+  - name: stackoverflow
+    engine: stackoverflow
+    shortcut: so
+    disabled: false
+
+  - name: stackexchange
+    engine: stackexchange
+    shortcut: se
+    disabled: false
+
+  - name: github
+    engine: github
+    shortcut: gh
+    disabled: false
+
+  # Reference
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+    disabled: false
+
+  - name: wikidata
+    engine: wikidata
+    shortcut: wd
+    disabled: true   # Keep disabled unless needed
+
+# ── Disabled Engines (noisy/low-value for sovereign use) ──────────────────────
+# All other engines are implicitly disabled by use_default_settings + explicit disables below.
+# The deploy script writes a comprehensive disable list to prevent unwanted engines from activating.
+
+# Logging
+logging:
+  file:
+    level: WARNING
+    enabled: false
+    filename: /tmp/searxng.log
+  console:
+    level: INFO
+    enabled: true

@@ -1,0 +1,73 @@
+{
+  "name": "Model Team Orchestrator (Reasoning + Coding)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "model-team-run",
+        "responseMode": "responseNode"
+      },
+      "id": "1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        280,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/node/.n8n/wreckhunter2000-1 && REASONING_BASE_URL=${REASONING_BASE_URL:-http://host.docker.internal:5001/v1} CODING_BASE_URL=${CODING_BASE_URL:-http://host.docker.internal:5002/v1} cargo run --release -p cesarops-slicer --bin model_team_tool -- --task \"{{$json.body.task}}\" --output outputs/model_team/latest.json"
+      },
+      "id": "2",
+      "name": "Run Rust Model Team Tool",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        560,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"ok\",\"stdout\":$json.stdout,\"stderr\":$json.stderr,\"output_file\":\"outputs/model_team/latest.json\"}",
+        "options": {}
+      },
+      "id": "3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Rust Model Team Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Rust Model Team Tool": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

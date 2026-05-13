@@ -1,0 +1,118 @@
+[
+  {
+    "domain": "bathymetry",
+    "timestamp": "2026-05-07T00:29:41.213969+00:00",
+    "papers_found": 0,
+    "papers_relevant": 0,
+    "papers": [],
+    "synthesis": ""
+  },
+  {
+    "domain": "curvelet_gpu",
+    "timestamp": "2026-05-07T00:59:51.627903+00:00",
+    "papers_found": 5,
+    "papers_relevant": 5,
+    "papers": [
+      {
+        "title": "Curvelet-Based Frequency-Aware Feature Enhancement for Deepfake Detection",
+        "source": "http://arxiv.org/abs/2604.12028v1",
+        "year": 2026
+      },
+      {
+        "title": "Polynomial curvelets on higher-dimensional spheres",
+        "source": "http://arxiv.org/abs/2603.12825v1",
+        "year": 2026
+      },
+      {
+        "title": "Curvelet-Regularized SPDE Inversion on Piecewise-Planar Fractures with Trace-Graph Coupling",
+        "source": "http://arxiv.org/abs/2601.17485v1",
+        "year": 2026
+      },
+      {
+        "title": "GPU Implementation of the Wavelet Tree",
+        "source": "http://arxiv.org/abs/2505.03372v1",
+        "year": 2025
+      },
+      {
+        "title": "2D Empirical Transforms. Wavelets, Ridgelets and Curvelets revisited",
+        "source": "http://arxiv.org/abs/2410.23533v1",
+        "year": 2024
+      }
+    ],
+    "synthesis": "\n\n1. Key technique from the papers\nThe third paper introduces an $\\ell_1$ penalty on undecimated discrete curvelet coefficients to enforce anisotropic, fracture-aligned structures during sparse-to-dense reconstruction. This approach leverages the directional sensitivity of curvelets to better capture elongated or planar features that isotropic smoothness priors fail to represent.\n\n2. How it could improve CESAROPS\nApplying this $\\ell_1$-regularized curvelet prior to your sub-surface anomaly detection could enhance the identification of shipwreck hulls, which often exhibit linear or planar geometric structures. This would improve the separation of true wreck anomalies from isotropic noise or natural seabed variations by explicitly penalizing deviations from anisotropic, fracture-aligned patterns.\n\n3. Specific parameter or algorithm change to test\nAdd an $\\ell_1$ regularization term on the undecimated discrete curvelet coefficients within your current f64 AVX-512 reconstruction objective to enforce anisotropic sparsity constraints during sub-surface anomaly extraction."
+  },
+  {
+    "domain": "wreck_detection",
+    "timestamp": "2026-05-07T01:29:53.036218+00:00",
+    "papers_found": 0,
+    "papers_relevant": 0,
+    "papers": [],
+    "synthesis": ""
+  },
+  {
+    "domain": "hydrocarbon",
+    "timestamp": "2026-05-07T02:00:05.586166+00:00",
+    "papers_found": 5,
+    "papers_relevant": 3,
+    "papers": [
+      {
+        "title": "Counting own goals: High-level assessment of the economic relationship between the ICT and the Oil and Gas sectors and its environmental implications",
+        "source": "http://arxiv.org/abs/2604.26539v1",
+        "year": 2026
+      },
+      {
+        "title": "Solve Crude Oil Scheduling Problems by Using Quantum-Classical Hybrid Algorithms",
+        "source": "http://arxiv.org/abs/2604.26459v1",
+        "year": 2026
+      },
+      {
+        "title": "From Noisy Historical Maps to Time-Series Oil Palm Mapping Without Annotation in Malaysia and Indonesia (2020-2024)",
+        "source": "http://arxiv.org/abs/2604.23776v1",
+        "year": 2026
+      }
+    ],
+    "synthesis": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Context:** Analyzing real research papers about hydrocarbons for the CESAROPS shipwreck detection system.\n   - **Constraint:** Based ONLY on the abstracts below (do not invent facts).\n   - **System Components:**\n     - Curvelet transforms (f64, AVX-512 Xeon) for sub-surface anomaly detection\n     - wgpu/Vulkan compute shaders (f32) for parallel dipole scanning on Tesla P100\n     - NOAA buoy weather data to pick optimal satellite download days\n     - Sentinel-1 SAR + optical multispectral fusion\n   - **Papers Provided:**\n     1. *Counting own goals...* (ICT & Oil/Gas environmental impact) - Abstract cuts off, but topic is environmental/economic impact of digitalization in O&G. Not directly relevant to detection pipeline.\n     2. *Solve Crude Oil Scheduling Problems...* (Quantum-classical hybrid algorithms for MILP scheduling) - Topic is optimization of crude oil scheduling, NP-hard MILP, quantum-classical hybrid framework. Not directly relevant to shipwreck/SAR detection.\n     3. *From Noisy Historical Maps to Time-Series Oil Palm Mapping...* (Deep learning framework for 10m resolution oil palm maps from Sentinel-2, 2020"
+  },
+  {
+    "domain": "turbidity",
+    "timestamp": "2026-05-07T02:30:07.072736+00:00",
+    "papers_found": 0,
+    "papers_relevant": 0,
+    "papers": [],
+    "synthesis": ""
+  },
+  {
+    "domain": "sar_maritime",
+    "timestamp": "2026-05-07T03:00:18.471081+00:00",
+    "papers_found": 5,
+    "papers_relevant": 5,
+    "papers": [
+      {
+        "title": "SARES-DEIM: Sparse Mixture-of-Experts Meets DETR for Robust SAR Ship Detection",
+        "source": "http://arxiv.org/abs/2604.04127v1",
+        "year": 2026
+      },
+      {
+        "title": "Denoising-Enhanced YOLO for Robust SAR Ship Detection",
+        "source": "http://arxiv.org/abs/2602.23820v1",
+        "year": 2026
+      },
+      {
+        "title": "Maritime object classification with SAR imagery using quantum kernel methods",
+        "source": "http://arxiv.org/abs/2512.11367v2",
+        "year": 2025
+      },
+      {
+        "title": "Lightweight CNNs for Embedded SAR Ship Target Detection and Classification",
+        "source": "http://arxiv.org/abs/2508.10712v1",
+        "year": 2025
+      },
+      {
+        "title": "Feature-Space Oversampling for Addressing Class Imbalance in SAR Ship Classification",
+        "source": "http://arxiv.org/abs/2508.06420v1",
+        "year": 2025
+      }
+    ],
+    "synthesis": "\n\n1. Key technique from the papers\nThe papers highlight the critical need for specialized denoising modules, such as learnable large-kernel filters or domain-aware sparse mixture-of-experts, to mitigate SAR-specific coherent speckle noise and complex coastal clutter. These methods preserve fine-grained target signatures that are typically lost during standard spatial downsampling or conventional processing.\n\n2. How it could improve CESAROPS\nIntegrating a learnable denoising pre-processing step before the wgpu/Vulkan dipole scanning would reduce false alarms caused by speckle noise, enhancing the signal-to-noise ratio for sub-surface anomalies. This allows the existing Curvelet transform and parallel scanning stages to operate on cleaner data, improving detection precision for small-scale shipwreck signatures.\n\n3. Specific parameter or algorithm change to test\nImplement a learnable large-kernel denoising module (as proposed in CPN-YOLO) as a pre-processing stage for the Sentinel-1 SAR input before it enters the Curvelet transform pipeline."
+  }
+]

@@ -1,0 +1,109 @@
+# Cluster Configuration — managed by web UI
+# Anything we can't handle natively falls back to KoboldCPP
+
+[bootstrap]
+model = "/codebase/models/qwen2.5-coder-1.5b-instruct-q6_k.gguf"
+port = 5002
+backend = "cpu"
+template = "qwen2.5"
+
+[fallback]
+# KoboldCPP handles formats we don't support (MXFP4, GGML v1, etc.)
+enabled = true
+binary = "/home/cesarops/koboldcpp"
+port = 5001
+# Supported native quant types (everything else goes to koboldcpp)
+native_quants = ["Q4_0", "Q4_K_M", "Q6_K", "Q8_0", "F16", "F32", "BF16"]
+
+[[gpu]]
+id = 0
+name = "P100 #1"
+bus_id = "5E:00.0"
+vram_mb = 16384
+host = "local"
+
+[[gpu]]
+id = 1
+name = "P100 #2"
+bus_id = "AF:00.0"
+vram_mb = 16384
+host = "local"
+
+[[gpu]]
+id = 2
+name = "GTX 1060"
+vram_mb = 6144
+host = "100.105.77.74"
+port_base = 5570
+
+[[worker]]
+name = "Thinker"
+role = "think"
+gpu = 0
+model = "/codebase/models/Qwen2.5-Coder-7B-Instruct-abliterated-Q8_0.gguf"
+port = 5010
+template = "qwen2.5"
+enabled = true
+
+[[worker]]
+name = "Coder"
+role = "code"
+gpu = 1
+model = "/codebase/models/Qwen2.5-Coder-14B-Instruct-abliterated-Q6_K.gguf"
+port = 5011
+template = "qwen2.5"
+enabled = false
+
+[[worker]]
+name = "Scout"
+role = "general"
+gpu = 2
+model = ""
+port = 5570
+template = "qwen2.5"
+enabled = false
+host = "100.105.77.74"
+
+[models_dir]
+path = "/codebase/models"
+
+# Nodes to poll for availability (Tailscale IPs)
+# The forge probes these on /health every 30s to see who's online
+[[known_nodes]]
+name = "T440 (local)"
+ip = "127.0.0.1"
+gpu = "2x P100 16GB"
+ports = [5002, 5010, 5011]
+
+[[known_nodes]]
+name = "Cesarops2 (1070)"
+ip = "100.102.158.111"
+gpu = "GTX 1070 8GB"
+ports = [5555, 5571]
+
+[[known_nodes]]
+name = "Cesarops3 (1060)"
+ip = "100.105.77.74"
+gpu = "GTX 1060 6GB"
+ports = [5570]
+
+[[known_nodes]]
+name = "Nautik9 Laptop"
+ip = "100.110.214.86"
+gpu = "Maxwell (Laptop)"
+ports = [5002]
+
+[routing]
+default_mode = "auto"
+
+[tuning]
+# How many think-only rounds before declaring the model stuck
+max_think_rounds = 20
+# Main generation timeout in seconds
+generation_timeout_secs = 600
+# Thinker preflight timeout in seconds
+thinker_timeout_secs = 60
+# Max tokens for main generation
+max_generation_tokens = 12288
+# Starting temperature
+temperature = 0.4

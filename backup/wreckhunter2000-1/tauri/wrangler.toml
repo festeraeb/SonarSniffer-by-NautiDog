@@ -1,0 +1,15 @@
+name = "cesarops-wreckhunter"
+compatibility_date = "2024-01-01"
+
+# Deploy: cd tauri && npm run build && npx wrangler pages deploy dist --project-name cesarops-wreckhunter
+# First deploy creates the project under <name>.pages.dev; subsequent deploys update it.
+# Wrangler Pages is free and does NOT require your domain to be on Cloudflare.
+# The built static files are uploaded to Cloudflare's CDN directly.
+#
+# To set a custom domain (app.cesarops.com → pages.dev):
+#   Cloudflare dashboard → Pages → cesarops-wreckhunter → Custom domains
+#   Add a CNAME in IONOS DNS:  app  →  cesarops-wreckhunter.pages.dev
+
+[vars]
+# DNS on Cloudflare — all traffic through tunnel with full SSL
+VITE_API_BASE = "https://api.cesarops.org"

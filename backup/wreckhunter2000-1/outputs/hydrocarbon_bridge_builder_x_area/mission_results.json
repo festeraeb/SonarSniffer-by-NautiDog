@@ -1,0 +1,154 @@
+{
+  "mission": "HC pass — B11 SWIR dark anomaly + B04 Red bright confirm (oi",
+  "bbox": [
+    45.7,
+    -84.7,
+    45.8,
+    -84.5
+  ],
+  "passes_enabled": [
+    "hydrocarbon"
+  ],
+  "total_detections": 8,
+  "hc_count": 8,
+  "known_hits": 0,
+  "detections": [
+    {
+      "lat": 43.607867419076946,
+      "lon": -85.13546247036369,
+      "zscore": -2.9832475185394287,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 12,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 3500,
+        "col": 2523
+      }
+    },
+    {
+      "lat": 43.580834022144856,
+      "lon": -84.79073932612636,
+      "zscore": -2.4921324253082275,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 6,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 3616,
+        "col": 3918
+      }
+    },
+    {
+      "lat": 43.5789084697309,
+      "lon": -84.80294718904796,
+      "zscore": -2.7128725051879883,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 4,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 3628,
+        "col": 3869
+      }
+    },
+    {
+      "lat": 43.57819342486497,
+      "lon": -84.80322090055553,
+      "zscore": -2.1655335426330566,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 5,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 3632,
+        "col": 3868
+      }
+    },
+    {
+      "lat": 43.55102731259103,
+      "lon": -85.20703693598135,
+      "zscore": -2.402761936187744,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 6,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 3822,
+        "col": 2241
+      }
+    },
+    {
+      "lat": 43.43699049537522,
+      "lon": -85.66438090734243,
+      "zscore": -2.344501256942749,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 6,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 4490,
+        "col": 404
+      }
+    },
+    {
+      "lat": 43.3622879379303,
+      "lon": -84.66738270993213,
+      "zscore": -2.2445249557495117,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 4,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 4816,
+        "col": 4450
+      }
+    },
+    {
+      "lat": 43.32732342262692,
+      "lon": -85.26272184095949,
+      "zscore": -2.9725849628448486,
+      "type": "hydrocarbon",
+      "source": "S2A_16TFP_20221029_0_L2A.swir16.tif",
+      "band": "B11_SWIR",
+      "area_pixels": 5,
+      "line5_candidate": false,
+      "known_wreck_hit": null,
+      "known_wreck_name": null,
+      "hc_subtype": "UNKNOWN_DIFFUSE",
+      "pixel": {
+        "row": 5069,
+        "col": 2042
+      }
+    }
+  ],
+  "timestamp": "2026-04-11 20:54:21"
+}

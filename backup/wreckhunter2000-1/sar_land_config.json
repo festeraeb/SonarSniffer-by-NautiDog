@@ -1,0 +1,173 @@
+{
+  "_schema": "sar_land_v1",
+  "_description": "Search and Rescue sidecar config for land-based wreck detection (aircraft crash sites in terrain). Loaded by wreck_ml_trainer.py and lake_michigan_scan.py when environment='land' entries are processed.",
+  "_complement": "sensor_config.json covers underwater/water-surface detection. This file covers land/terrain metal detection only.",
+
+  "detection_mode": "sar_land",
+
+  "band_priority": {
+    "_note": "Ranked by utility for metal-on-land detection. SWIR penetrates vegetation canopy; thermal picks up differential heating; NIR/NDVI reveals impact clearing.",
+    "primary": [
+      {
+        "band": "B11",
+        "hls_name": "B11",
+        "wavelength_nm": "1565-1655",
+        "resolution_m": 20,
+        "purpose": "Primary metal detector — aluminum/steel strongly reflects SWIR. Partial canopy penetration. High z-score bright patch = exposed metal.",
+        "z_threshold": 1.8,
+        "mode": "bright"
+      },
+      {
+        "band": "B12",
+        "hls_name": "B12",
+        "wavelength_nm": "2100-2280",
+        "resolution_m": 20,
+        "purpose": "Secondary SWIR — oxidized/corroded steel corrosion signature. Complement to B11.",
+        "z_threshold": 1.6,
+        "mode": "bright"
+      }
+    ],
+    "secondary": [
+      {
+        "band": "B10",
+        "hls_name": "ST_B10",
+        "wavelength_nm": "10600-11200",
+        "resolution_m": 100,
+        "purpose": "Diurnal thermal anomaly — hollow fuselages and bare metal heat/cool faster than surrounding soil and canopy. Use morning imagery for cold-metal signatures, midday for hot-metal.",
+        "z_threshold": 1.8,
+        "thermal_modes": {
+          "morning_cold_metal": { "mode": "cold_sink", "z_threshold": -2.0, "hour_utc_window": [13, 16] },
+          "midday_hot_metal":   { "mode": "hot_source", "z_threshold": 2.0, "hour_utc_window": [17, 21] }
+        }
+      },
+      {
+        "band": "NDVI",
+        "derived_from": ["B08", "B04"],
+        "purpose": "Persistent impact clearing — crash sites create vegetation gaps that remain detectable for decades. NDVI depression (lower than surrounding pixels) marks clearing edge.",
+        "ndvi_depression_threshold": -0.25,
+        "min_clearing_area_m2": 200
+      }
+    ],
+    "avoid": [
+      { "band": "B02", "reason": "Blue — water penetration band; irrelevant on land." },
+      { "band": "B03", "reason": "Green — minimal discrimination of metal on land." }
+    ]
+  },
+
+  "terrain_modes": {
+    "_note": "Select the appropriate mode based on crash site environment. Controls which band combination and thresholds are used.",
+    "alpine_above_treeline": {
+      "description": "High altitude, minimal or no vegetation. Examples: Humphreys Peak AZ.",
+      "primary_band": "B11",
+      "ndvi_baseline": 0.05,
+      "swir_z_threshold": 1.5,
+      "thermal_z_threshold": 1.6,
+      "canopy_attenuation": "none",
+      "best_season": "any",
+      "best_time_of_day": "midday (11:00-14:00 local) for maximum thermal contrast"
+    },
+    "forested_conifer": {
+      "description": "Dense conifer forest (spruce, fir, pine). Year-round canopy. Examples: Mt. Success NH, Allenspark CO.",
+      "primary_band": "B11",
+      "ndvi_baseline": 0.65,
+      "swir_z_threshold": 2.2,
+      "thermal_z_threshold": 2.0,
+      "canopy_attenuation": "heavy",
+      "canopy_penetration_note": "B11 SWIR penetrates ~30-50% of dense conifer canopy. Increase z-threshold to reduce false positives from sun-lit canopy gaps. Best results when target is partially exposed (clearing edge or ridge).",
+      "best_season": "any (evergreen canopy constant year-round)",
+      "best_time_of_day": "morning (golden hour differential cooling)"
+    },
+    "forested_deciduous": {
+      "description": "Deciduous hardwood (oak, maple, birch). Canopy present May-October. Examples: Kaaterskill NY, Waterrock Knob NC.",
+      "primary_band": "B11",
+      "ndvi_baseline": 0.70,
+      "swir_z_threshold": 1.8,
+      "thermal_z_threshold": 1.9,
+      "canopy_attenuation": "seasonal",
+      "leaf_off_window": {
+        "months": [11, 12, 1, 2, 3, 4],
+        "swir_z_threshold_override": 1.5,
+        "note": "Leaf-off exposes metal directly. Lower threshold during leaf-off season."
+      },
+      "leaf_on_window": {
+        "months": [5, 6, 7, 8, 9, 10],
+        "swir_z_threshold_override": 2.2,
+        "note": "Full canopy attenuates SWIR. Rely on NDVI clearing depression and thermal instead."
+      },
+      "best_season": "leaf-off (November through April)",
+      "best_time_of_day": "morning for thermal, midday for SWIR leaf-off"
+    },
+    "coastal_cliff": {
+      "description": "Exposed rock face, minimal vegetation, coastal environment. Examples: Cape Lookout OR.",
+      "primary_band": "B11",
+      "ndvi_baseline": 0.1,
+      "swir_z_threshold": 1.6,
+      "thermal_z_threshold": 1.7,
+      "canopy_attenuation": "minimal",
+      "salt_oxidation_note": "Coastal wrecks show enhanced oxidation in B12 (rust) and slight red-band elevation from iron oxide. Check B12/B11 ratio for salt-corroded iron signature.",
+      "ocean_adjacency_note": "Check adjacent ocean pixels for residual fuel/oil sheen using HC pass (B11 dark water anomaly).",
+      "best_season": "any",
+      "best_time_of_day": "midday for maximum thermal contrast on bare rock"
+    }
+  },
+
+  "training_patch": {
+    "_note": "Overrides wreck_ml_trainer.py PATCH_HALF=8 (17x17) for land wrecks. Land debris fields are larger and more dispersed than underwater hull footprints.",
+    "patch_half_intact_fuselage": 10,
+    "patch_half_scattered_debris": 20,
+    "patch_half_default": 12,
+    "patch_size_note": "T-33/Beechcraft 18 (intact): use 10 (21x21 = 630m @ 30m/px). Cessna 182 Humphreys (scattered): use 20 (41x41 = 1230m). Default 12 (25x25 = 750m).",
+    "negatives_multiplier": 4,
+    "negative_sample_strategy": "sample from same tile at >500m from any known wreck GPS, within same terrain type (avoid sampling open water or road pixels as negatives)"
+  },
+
+  "detection_radius_m": {
+    "_note": "Override for _flag_known_wreck() radius. Land debris fields are larger than underwater hull footprints.",
+    "intact_fuselage": 150,
+    "scattered_debris": 400,
+    "default": 200,
+    "water_default": 444
+  },
+
+  "scoring_weights": {
+    "_note": "Feature importance adjustments for land-mode wreck scoring. Applied on top of base LightGBM model.",
+    "swir_b11_mean": 1.8,
+    "swir_b12_mean": 1.4,
+    "thermal_zscore": 1.3,
+    "ndvi_depression": 1.6,
+    "log_energy_blob": 1.2,
+    "blue_mean": 0.1,
+    "stumpf_ratio": 0.0
+  },
+
+  "seasonal_collection_windows": {
+    "_note": "Preferred satellite collection months per terrain type for maximum detection probability.",
+    "alpine": { "preferred_months": [7, 8], "reason": "Snow-free summit; maximum metal exposure" },
+    "forested_conifer": { "preferred_months": [1, 2, 3], "reason": "Low sun angle creates oblique illumination that enhances linear features (fuselage)" },
+    "forested_deciduous": { "preferred_months": [11, 12, 1, 2, 3], "reason": "Leaf-off window; direct SWIR view of metal" },
+    "coastal_cliff": { "preferred_months": "any", "reason": "Minimal canopy; geometry-independent" }
+  },
+
+  "cmr_download_bands": {
+    "_note": "Which HLS bands to request from CMR for land-SAR tile downloads.",
+    "required": ["B11", "B12", "B08", "B04"],
+    "optional": ["ST_B10"],
+    "skip": ["B02", "B03", "Fmask", "SAA", "SZA", "VAA", "VZA"]
+  },
+
+  "known_wreck_ids_land": [
+    "t33_allenspark_co",
+    "cessna414_waterrock_knob_nc",
+    "cessna182_humphreys_peak_az",
+    "pa25_cape_lookout_or",
+    "beechcraft18_mt_success_nh",
+    "pa28_kaaterskill_high_peak_ny"
+  ],
+
+  "pipeline_notes": {
+    "trainer": "wreck_ml_trainer.py: filter known_wrecks where environment=='land', use terrain_mode to select patch_half and z_threshold overrides, skip stumpf_ratio feature (land), weight NDVI depression and SWIR features.",
+    "scanner": "lake_michigan_scan.py: PASS 1 skip land wrecks (water scanner). Land wrecks feed a separate land_scan pass using B11/B12/thermal bands. scan_bbox for each land site = 0.05 deg buffer around lat/lon.",
+    "geometry_sidecar": "tile_geometry.py .geometry.json sidecar is still used — solar zenith correction applies to SWIR imagery for slope-aspect correction on mountain terrain.",
+    "tpu": "TFLite model exported with environment='land' flag in metadata — TPU server routes to land model when lat/lon is not over water."
+  }
+}

@@ -1,0 +1,53 @@
+[package]
+name = "cesarops-hybrid-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Distributed Vulkan/wgpu Hybrid Agent & Spatial Engine — dynamic role-flipping between MoE LLM inference and Nauticus geospatial compute"
+authors = ["CESAROPS"]
+
+[[bin]]
+name = "hybrid-engine"
+path = "src/main.rs"
+
+[dependencies]
+# 1. GPU Compute & Low-Level API Core (Vulkan backend, P100 target)
+wgpu         = "29.0.1"
+bytemuck     = { version = "1.18", features = ["derive"] }
+pollster     = "0.4"
+
+# 2. Parallel Processing & CPU Vectorization (Xeon AVX-512, 32 threads)
+rayon        = "1.10"
+
+# 3. Asynchronous Runtime & Low-Latency Network Pipeline
+tokio        = { version = "1", features = ["full", "net", "sync", "rt-multi-thread"] }
+tokio-util   = { version = "0.7", features = ["codec"] }
+
+# 4. Ultra-Fast Zero-Allocation Binary Serialization (Network Framing)
+postcard     = { version = "1", features = ["alloc"] }
+serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
+bincode      = "1"
+
+# 5. Logging & Error Handling
+tracing      = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow       = "1"
+thiserror    = "1"
+
+# 6. Shared protocol types from nauticuvs
+nauticuvs    = { path = "../nauticuvs" }
+
+# 7. Utilities
+uuid         = { version = "1", features = ["v4"] }
+crossbeam    = "0.8"
+
+[profile.release]
+opt-level    = 3          # Maximize instruction optimization loops
+lto          = "fat"      # Full Link-Time Optimization across all crates
+codegen-units = 1         # Single codegen unit for maximum global optimization
+panic        = "abort"    # Drop unwinding overhead — lean binary
+strip        = true       # Strip debug symbols for deployment
+
+[profile.dev]
+opt-level    = 1          # Keep basic optimizations active during testing
+debug        = true
