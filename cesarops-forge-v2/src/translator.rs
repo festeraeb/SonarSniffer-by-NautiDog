@@ -95,10 +95,10 @@ pub fn normalize(raw_output: &str) -> NormalizedMessage {
 }
 
 /// Format a tool result as a QwenChatML user message for multi-turn tool use.
-pub fn format_tool_result_for_qwen(result: &str, round: u32, max_rounds: u32) -> String {
+pub fn format_tool_result_for_qwen(result: &str, _round: u32, _max_rounds: u32) -> String {
     format!(
-        "<|im_end|>\n<|im_start|>user\n[Tool Result - Round {}/{}]: {}\nNow continue. Either call another tool or provide your final answer.<|im_end|>\n<|im_start|>assistant\n",
-        round, max_rounds, result
+        "<|im_end|>\n<|im_start|>user\n[Tool Result]: {}\nNow continue. Either call another tool or provide your final answer.<|im_end|>\n<|im_start|>assistant\n",
+        result
     )
 }
 

@@ -125,6 +125,8 @@
         </div>
         <div>
             <button class="btn-clear" onclick="clearChat()">CLEAR</button>
+            <button style="background:#f44336; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="interruptAgent()">STOP</button>
+            <button style="background:#ff9800; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="steerAgent()">STEER</button>
             <span class="status" id="status">Connecting...</span>
         </div>
     </header>
@@ -225,6 +227,28 @@
             await fetch('/clear', {method: 'POST'});
             document.getElementById('messages').innerHTML =
                 '<div class="msg msg-assistant">Conversation cleared. Ready.</div>';
+        }
+
+        async function interruptAgent() {
+            const resp = await fetch('/interrupt', {method: 'POST'});
+            const text = await resp.text();
+            const msgs = document.getElementById('messages');
+            msgs.innerHTML += '<div class="msg msg-assistant" style="color:#f44336;">[STOP] ' + text + '</div>';
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        async function steerAgent() {
+            const msg = prompt('Steering message (injected into next round):');
+            if (!msg) return;
+            const resp = await fetch('/steer', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: msg})
+            });
+            const result = await resp.json();
+            const msgs = document.getElementById('messages');
+            msgs.innerHTML += '<div class="msg msg-assistant" style="color:#ff9800;">[STEER] ' + (result.message || result.error) + '</div>';
+            msgs.scrollTop = msgs.scrollHeight;
         }
     </script>
 </body>

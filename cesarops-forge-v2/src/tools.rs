@@ -7,7 +7,7 @@ use tracing::{info, warn};
 
 /// Counter for think_harder calls per session. Resets on /clear.
 static THINK_HARDER_COUNT: AtomicU32 = AtomicU32::new(0);
-const THINK_HARDER_LIMIT: u32 = 50;
+const THINK_HARDER_LIMIT: u32 = u32::MAX; // No limit — let it search as much as it needs
 
 /// Reset the think_harder counter (called on /clear).
 pub fn reset_think_counter() {
@@ -23,12 +23,9 @@ pub async fn execute(name: &str, arguments: &Value, state: &AppState) -> String 
         "read_file" => { reset_think_counter(); read_file(arguments, state).await },
         "cargo_check" => { reset_think_counter(); cargo_check(arguments, state).await },
         "think_harder" => {
-            let count = THINK_HARDER_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
-            if count > THINK_HARDER_LIMIT {
-                return format!("[SEARCH LIMIT: {}/{} consecutive searches with no action. Use the results you have — write_file, read_file, or provide your answer. Counter resets when you take action.]", count, THINK_HARDER_LIMIT);
-            }
+            let _count = THINK_HARDER_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
             let result = think_harder(arguments, state).await;
-            format!("{}\n[Search {}/{} — counter resets when you call write_file/read_file/cargo_check]", result, count, THINK_HARDER_LIMIT)
+            result
         },
         "remember" => { reset_think_counter(); remember(arguments, state).await },
         "run_command" => { reset_think_counter(); run_command(arguments, state).await },

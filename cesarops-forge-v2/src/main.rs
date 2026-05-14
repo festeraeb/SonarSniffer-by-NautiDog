@@ -19,6 +19,8 @@ use tracing::info;
 pub struct AppState {
     pub conversation: Arc<Mutex<Vec<translator::Message>>>,
     pub config: Arc<ForgeConfig>,
+    pub interrupt: Arc<std::sync::atomic::AtomicBool>,
+    pub steering: Arc<Mutex<Vec<String>>>,
 }
 
 #[derive(Clone)]
@@ -74,7 +76,25 @@ async fn clear(State(state): State<AppState>) -> &'static str {
     let mut conv = state.conversation.lock().await;
     conv.clear();
     tools::reset_think_counter();
+    state.interrupt.store(false, std::sync::atomic::Ordering::Relaxed);
     "Conversation cleared"
+}
+
+async fn interrupt(State(state): State<AppState>) -> &'static str {
+    state.interrupt.store(true, std::sync::atomic::Ordering::Relaxed);
+    info!("INTERRUPT signal received — will stop after current tool call");
+    "Interrupt signal sent. Generation will stop after current round."
+}
+
+async fn steer(State(state): State<AppState>, Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
+    if msg.is_empty() {
+        return Json(serde_json::json!({"error": "message required"}));
+    }
+    let mut steering = state.steering.lock().await;
+    steering.push(msg.to_string());
+    info!("STEERING injected: {}", &msg[..msg.len().min(80)]);
+    Json(serde_json::json!({"message": format!("Steering queued: {}", msg)}))
 }
 
 async fn monitor() -> Json<serde_json::Value> {
@@ -626,6 +646,8 @@ async fn main() {
     let state = AppState {
         conversation: Arc::new(Mutex::new(Vec::new())),
         config: Arc::new(config),
+        interrupt: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        steering: Arc::new(Mutex::new(Vec::new())),
     };
 
     let app = Router::new()
@@ -634,6 +656,8 @@ async fn main() {
         .route("/health", get(health))
         .route("/send", post(send_message))
         .route("/clear", post(clear))
+        .route("/interrupt", post(interrupt))
+        .route("/steer", post(steer))
         .route("/monitor", get(monitor))
         .route("/cluster/config", get(get_cluster_config).post(save_cluster_config))
         .route("/cluster/models", get(list_available_models))

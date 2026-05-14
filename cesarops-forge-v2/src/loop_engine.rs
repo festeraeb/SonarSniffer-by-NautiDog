@@ -59,6 +59,32 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
     let mut temperature = start_temp;
 
     for round in 1..=MAX_TOOL_ROUNDS {
+        // Check interrupt flag
+        if state.interrupt.load(std::sync::atomic::Ordering::Relaxed) {
+            info!("INTERRUPTED at round {}", round);
+            state.interrupt.store(false, std::sync::atomic::Ordering::Relaxed);
+            return SendResponse {
+                response: "[INTERRUPTED by user]".to_string(),
+                tool_actions,
+                diagnosis: diagnosis_info,
+            };
+        }
+
+        // Check for steering messages injected between rounds
+        {
+            let mut steering = state.steering.lock().await;
+            if !steering.is_empty() {
+                let mut conv = state.conversation.lock().await;
+                for msg in steering.drain(..) {
+                    info!("Injecting steering: {}", &msg[..msg.len().min(60)]);
+                    conv.push(Message {
+                        role: "user".to_string(),
+                        content: format!("[STEERING FROM OPERATOR]: {}", msg),
+                    });
+                }
+            }
+        }
+
         // Build prompt from conversation state
         let prompt = build_prompt(state, &thinker_context, failure_count).await;
 
@@ -211,11 +237,17 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
             // Execute the tool
             let result = tools::execute(&tool_call.name, &tool_call.arguments, state).await;
 
-            // Format result as user message (QwenChatML format)
-            let formatted = translator::format_tool_result_for_qwen(&result, round, MAX_TOOL_ROUNDS);
+            // --- Context Window Management ---
+            // If the result is large, compress it for conversation and store full in nautivecs
+            let (conv_result, stored_full) = compress_tool_result(&tool_call.name, &tool_call.arguments, &result, state).await;
 
-            // Add to conversation
+            // Format result as user message (QwenChatML format)
+            let formatted = translator::format_tool_result_for_qwen(&conv_result, round, MAX_TOOL_ROUNDS);
+
+            // Trim old conversation to keep context lean (keep system + last 6 exchanges)
             let mut conv = state.conversation.lock().await;
+            trim_conversation(&mut conv, 12); // keep last 12 messages (6 exchanges)
+
             conv.push(Message {
                 role: "assistant".to_string(),
                 content: normalized.content.clone(),
@@ -348,9 +380,11 @@ async fn build_prompt(state: &AppState, thinker_context: &str, failure_count: u3
 async fn generate_35b(prompt: &str, temperature: f32, state: &AppState) -> String {
     let client = reqwest::Client::new();
 
+    // Fresh token budget every call — context is trimmed between rounds
+    // so we always have room for a full generation
     let payload = serde_json::json!({
         "prompt": prompt,
-        "max_length": 12288,
+        "max_length": 16384,
         "temperature": temperature,
         "top_p": 0.95,
         "rep_pen": 1.1,
@@ -586,4 +620,86 @@ Is this repetition justified?<|im_end|>
             RepetitionJudgment { allowed: true, reason: "corrector unreachable, allowing".to_string() }
         }
     }
+}
+
+/// Compress a tool result for conversation context.
+/// If the result is large (>800 chars), store the full version in nautivecs
+/// and return a compressed summary for the conversation.
+/// This keeps the context window lean across many tool rounds.
+async fn compress_tool_result(
+    tool_name: &str,
+    args: &serde_json::Value,
+    full_result: &str,
+    state: &AppState,
+) -> (String, bool) {
+    const COMPRESS_THRESHOLD: usize = 800;
+
+    if full_result.len() <= COMPRESS_THRESHOLD {
+        return (full_result.to_string(), false);
+    }
+
+    // Build a compressed summary: first 400 chars + last 200 chars + metadata
+    let first = &full_result[..400.min(full_result.len())];
+    let last_start = full_result.len().saturating_sub(200);
+    let last = &full_result[last_start..];
+    let lines = full_result.lines().count();
+
+    let summary = format!(
+        "[COMPRESSED — full result stored in memory, use think_harder to recall]\n\
+         Tool: {}({})\n\
+         Size: {} chars, {} lines\n\
+         Preview: {}...\n\
+         ...tail: {}",
+        tool_name,
+        args.get("path").or(args.get("query")).or(args.get("cmd"))
+            .and_then(|v| v.as_str()).unwrap_or(""),
+        full_result.len(),
+        lines,
+        first.trim(),
+        last.trim(),
+    );
+
+    // Store full result in nautivecs for later retrieval via think_harder
+    let remember_content = format!(
+        "Tool result from {}({}): {}", 
+        tool_name,
+        args.get("path").or(args.get("query")).or(args.get("cmd"))
+            .and_then(|v| v.as_str()).unwrap_or(""),
+        &full_result[..full_result.len().min(3000)]
+    );
+    let remember_args = serde_json::json!({
+        "content": remember_content,
+        "tags": format!("tool_result,{},context_overflow", tool_name)
+    });
+    let _ = tools::execute("remember", &remember_args, state).await;
+
+    (summary, true)
+}
+
+/// Trim conversation to keep only the first message (system/task) and the last N messages.
+/// This prevents unbounded context growth across many tool rounds.
+fn trim_conversation(conv: &mut Vec<Message>, keep_last: usize) {
+    if conv.len() <= keep_last + 1 {
+        return; // Nothing to trim
+    }
+
+    // Keep first message (the original user task) + last N messages
+    let first = conv[0].clone();
+    let tail: Vec<Message> = conv.iter().rev().take(keep_last).cloned().collect::<Vec<_>>().into_iter().rev().collect();
+
+    conv.clear();
+    conv.push(first);
+
+    // Add a context note so the model knows history was trimmed
+    conv.push(Message {
+        role: "user".to_string(),
+        content: format!(
+            "[CONTEXT NOTE: {} earlier messages were compressed and stored in memory. \
+             Use think_harder to recall previous tool results if needed. \
+             Continue working on the original task.]",
+            tail.len()
+        ),
+    });
+
+    conv.extend(tail);
 }
