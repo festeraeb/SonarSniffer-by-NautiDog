@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Secrets
+.env
+
+# Tauri
+tauri/node_modules/
+tauri/target/
+tauri/dist/
+tauri/src-tauri/target/
+
+# Rust target
+cesarops-slicer/target/
+
+# IDE
+.vscode/settings.json
+
+# Outputs
+outputs/
+
+# Syncthing
+.stfolder/
