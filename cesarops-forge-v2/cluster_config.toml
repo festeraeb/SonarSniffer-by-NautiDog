@@ -108,4 +108,4 @@ max_generation_tokens = 16384
 # Starting temperature
 temperature = 0.4
 # Disable corrector for heavy tasks (set true to skip correction pass)
-skip_corrector = true
+skip_corrector = false
