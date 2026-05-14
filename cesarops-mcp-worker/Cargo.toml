@@ -3,9 +3,7 @@ name = "cesarops-mcp-worker"
 version = "0.1.0"
 edition = "2021"
 description = "MCP-compatible GPU worker for self-organizing agent swarm"
-
 [dependencies]
-rmcp = { version = "0.1", features = ["server", "transport-sse"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -18,3 +16,4 @@ uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
 glob = "0.3"
 clap = { version = "4", features = ["derive"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

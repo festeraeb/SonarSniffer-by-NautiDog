@@ -129,7 +129,7 @@ async fn think_harder(args: &Value) -> String {
     // Since we don't have actual search engine configured in this standalone worker,
     // we simulate the behavior by returning a structured response.
     // In production, this would call an external search API or local vector DB.
-    format!("Searched for: '{}'\nNo search engines configured on this worker.\nIn production, results from nautivecs KB and web search would appear here.")
+    format!("Searched for: '{}'\nNo search engines configured on this worker.\nIn production, results from nautivecs KB and web search would appear here.", query)
 }
 
 /// Save a lesson learned.

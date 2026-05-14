@@ -1,5 +1,5 @@
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::Json,
     routing::{get, post},
@@ -7,11 +7,20 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::capabilities::WorkerManifest;
 use crate::model_registry::ModelRegistry;
 use crate::tools;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub manifest: WorkerManifest,
+    pub registry: ModelRegistry,
+    pub project_root: PathBuf,
+    pub koboldcpp_url: String,
+}
 
 /// Request body for POST /generate endpoint.
 #[derive(Debug, Deserialize)]
@@ -49,28 +58,30 @@ pub fn create_app(
     project_root: PathBuf,
     koboldcpp_url: String,
 ) -> Router {
-    let manifest_static = manifest.clone();
-    
+    let state = AppState { manifest, registry, project_root, koboldcpp_url };
+
     Router::new()
-        .route("/health", get(|| async { Json(manifest_static.clone()) }))
-        .route("/capabilities", get(move || async { Json(manifest.clone()) }))
-        .route("/generate", post(move |req| {
-            generate_handler(req, koboldcpp_url.clone(), manifest.clone())
-        }))
-        .route("/tool/{name}", post(move |Path(name), req| {
-            tool_handler(name, req, project_root.clone())
-        }))
-        // MCP-compatible JSON-RPC endpoint
-        .route("/rpc", post(move |body: axum::Json<serde_json::Value>| {
-            rpc_handler(body, project_root.clone(), manifest.clone())
-        }))
+        .route("/health", get(health_handler))
+        .route("/capabilities", get(capabilities_handler))
+        .route("/generate", post(generate_handler))
+        .route("/tool/:name", post(tool_handler))
+        .route("/rpc", post(rpc_handler))
+        .with_state(state)
+}
+
+async fn health_handler(State(state): State<AppState>) -> Json<WorkerManifest> {
+    Json(state.manifest)
+}
+
+async fn capabilities_handler(State(state): State<AppState>) -> Json<WorkerManifest> {
+    Json(state.manifest)
 }
 
 async fn generate_handler(
+    State(state): State<AppState>,
     req: axum::Json<GenerateRequest>,
-    koboldcpp_url: String,
-    _manifest: WorkerManifest,
 ) -> (StatusCode, Json<GenerateResponse>) {
+    let koboldcpp_url = &state.koboldcpp_url;
     info!("Forwarding generation request to koboldcpp at {}", koboldcpp_url);
     
     let url = format!("{}/v1/generate", koboldcpp_url);
@@ -126,7 +137,7 @@ async fn generate_handler(
             }
         }
         Err(e) => {
-            warn!("Failed to reach koboldcpp at {}: {}", koboldcpp_url, e);
+            warn!("Failed to reach koboldcpp: {}", e);
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(GenerateResponse {
@@ -140,23 +151,23 @@ async fn generate_handler(
 }
 
 async fn tool_handler(
-    name: String,
+    State(state): State<AppState>,
+    Path(name): Path<String>,
     req: axum::Json<ToolRequest>,
-    project_root: PathBuf,
 ) -> (StatusCode, Json<ToolResponse>) {
     info!("Executing tool: {}", name);
     
-    let result = tools::execute(&name, &req.args, &project_root).await;
+    let result = tools::execute(&name, &req.args, &state.project_root).await;
     
     (StatusCode::OK, Json(ToolResponse { name, result }))
 }
 
-/// Handle MCP-compatible JSON-RPC calls.
 pub async fn rpc_handler(
+    State(state): State<AppState>,
     body: axum::Json<serde_json::Value>,
-    project_root: PathBuf,
-    manifest: WorkerManifest,
 ) -> (StatusCode, Json<serde_json::Value>) {
+    let project_root = &state.project_root;
+    let manifest = &state.manifest;
     // Extract method and params from JSON-RPC envelope
     let method = match body.get("method").and_then(|m| m.as_str()) {
         Some(m) => m,
@@ -186,7 +197,7 @@ pub async fn rpc_handler(
                 .unwrap_or("unknown");
             let tool_args = params.get("arguments")
                 .unwrap_or(params);
-            let result = tools::execute(tool_name, tool_args, &project_root).await;
+            let result = tools::execute(tool_name, tool_args, project_root).await;
             serde_json::json!({ "result": result })
         }
         "resources/list" => {

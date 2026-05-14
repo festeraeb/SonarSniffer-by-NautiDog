@@ -76,8 +76,10 @@ pub fn parse_nvidia_smi(output: &str) -> (String, u64, u64) {
                 if trimmed.contains("M /") {
                     let mem_parts: Vec<&str> = trimmed.split('/').collect();
                     if mem_parts.len() == 2 {
-                        let used_str = mem_parts[0].trim().replace('M', "").trim();
-                        let total_str = mem_parts[1].trim().replace('M', "").trim();
+                        let used_string = mem_parts[0].trim().replace('M', "");
+                        let total_string = mem_parts[1].trim().replace('M', "");
+                        let used_str = used_string.trim();
+                        let total_str = total_string.trim();
                         if let Ok(used) = used_str.parse::<u64>() {
                             if let Ok(tot) = total_str.parse::<u64>() {
                                 free_mb = tot.saturating_sub(used);

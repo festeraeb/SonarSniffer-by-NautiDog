@@ -6,6 +6,7 @@ mod server;
 mod tools;
 
 use clap::{Parser, ValueHint};
+use tracing::{info, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
@@ -57,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Models dir: {:?}", args.models_dir);
 
     // Discover worker capabilities
-    let manifest = capabilities::discover_self(Some(&args.specialty));
+    let manifest = capabilities::discover_self(&args.specialty, args.model.clone());
     info!("Worker manifest: {:#?}", manifest);
 
     // Scan for available models
@@ -93,9 +94,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("0.0.0.0:{}", args.port);
     info!("Listening on {}", addr);
 
-    axum::Server::bind(&addr.parse()?)
-        .serve(app.into_make_service())
-        .await?;
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

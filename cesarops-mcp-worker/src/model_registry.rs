@@ -29,14 +29,14 @@ impl ModelEntry {
     /// Infer quantization type from filename.
     fn infer_quantization(filename: &str) -> String {
         let lower = filename.to_lowercase();
-        if lower.contains("q2") { return "Q2_K"; }
-        if lower.contains("q3") { return "Q3_K"; }
-        if lower.contains("q4") { return "Q4_K_M"; }
-        if lower.contains("q5") { return "Q5_K_M"; }
-        if lower.contains("q6") { return "Q6_K"; }
-        if lower.contains("q8") { return "Q8_0"; }
-        if lower.contains("f16") || lower.contains("fp16") { return "F16"; }
-        if lower.contains("bf16") { return "BF16"; }
+        if lower.contains("q2") { return "Q2_K".to_string(); }
+        if lower.contains("q3") { return "Q3_K".to_string(); }
+        if lower.contains("q4") { return "Q4_K_M".to_string(); }
+        if lower.contains("q5") { return "Q5_K_M".to_string(); }
+        if lower.contains("q6") { return "Q6_K".to_string(); }
+        if lower.contains("q8") { return "Q8_0".to_string(); }
+        if lower.contains("f16") || lower.contains("fp16") { return "F16".to_string(); }
+        if lower.contains("bf16") { return "BF16".to_string(); }
         "unknown".to_string()
     }
 
@@ -57,43 +57,61 @@ impl ModelEntry {
     }
 }
 
+/// The model registry — holds all discovered models.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelRegistry {
+    pub models: Vec<ModelEntry>,
+}
+
+impl ModelRegistry {
+    /// Scan a directory for .gguf models.
+    pub fn scan(base_dir: &Path) -> Self {
+        Self { models: scan_models(base_dir) }
+    }
+
+    /// Select the best model for a task.
+    pub fn select_model_for_task(&self, task_type: &str, available_vram_mb: u64) -> Option<&ModelEntry> {
+        select_model_for_task(task_type, available_vram_mb, &self.models)
+    }
+}
+
 /// Scan a directory for .gguf files and build a registry.
 pub fn scan_models(base_dir: &Path) -> Vec<ModelEntry> {
-    let pattern = base_dir.join("**/*.gguf");
+    let pattern = format!("{}/**/*.gguf", base_dir.display());
     let mut entries = Vec::new();
 
-    for entry in glob(pattern.to_str().unwrap_or("")) {
-        if let Ok(path) = entry {
-            if let Ok(metadata) = fs::metadata(&path) {
+    if let Ok(paths) = glob(&pattern) {
+        for entry in paths.flatten() {
+            if let Ok(metadata) = fs::metadata(&entry) {
                 let size_bytes = metadata.len() as f64;
                 let size_mb = size_bytes / (1024.0 * 1024.0);
-                let filename = path.file_name()
+                let filename = entry.file_name()
                     .map(|f| f.to_string_lossy().into_owned())
                     .unwrap_or_default();
 
+                let quant = ModelEntry::infer_quantization(&filename);
                 entries.push(ModelEntry {
-                    path: path.to_string_lossy().into_owned(),
+                    path: entry.to_string_lossy().into_owned(),
                     size_mb,
                     specialty: ModelEntry::infer_specialty(&filename).to_string(),
-                    quantization: ModelEntry::infer_quantization(&filename),
-                    estimated_vram_mb: ModelEntry::estimate_vram_mb(size_mb, &ModelEntry::infer_quantization(&filename)),
+                    quantization: quant.clone(),
+                    estimated_vram_mb: ModelEntry::estimate_vram_mb(size_mb, &quant),
                 });
             }
         }
     }
 
-    // Sort by estimated VRAM ascending so smaller models come first
     entries.sort_by_key(|e| e.estimated_vram_mb);
     entries
 }
 
 /// Select the best model for a given task type and available VRAM.
 /// Priority: exact specialty match > any match, smallest sufficient model.
-pub fn select_model_for_task(
+pub fn select_model_for_task<'a>(
     task_type: &str,
     available_vram_mb: u64,
-    registry: &[ModelEntry],
-) -> Option<&ModelEntry> {
+    registry: &'a [ModelEntry],
+) -> Option<&'a ModelEntry> {
     let mut candidates: Vec<&ModelEntry> = registry.iter()
         .filter(|m| m.estimated_vram_mb <= available_vram_mb)
         .collect();
