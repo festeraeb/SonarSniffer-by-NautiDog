@@ -1,0 +1,11 @@
+{
+  "active": false,
+  "gpu0_model": "/codebase/models/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+  "gpu0_role": "coder",
+  "gpu1_model": "",
+  "gpu1_role": "kv-cache",
+  "node_1060": "thinker",
+  "node_1070": "corrector",
+  "node_laptop": "idle",
+  "p100_mode": "unified"
+}

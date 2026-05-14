@@ -98,12 +98,14 @@ default_mode = "auto"
 
 [tuning]
 # How many think-only rounds before declaring the model stuck
-max_think_rounds = 20
+max_think_rounds = 50
 # Main generation timeout in seconds
-generation_timeout_secs = 600
+generation_timeout_secs = 1200
 # Thinker preflight timeout in seconds
 thinker_timeout_secs = 60
 # Max tokens for main generation
-max_generation_tokens = 12288
+max_generation_tokens = 16384
 # Starting temperature
 temperature = 0.4
+# Disable corrector for heavy tasks (set true to skip correction pass)
+skip_corrector = true

@@ -7,7 +7,7 @@ use tracing::{info, warn};
 
 /// Counter for think_harder calls per session. Resets on /clear.
 static THINK_HARDER_COUNT: AtomicU32 = AtomicU32::new(0);
-const THINK_HARDER_LIMIT: u32 = 30;
+const THINK_HARDER_LIMIT: u32 = 50;
 
 /// Reset the think_harder counter (called on /clear).
 pub fn reset_think_counter() {

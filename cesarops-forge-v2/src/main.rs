@@ -7,6 +7,7 @@ mod memory;
 mod hardware;
 mod prompts;
 mod loop_engine;
+mod agent_dispatch;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};
@@ -122,8 +123,55 @@ async fn activate_preset() -> Json<serde_json::Value> {
     };
     preset["active"] = serde_json::json!(true);
     let _ = std::fs::write(preset_path, serde_json::to_string_pretty(&preset).unwrap_or_default());
-    info!("CESAROPS ACTIVATED — locking resources for SAR scanning");
-    Json(serde_json::json!({"message": "CESAROPS Preset activated. Resources locked for scanning."}))
+    info!("CESAROPS ACTIVATED - locking resources for SAR scanning");
+    Json(serde_json::json!({"message": "CESAROPS activated. Resources locked for scanning."}))
+}
+
+async fn launch_preset() -> Json<serde_json::Value> {
+    let preset_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/preset.json";
+    let preset: serde_json::Value = match std::fs::read_to_string(preset_path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+        Err(_) => return Json(serde_json::json!({"error": "No preset config saved. Save first."})),
+    };
+
+    // Stop all existing workers
+    let _ = std::process::Command::new("bash")
+        .arg("-c")
+        .arg("pkill -f 'cesarops-inference.*--backend' ; pkill -f 'koboldcpp.*--model'")
+        .output();
+
+    info!("All workers stopped. Launching preset config...");
+
+    let gpu0_model = preset.get("gpu0_model").and_then(|v| v.as_str()).unwrap_or("");
+    let gpu0_role = preset.get("gpu0_role").and_then(|v| v.as_str()).unwrap_or("coder");
+    let p100_mode = preset.get("p100_mode").and_then(|v| v.as_str()).unwrap_or("unified");
+
+    let mut launched = Vec::new();
+
+    // Launch GPU0 worker
+    if !gpu0_model.is_empty() {
+        let port = 5001;
+        let cmd = format!(
+            "nohup /home/cesarops/koboldcpp --model {} --port {} --usevulkan --gpulayers 99 > /tmp/preset_gpu0.log 2>&1 &",
+            gpu0_model, port
+        );
+        let _ = std::process::Command::new("bash").arg("-c").arg(&cmd).output();
+        launched.push(format!("GPU0 ({}): {} on port {}", gpu0_role, gpu0_model.split('/').last().unwrap_or_default(), port));
+    }
+
+    // Mark preset as active
+    let mut active_preset = preset.clone();
+    active_preset["active"] = serde_json::json!(true);
+    let _ = std::fs::write(preset_path, serde_json::to_string_pretty(&active_preset).unwrap_or_default());
+
+    let msg = if launched.is_empty() {
+        "Preset launched (no models configured - configure models first).".to_string()
+    } else {
+        format!("Preset launched: {}", launched.join(", "))
+    };
+
+    info!("{}", msg);
+    Json(serde_json::json!({"message": msg}))
 }
 
 async fn deactivate_preset() -> Json<serde_json::Value> {
@@ -136,6 +184,70 @@ async fn deactivate_preset() -> Json<serde_json::Value> {
     let _ = std::fs::write(preset_path, serde_json::to_string_pretty(&preset).unwrap_or_default());
     info!("CESAROPS DEACTIVATED — freeform mode for coding/testing");
     Json(serde_json::json!({"message": "CESAROPS deactivated. Freeform mode."}))
+}
+
+async fn apply_freeform(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let freeform_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/freeform_state.json";
+    match std::fs::write(freeform_path, serde_json::to_string_pretty(&body).unwrap_or_default()) {
+        Ok(_) => {
+            info!("Freeform config applied: coder={}, thinker={}, corrector={}, polisher={}",
+                body.get("coder_model").and_then(|v| v.as_str()).unwrap_or("none"),
+                body.get("thinker_model").and_then(|v| v.as_str()).unwrap_or("none"),
+                body.get("corrector_model").and_then(|v| v.as_str()).unwrap_or("none"),
+                body.get("polisher_model").and_then(|v| v.as_str()).unwrap_or("none"),
+            );
+            Json(serde_json::json!({"message": "Freeform configuration applied. Models loading."}))
+        }
+        Err(e) => Json(serde_json::json!({"error": format!("Failed to save freeform state: {}", e)})),
+    }
+}
+
+async fn corrector_connect() -> Json<serde_json::Value> {
+    // Update tuning config to re-enable corrector
+    let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+    if let Ok(content) = std::fs::read_to_string(config_path) {
+        let updated = content.replace("skip_corrector = true", "skip_corrector = false");
+        let _ = std::fs::write(config_path, updated);
+    }
+    info!("Corrector CONNECTED");
+    Json(serde_json::json!({"message": "Corrector connected. Will be used on next request."}))
+}
+
+async fn corrector_disconnect() -> Json<serde_json::Value> {
+    let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+    if let Ok(content) = std::fs::read_to_string(config_path) {
+        let updated = content.replace("skip_corrector = false", "skip_corrector = true");
+        let _ = std::fs::write(config_path, updated);
+    }
+    info!("Corrector DISCONNECTED");
+    Json(serde_json::json!({"message": "Corrector disconnected. Qwen flies solo."}))
+}
+
+/// Send a task to any GPU endpoint in agent mode (with tools).
+/// POST /cluster/agent/run { "endpoint": "http://...:5001", "message": "do something" }
+async fn run_agent_task(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let endpoint = body.get("endpoint").and_then(|v| v.as_str()).unwrap_or("");
+    let message = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+    if endpoint.is_empty() || message.is_empty() {
+        return Json(serde_json::json!({"error": "endpoint and message required"}));
+    }
+
+    let config = agent_dispatch::AgentConfig {
+        endpoint_url: endpoint.to_string(),
+        project_root: "/codebase/wreckhunter2000-1".to_string(),
+        nautivecs_url: "http://127.0.0.1:5003/query".to_string(),
+        wso_url: "http://127.0.0.1:5010/search".to_string(),
+        max_tokens: 12288,
+        temperature: 0.4,
+        safe_mode: body.get("safe_mode").and_then(|v| v.as_bool()).unwrap_or(false),
+    };
+
+    info!("Agent task dispatched to {}: {}...", endpoint, &message[..message.len().min(80)]);
+    let result = agent_dispatch::run_agent_loop(&config, message).await;
+    info!("Agent task complete: {}...", &result[..result.len().min(100)]);
+
+    Json(serde_json::json!({"response": result}))
 }
 
 // --- Cluster Control API ---
@@ -505,7 +617,7 @@ async fn main() {
     let config = ForgeConfig {
         coder_url: "http://127.0.0.1:5001".to_string(),  // Qwen3.6 on P100s
         thinker_url: "http://127.0.0.1:5557".to_string(),       // DeepSeek-R1 7B on Xeon CPU (thinker)
-        corrector_url: "http://100.102.158.111:5555".to_string(), // 14B Marvin on 1070
+        corrector_url: "http://0.0.0.0:0".to_string(), // DISABLED — corrector severed, skip_corrector=true in tuning
         nautivecs_url: "http://127.0.0.1:5003/query".to_string(),
         wso_url: "http://127.0.0.1:5010/search".to_string(),
         project_root: "/codebase/wreckhunter2000-1".to_string(),
@@ -527,7 +639,12 @@ async fn main() {
         .route("/cluster/models", get(list_available_models))
         .route("/cluster/preset/config", get(get_preset_config).post(save_preset_config))
         .route("/cluster/preset/activate", post(activate_preset))
+        .route("/cluster/preset/launch", post(launch_preset))
         .route("/cluster/preset/deactivate", post(deactivate_preset))
+        .route("/cluster/freeform/apply", post(apply_freeform))
+        .route("/cluster/agent/run", post(run_agent_task))
+        .route("/cluster/corrector/connect", post(corrector_connect))
+        .route("/cluster/corrector/disconnect", post(corrector_disconnect))
         .route("/cluster/worker/{idx}/start", post(start_worker))
         .route("/cluster/worker/{idx}/stop", post(stop_worker))
         .route("/cluster/start-all", post(start_all_workers))

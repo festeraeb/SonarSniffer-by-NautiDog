@@ -9,7 +9,7 @@ use tracing::{info, warn};
 const MAX_TOOL_ROUNDS: u32 = u32::MAX; // No limit — only loops/empty stop it
 
 /// Read tuning params from cluster_config.toml
-fn read_tuning() -> (u32, u64, u64, u32, f32) {
+fn read_tuning() -> (u32, u64, u64, u32, f32, bool) {
     let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
     let content = std::fs::read_to_string(config_path).unwrap_or_default();
     let table: toml::Table = content.parse().unwrap_or_default();
@@ -20,8 +20,9 @@ fn read_tuning() -> (u32, u64, u64, u32, f32) {
     let thinker_timeout = tuning.and_then(|t| t.get("thinker_timeout_secs")).and_then(|v| v.as_integer()).unwrap_or(60) as u64;
     let max_tokens = tuning.and_then(|t| t.get("max_generation_tokens")).and_then(|v| v.as_integer()).unwrap_or(12288) as u32;
     let temperature = tuning.and_then(|t| t.get("temperature")).and_then(|v| v.as_float()).unwrap_or(0.4) as f32;
+    let skip_corrector = tuning.and_then(|t| t.get("skip_corrector")).and_then(|v| v.as_bool()).unwrap_or(false);
     
-    (max_think, gen_timeout, thinker_timeout, max_tokens, temperature)
+    (max_think, gen_timeout, thinker_timeout, max_tokens, temperature, skip_corrector)
 }
 
 /// Main orchestration loop: Strategy → Execution → Verification.
@@ -54,7 +55,7 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
     let mut output_history: Vec<String> = Vec::new();
     let mut failure_count: u32 = 0;
     let mut diagnosis_info: Option<String> = None;
-    let (max_diagnosis, _gen_timeout, _thinker_timeout, _max_tokens, start_temp) = read_tuning();
+    let (max_diagnosis, _gen_timeout, _thinker_timeout, _max_tokens, start_temp, skip_corrector) = read_tuning();
     let mut temperature = start_temp;
 
     for round in 1..=MAX_TOOL_ROUNDS {
@@ -84,6 +85,12 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
 
             // --- MalformedToolCall: Route to 14B Corrector (Marvin) ---
             if matches!(failure_type, FailureType::MalformedToolCall) {
+                if skip_corrector {
+                    info!("Corrector disabled (skip_corrector=true). Treating as parse failure.");
+                    failure_count += 1;
+                    temperature = (temperature + 0.1).min(1.0);
+                    continue;
+                }
                 info!("Routing malformed tool call to 14B Corrector (Marvin)");
                 let corrected = correct_and_execute(&raw_output, &normalized.content, state).await;
                 

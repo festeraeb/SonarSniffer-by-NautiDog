@@ -240,7 +240,7 @@
             </button>
         </div>
 
-        <!-- PRESET SUMMARY (greyed out, read-only) -->
+        <!-- PRESET SUMMARY (greyed out, read-only in scanning mode) -->
         <div class="preset-summary locked" id="preset-display">
             <div class="item"><span class="item-label">P100 Group</span><span class="item-value" id="ps-p100">Unified 32GB &#8212; SAR Pipeline</span></div>
             <div class="item"><span class="item-label">P100 #1</span><span class="item-value" id="ps-gpu0">Qwen3.6 35B (coder)</span></div>
@@ -249,6 +249,80 @@
             <div class="item"><span class="item-label">Cesarops3 (1060)</span><span class="item-value" id="ps-1060">R1 7B Thinker</span></div>
             <div class="item"><span class="item-label">Nautik9 Laptop</span><span class="item-value" id="ps-laptop">Idle / Available</span></div>
             <div class="item"><span class="item-label">T440 CPU</span><span class="item-value" id="ps-cpu">Bootstrap 1.5B + Nautivecs</span></div>
+        </div>
+
+        <!-- FREEFORM WORKER CARDS (visible only in freeform mode) -->
+        <div id="freeform-workers" style="display:none;">
+            <h2>Active Roles</h2>
+
+            <!-- Loading Tracker -->
+            <div id="loading-tracker" style="display:none;" class="card" aria-live="polite">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <span class="refresh-spinner"></span>
+                    <span id="loading-msg" style="color:#ff9800;">Loading model...</span>
+                </div>
+                <div class="gpu-bar" style="margin-top:0.8rem;">
+                    <div class="gpu-bar-fill" id="loading-bar" style="width:0%; transition:width 1s;"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:#00d4ff;">Coder</span>
+                    <span style="color:#666; font-size:0.85rem;">P100 #1 + #2</span>
+                </div>
+                <div class="row">
+                    <label>Model:</label>
+                    <select id="ff-coder-model" class="ff-model-dropdown" aria-label="Coder model"></select>
+                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
+                    <input type="checkbox" id="ff-coder-agent" checked style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-coder-safe" style="width:20px; height:20px;">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:#4caf50;">Thinker</span>
+                    <span style="color:#666; font-size:0.85rem;">Cesarops3 (1060)</span>
+                </div>
+                <div class="row">
+                    <label>Model:</label>
+                    <select id="ff-thinker-model" class="ff-model-dropdown" aria-label="Thinker model"></select>
+                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
+                    <input type="checkbox" id="ff-thinker-agent" style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-thinker-safe" checked style="width:20px; height:20px;">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:#ff9800;">Corrector</span>
+                    <span style="color:#666; font-size:0.85rem;">Cesarops2 (1070)</span>
+                </div>
+                <div class="row">
+                    <label>Model:</label>
+                    <select id="ff-corrector-model" class="ff-model-dropdown" aria-label="Corrector model"></select>
+                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
+                    <input type="checkbox" id="ff-corrector-agent" style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-corrector-safe" checked style="width:20px; height:20px;">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:#d4a5ff;">Polisher</span>
+                    <span style="color:#666; font-size:0.85rem;">Nautik9 Laptop (optional)</span>
+                </div>
+                <div class="row">
+                    <label>Model:</label>
+                    <select id="ff-polisher-model" class="ff-model-dropdown" aria-label="Polisher model">
+                        <option value="">-- Disabled --</option>
+                    </select>
+                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
+                    <input type="checkbox" id="ff-polisher-agent" style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-polisher-safe" checked style="width:20px; height:20px;">
+                </div>
+            </div>
+
+            <div class="row" style="margin-top:1.5rem;">
+                <button class="btn-apply" onclick="applyFreeform()">Apply Changes</button>
+            </div>
         </div>
 
         <!-- LIVE NETWORK DISCOVERY -->
@@ -265,7 +339,7 @@
             <div class="row" style="flex-wrap:wrap; gap:0.5rem">
                 <a href="/" style="padding:0.6rem 1.2rem; background:#1b4332; color:#4caf50; border-radius:8px; text-decoration:none; font-weight:bold">Forge Chat</a>
                 <a href="http://100.102.158.111:5678" target="_blank" style="padding:0.6rem 1.2rem; background:#2d1b4e; color:#d4a5ff; border-radius:8px; text-decoration:none; font-weight:bold">n8n Router</a>
-                <a href="http://100.102.158.111:5555/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#4a1500; color:#ffb380; border-radius:8px; text-decoration:none; font-weight:bold">Corrector (14B)</a>
+                <button onclick="toggleCorrectorConnection()" id="btn-corrector-toggle" style="padding:0.6rem 1.2rem; background:#4a1500; color:#f44336; border-radius:8px; font-weight:bold; border:none; cursor:pointer;">Corrector: OFF</button>
                 <a href="http://localhost:5001/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">Qwen3.6 (P100s)</a>
                 <a href="http://100.105.77.74:5002/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">R1 (1060)</a>
                 <a href="http://localhost:5557/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">Thinker (CPU)</a>
@@ -376,9 +450,10 @@
             </div>
         </div>
 
-        <!-- SAVE -->
+        <!-- SAVE & LAUNCH -->
         <div class="row" style="margin-top:2rem; gap:1rem;">
-            <button class="btn-apply" onclick="savePresetConfig()">Save CESAROPS</button>
+            <button class="btn-apply" onclick="savePresetConfig()">Save</button>
+            <button class="btn-start" onclick="launchPreset()">Launch</button>
             <button class="btn-back" onclick="showView('view-main')">Cancel</button>
         </div>
     </div>
@@ -402,10 +477,13 @@
                 presetActive = false;
                 document.getElementById('btn-preset').classList.remove('active');
                 document.getElementById('btn-preset').textContent = 'CESAROPS';
-                document.getElementById('preset-status').textContent = 'Freeform mode. Resources available for coding/testing.';
+                document.getElementById('preset-status').textContent = 'Freeform mode. Swap models, test, code.';
                 document.getElementById('mode-badge').textContent = 'FREEFORM';
                 document.getElementById('mode-badge').className = 'mode-badge freeform';
                 document.getElementById('preset-display').classList.remove('locked');
+                document.getElementById('preset-display').style.display = 'none';
+                document.getElementById('freeform-workers').style.display = 'block';
+                loadFreeformModels();
                 log('CESAROPS deactivated. Freeform mode.');
                 fetch('/cluster/preset/deactivate', { method: 'POST' });
             } else {
@@ -417,8 +495,105 @@
                 document.getElementById('mode-badge').textContent = 'SCANNING';
                 document.getElementById('mode-badge').className = 'mode-badge scanning';
                 document.getElementById('preset-display').classList.add('locked');
+                document.getElementById('preset-display').style.display = '';
+                document.getElementById('freeform-workers').style.display = 'none';
                 log('CESAROPS activated. Locking resources for SAR scanning.');
                 fetch('/cluster/preset/activate', { method: 'POST' });
+            }
+        }
+
+        // ---- FREEFORM MODEL LOADING ----
+        async function loadFreeformModels() {
+            try {
+                const resp = await fetch('/cluster/models');
+                const models = await resp.json();
+                document.querySelectorAll('.ff-model-dropdown').forEach(sel => {
+                    const current = sel.value;
+                    const hasDisabled = sel.id === 'ff-polisher-model';
+                    sel.innerHTML = (hasDisabled ? '<option value="">-- Disabled --</option>' : '') +
+                        models.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m.split('/').pop()}</option>`).join('');
+                });
+            } catch(e) {
+                log('Failed to load models: ' + e.message);
+            }
+        }
+
+        async function applyFreeform() {
+            // Ensure models are loaded first
+            if (document.getElementById('ff-coder-model').options.length <= 1) {
+                await loadFreeformModels();
+            }
+
+            const tracker = document.getElementById('loading-tracker');
+            const bar = document.getElementById('loading-bar');
+            const msg = document.getElementById('loading-msg');
+
+            tracker.style.display = 'block';
+            msg.textContent = 'Applying configuration...';
+            bar.style.width = '10%';
+
+            const config = {
+                coder_model: document.getElementById('ff-coder-model').value,
+                coder_agent: document.getElementById('ff-coder-agent').checked,
+                coder_safe: document.getElementById('ff-coder-safe').checked,
+                thinker_model: document.getElementById('ff-thinker-model').value,
+                thinker_agent: document.getElementById('ff-thinker-agent').checked,
+                thinker_safe: document.getElementById('ff-thinker-safe').checked,
+                corrector_model: document.getElementById('ff-corrector-model').value,
+                corrector_agent: document.getElementById('ff-corrector-agent').checked,
+                corrector_safe: document.getElementById('ff-corrector-safe').checked,
+                polisher_model: document.getElementById('ff-polisher-model').value,
+                polisher_agent: document.getElementById('ff-polisher-agent').checked,
+                polisher_safe: document.getElementById('ff-polisher-safe').checked,
+            };
+
+            bar.style.width = '30%';
+            msg.textContent = 'Sending to cluster...';
+
+            try {
+                const resp = await fetch('/cluster/freeform/apply', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                const result = await resp.json();
+
+                bar.style.width = '70%';
+                msg.textContent = 'Loading models...';
+
+                // Poll for readiness
+                let attempts = 0;
+                const pollInterval = setInterval(async () => {
+                    attempts++;
+                    const pct = Math.min(70 + attempts * 3, 95);
+                    bar.style.width = pct + '%';
+                    msg.textContent = `Loading models... (${attempts}s)`;
+
+                    if (attempts > 30) {
+                        clearInterval(pollInterval);
+                        bar.style.width = '100%';
+                        msg.textContent = 'Applied (timeout waiting for full load)';
+                        setTimeout(() => { tracker.style.display = 'none'; }, 3000);
+                    }
+
+                    // Check if workers are responding
+                    try {
+                        const health = await fetch('/health');
+                        if (health.ok) {
+                            clearInterval(pollInterval);
+                            bar.style.width = '100%';
+                            msg.textContent = 'All models loaded.';
+                            log(result.message || 'Freeform config applied.');
+                            setTimeout(() => { tracker.style.display = 'none'; }, 2000);
+                        }
+                    } catch(e) {}
+                }, 1000);
+
+            } catch(e) {
+                bar.style.width = '100%';
+                msg.textContent = 'Error: ' + e.message;
+                log('Apply failed: ' + e.message);
+                setTimeout(() => { tracker.style.display = 'none'; }, 4000);
             }
         }
 
@@ -528,9 +703,32 @@
                 const result = await resp.json();
                 log(result.message || 'CESAROPS config saved.');
                 updatePresetDisplay(preset);
+            } catch(e) {
+                log('Failed to save: ' + e.message);
+            }
+        }
+
+        async function launchPreset() {
+            log('Stopping all workers...');
+            await fetch('/cluster/stop-all', { method: 'POST' });
+
+            log('Launching CESAROPS preset...');
+            try {
+                const resp = await fetch('/cluster/preset/launch', { method: 'POST' });
+                const result = await resp.json();
+                log(result.message || 'Preset launched.');
+                // Switch back to main view in scanning mode
+                presetActive = true;
+                document.getElementById('btn-preset').classList.add('active');
+                document.getElementById('preset-status').textContent = 'Locked in for SAR scanning. All resources allocated.';
+                document.getElementById('mode-badge').textContent = 'SCANNING';
+                document.getElementById('mode-badge').className = 'mode-badge scanning';
+                document.getElementById('preset-display').classList.add('locked');
+                document.getElementById('preset-display').style.display = '';
+                document.getElementById('freeform-workers').style.display = 'none';
                 showView('view-main');
             } catch(e) {
-                log('Failed to save preset: ' + e.message);
+                log('Launch failed: ' + e.message);
             }
         }
 
@@ -549,6 +747,27 @@
             const el = document.getElementById('log');
             const time = new Date().toLocaleTimeString();
             el.textContent = `[${time}] ${msg}\n` + el.textContent;
+        }
+
+        // ---- CORRECTOR TOGGLE ----
+        let correctorConnected = false; // starts disconnected per current config
+
+        async function toggleCorrectorConnection() {
+            correctorConnected = !correctorConnected;
+            const btn = document.getElementById('btn-corrector-toggle');
+            if (correctorConnected) {
+                btn.textContent = 'Corrector: ON';
+                btn.style.color = '#4caf50';
+                btn.style.background = '#1b4332';
+                log('Corrector reconnected.');
+                await fetch('/cluster/corrector/connect', { method: 'POST' });
+            } else {
+                btn.textContent = 'Corrector: OFF';
+                btn.style.color = '#f44336';
+                btn.style.background = '#4a1500';
+                log('Corrector disconnected.');
+                await fetch('/cluster/corrector/disconnect', { method: 'POST' });
+            }
         }
 
         // ---- INIT ----

@@ -1,0 +1,14 @@
+{
+  "coder_agent": true,
+  "coder_model": "test",
+  "coder_safe": false,
+  "corrector_agent": false,
+  "corrector_model": "",
+  "corrector_safe": true,
+  "polisher_agent": false,
+  "polisher_model": "",
+  "polisher_safe": true,
+  "thinker_agent": false,
+  "thinker_model": "test",
+  "thinker_safe": true
+}
