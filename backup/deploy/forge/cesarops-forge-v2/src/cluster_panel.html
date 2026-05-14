@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CesarOps Cluster Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 2rem;
+            font-size: 1.1rem;
+        }
+        h1 { color: #00d4ff; margin-bottom: 1rem; font-size: 2rem; }
+        h2 { color: #4caf50; margin: 2rem 0 1rem 0; font-size: 1.4rem; }
+
+        .card {
+            background: #16213e;
+            border: 2px solid #0f3460;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .card-title { font-size: 1.3rem; font-weight: bold; }
+
+        .status-dot {
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .dot-green { background: #4caf50; }
+        .dot-red { background: #f44336; }
+        .dot-yellow { background: #ff9800; }
+        .dot-off { background: #555; }
+
+        .row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin: 0.8rem 0;
+            flex-wrap: wrap;
+        }
+        label {
+            font-size: 1rem;
+            color: #aaa;
+            min-width: 80px;
+        }
+        select, input[type="text"] {
+            padding: 0.7rem 1rem;
+            font-size: 1.1rem;
+            border: 2px solid #0f3460;
+            border-radius: 10px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-width: 250px;
+        }
+        select:focus, input:focus { border-color: #00d4ff; outline: none; }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-start { background: #4caf50; color: white; }
+        .btn-stop { background: #f44336; color: white; }
+        .btn-apply { background: #00d4ff; color: #1a1a2e; }
+        .btn-back { background: #333; color: #aaa; border: 1px solid #555; }
+
+        .log-box {
+            background: #0a0a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.95rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: #00d4ff; text-decoration: none; font-size: 1rem; }
+        .nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/">← Back to Chat</a>
+    </div>
+
+    <h1>Cluster Control Panel</h1>
+
+    <!-- BOOTSTRAP BRAIN -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title"><span class="status-dot dot-green" id="bootstrap-dot"></span> Bootstrap Brain</span>
+            <span style="color:#888">Always On — Recovery Path</span>
+        </div>
+        <div class="row">
+            <label>Model:</label>
+            <select id="bootstrap-model" aria-label="Bootstrap model selection">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="row">
+            <label>Port:</label>
+            <input type="text" id="bootstrap-port" value="5002" style="min-width:100px" aria-label="Bootstrap port">
+            <label>Template:</label>
+            <select id="bootstrap-template" aria-label="Bootstrap template">
+                <option value="qwen2.5">Qwen 2.5</option>
+                <option value="qwen3">Qwen 3</option>
+                <option value="phi3">Phi-3</option>
+                <option value="deepseek-r1-qwen">DeepSeek R1 (Qwen)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- GPU WORKERS -->
+    <h2>GPU Workers</h2>
+    <div id="workers-container"></div>
+
+    <!-- ACTIONS -->
+    <div class="row" style="margin-top:2rem">
+        <button class="btn-apply" onclick="applyConfig()">Apply Changes</button>
+        <button class="btn-start" onclick="startAll()">Start All Workers</button>
+        <button class="btn-stop" onclick="stopAll()">Stop All Workers</button>
+    </div>
+
+    <!-- TUNING -->
+    <h2>Model Tuning</h2>
+    <div class="card">
+        <div class="row">
+            <label>Think Rounds:</label>
+            <input type="range" id="tune-think-rounds" min="5" max="50" value="20" style="min-width:200px" oninput="document.getElementById('think-val').textContent=this.value">
+            <span id="think-val">20</span>
+        </div>
+        <div class="row">
+            <label>Gen Timeout (s):</label>
+            <input type="range" id="tune-gen-timeout" min="60" max="1800" step="30" value="600" style="min-width:200px" oninput="document.getElementById('timeout-val').textContent=this.value">
+            <span id="timeout-val">600</span>
+        </div>
+        <div class="row">
+            <label>Thinker Timeout (s):</label>
+            <input type="range" id="tune-thinker-timeout" min="15" max="180" step="5" value="90" style="min-width:200px" oninput="document.getElementById('thinker-val').textContent=this.value">
+            <span id="thinker-val">90</span>
+        </div>
+        <div class="row">
+            <label>Max Tokens:</label>
+            <input type="range" id="tune-max-tokens" min="1024" max="32768" step="1024" value="12288" style="min-width:200px" oninput="document.getElementById('tokens-val').textContent=this.value">
+            <span id="tokens-val">12288</span>
+        </div>
+        <div class="row">
+            <label>Temperature:</label>
+            <input type="range" id="tune-temperature" min="0.1" max="1.5" step="0.05" value="0.4" style="min-width:200px" oninput="document.getElementById('temp-val').textContent=this.value">
+            <span id="temp-val">0.4</span>
+        </div>
+        <div class="row">
+            <button class="btn-apply" onclick="saveTuning()">Save Tuning</button>
+        </div>
+    </div>
+
+    <!-- LOG -->
+    <h2>Activity Log</h2>
+    <div class="log-box" id="log">Waiting for actions...</div>
+
+    <script>
+        let config = {};
+        let availableModels = [];
+
+        async function loadConfig() {
+            try {
+                const resp = await fetch('/cluster/config');
+                config = await resp.json();
+                renderConfig();
+            } catch(e) {
+                log('Failed to load config: ' + e.message);
+            }
+        }
+
+        async function loadModels() {
+            try {
+                const resp = await fetch('/cluster/models');
+                availableModels = await resp.json();
+                renderModelDropdowns();
+            } catch(e) {
+                log('Failed to scan models: ' + e.message);
+            }
+        }
+
+        function renderConfig() {
+            // Bootstrap
+            document.getElementById('bootstrap-port').value = config.bootstrap?.port || 5002;
+            setDropdown('bootstrap-template', config.bootstrap?.template || 'qwen2.5');
+
+            // Workers
+            const container = document.getElementById('workers-container');
+            container.innerHTML = '';
+            (config.workers || []).forEach((w, i) => {
+                container.innerHTML += workerCard(w, i);
+            });
+            renderModelDropdowns();
+            loadTuning(config);
+        }
+
+        function workerCard(w, idx) {
+            const dotClass = w.enabled ? 'dot-green' : 'dot-off';
+            return `
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><span class="status-dot ${dotClass}"></span> ${w.name}</span>
+                    <button class="${w.enabled ? 'btn-stop' : 'btn-start'}" onclick="toggleWorker(${idx})">
+                        ${w.enabled ? 'Stop' : 'Start'}
+                    </button>
+                </div>
+                <div class="row">
+                    <label>GPU:</label>
+                    <select id="worker-${idx}-gpu" onchange="updateWorker(${idx})" aria-label="${w.name} GPU">
+                        ${(config.gpus || []).map(g => `<option value="${g.id}" ${g.id === w.gpu ? 'selected' : ''}>${g.name} (${g.vram_mb}MB)</option>`).join('')}
+                    </select>
+                </div>
+                <div class="row">
+                    <label>Model:</label>
+                    <select id="worker-${idx}-model" class="model-dropdown" data-current="${w.model || ''}" aria-label="${w.name} model">
+                        <option value="">-- None --</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label>Role:</label>
+                    <select id="worker-${idx}-role" onchange="updateWorker(${idx})" aria-label="${w.name} role">
+                        <option value="think" ${w.role==='think'?'selected':''}>Think (reasoning)</option>
+                        <option value="code" ${w.role==='code'?'selected':''}>Code (generation)</option>
+                        <option value="polish" ${w.role==='polish'?'selected':''}>Polish (editing)</option>
+                        <option value="general" ${w.role==='general'?'selected':''}>General</option>
+                        <option value="research" ${w.role==='research'?'selected':''}>Research (overnight)</option>
+                    </select>
+                    <label>Port:</label>
+                    <input type="text" id="worker-${idx}-port" value="${w.port}" style="min-width:80px" aria-label="${w.name} port">
+                </div>
+            </div>`;
+        }
+
+        function renderModelDropdowns() {
+            document.querySelectorAll('.model-dropdown').forEach(sel => {
+                const current = sel.dataset.current;
+                sel.innerHTML = '<option value="">-- None --</option>' +
+                    availableModels.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m.split('/').pop()}</option>`).join('');
+            });
+            // Bootstrap model dropdown
+            const bSel = document.getElementById('bootstrap-model');
+            const bCurrent = config.bootstrap?.model || '';
+            bSel.innerHTML = availableModels.map(m => `<option value="${m}" ${m === bCurrent ? 'selected' : ''}>${m.split('/').pop()}</option>`).join('');
+        }
+
+        function setDropdown(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        }
+
+        async function toggleWorker(idx) {
+            const action = config.workers[idx].enabled ? 'stop' : 'start';
+            log(`${action}ing ${config.workers[idx].name}...`);
+            const resp = await fetch('/cluster/worker/' + idx + '/' + action, { method: 'POST' });
+            const result = await resp.json();
+            log(result.message || JSON.stringify(result));
+            await loadConfig();
+        }
+
+        async function applyConfig() {
+            // Gather current UI state into config
+            config.bootstrap.model = document.getElementById('bootstrap-model').value;
+            config.bootstrap.port = parseInt(document.getElementById('bootstrap-port').value);
+            config.bootstrap.template = document.getElementById('bootstrap-template').value;
+
+            (config.workers || []).forEach((w, i) => {
+                w.gpu = parseInt(document.getElementById(`worker-${i}-gpu`).value);
+                w.model = document.getElementById(`worker-${i}-model`).value;
+                w.role = document.getElementById(`worker-${i}-role`).value;
+                w.port = parseInt(document.getElementById(`worker-${i}-port`).value);
+            });
+
+            log('Applying configuration...');
+            const resp = await fetch('/cluster/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+            const result = await resp.json();
+            log(result.message || 'Config saved.');
+        }
+
+        async function startAll() {
+            log('Starting all workers...');
+            const resp = await fetch('/cluster/start-all', { method: 'POST' });
+            const result = await resp.json();
+            log(result.message || JSON.stringify(result));
+            await loadConfig();
+        }
+
+        async function stopAll() {
+            log('Stopping all workers...');
+            const resp = await fetch('/cluster/stop-all', { method: 'POST' });
+            const result = await resp.json();
+            log(result.message || JSON.stringify(result));
+            await loadConfig();
+        }
+
+        async function saveTuning() {
+            const tuning = {
+                max_think_rounds: parseInt(document.getElementById('tune-think-rounds').value),
+                generation_timeout_secs: parseInt(document.getElementById('tune-gen-timeout').value),
+                thinker_timeout_secs: parseInt(document.getElementById('tune-thinker-timeout').value),
+                max_generation_tokens: parseInt(document.getElementById('tune-max-tokens').value),
+                temperature: parseFloat(document.getElementById('tune-temperature').value),
+            };
+            
+            // Read current config, update tuning section, save back
+            const resp = await fetch('/cluster/config');
+            const cfg = await resp.json();
+            cfg.tuning = tuning;
+            
+            const saveResp = await fetch('/cluster/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(cfg)
+            });
+            const result = await saveResp.json();
+            log('Tuning saved: ' + JSON.stringify(tuning));
+        }
+
+        function loadTuning(cfg) {
+            if (cfg.tuning) {
+                const t = cfg.tuning;
+                if (t.max_think_rounds) { document.getElementById('tune-think-rounds').value = t.max_think_rounds; document.getElementById('think-val').textContent = t.max_think_rounds; }
+                if (t.generation_timeout_secs) { document.getElementById('tune-gen-timeout').value = t.generation_timeout_secs; document.getElementById('timeout-val').textContent = t.generation_timeout_secs; }
+                if (t.thinker_timeout_secs) { document.getElementById('tune-thinker-timeout').value = t.thinker_timeout_secs; document.getElementById('thinker-val').textContent = t.thinker_timeout_secs; }
+                if (t.max_generation_tokens) { document.getElementById('tune-max-tokens').value = t.max_generation_tokens; document.getElementById('tokens-val').textContent = t.max_generation_tokens; }
+                if (t.temperature) { document.getElementById('tune-temperature').value = t.temperature; document.getElementById('temp-val').textContent = t.temperature; }
+            }
+        }
+
+        function log(msg) {
+            const el = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            el.textContent = `[${time}] ${msg}\n` + el.textContent;
+        }
+
+        // Init
+        loadConfig();
+        loadModels();
+    </script>
+</body>
+</html>

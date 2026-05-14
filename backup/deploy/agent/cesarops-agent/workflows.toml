@@ -1,0 +1,49 @@
+# Default self-healing workflow configuration
+[[workflow]]
+name = "Self-Annealing Loop"
+id = "wf-anneal-01"
+
+[[workflow.nodes]]
+id = "n-health"
+type = "HealthCheck"
+url = "http://localhost:5001/health"
+threshold = 0.9
+
+[[workflow.nodes]]
+id = "n-llm"
+type = "LlmDecision"
+prompt = "KoboldCPP is down, GPU shows OOM. What do?"
+system = "You are a system administrator. Respond with a concise action plan."
+
+[[workflow.nodes]]
+id = "n-swap"
+type = "ModelSwap"
+model_id = "coder14"
+
+[[workflow.nodes]]
+id = "n-restart"
+type = "ProcessControl"
+action = "restart"
+service = "koboldcpp"
+
+[[workflow.nodes]]
+id = "n-alert"
+type = "Alert"
+message = "Recovered: swapped to 14B model"
+channel = "mission-control"
+
+[[workflow.edges]]
+from = "n-health"
+to = "n-llm"
+
+[[workflow.edges]]
+from = "n-llm"
+to = "n-swap"
+
+[[workflow.edges]]
+from = "n-swap"
+to = "n-restart"
+
+[[workflow.edges]]
+from = "n-restart"
+to = "n-alert"

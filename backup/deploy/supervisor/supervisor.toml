@@ -1,0 +1,84 @@
+[general]
+log_level = "info"
+pid_file = "/var/run/cesarops-supervisor.pid"
+
+[drives]
+[[drives.mounts]]
+mount_point = "/mnt/data-external"
+type = "uuid"
+uuid = "dec00b8b-a95a-4c02-ae40-f7e6ab1b21e9"
+fs_type = "ext4"
+
+[[drives.mounts]]
+mount_point = "/codebase"
+type = "device"
+device = "/dev/sdb1"
+fs_type = "xfs"
+
+[[drives.mounts]]
+mount_point = "/data"
+type = "device"
+device = "/dev/sdb2"
+fs_type = "xfs"
+
+[[drives.mounts]]
+mount_point = "/mnt/cesarops2"
+type = "cifs"
+server = "100.102.158.111"
+share = "storage"
+
+[[drives.mounts]]
+mount_point = "/mnt/cesarops3-storage"
+type = "cifs"
+server = "100.105.77.74"
+share = "storage"
+
+[[drives.mounts]]
+mount_point = "/mnt/scratch"
+type = "cifs"
+server = "100.105.77.74"
+share = "scratch"
+
+[network]
+[[network.services]]
+type = "nics"
+
+[[network.services]]
+type = "tailscale"
+
+[[network.services]]
+type = "cloudflared"
+token = "your-cloudflared-token-here"
+
+[llm]
+[[llm.services]]
+name = "llama-cpp"
+binary = "/usr/local/bin/llama-server"
+args = ["--model", "/codebase/models/llama-2-7b.gguf", "--port", "8080"]
+
+[[llm.services]]
+name = "vllm"
+binary = "/usr/local/bin/vllm"
+args = ["serve", "/codebase/models/mistral-7b-instruct", "--port", "8081"]
+
+[app]
+[[app.services]]
+name = "api-gateway"
+binary = "/usr/local/bin/api-gateway"
+args = ["--config", "/etc/cesarops/api.yaml"]
+
+[[app.services]]
+name = "web-frontend"
+binary = "/usr/local/bin/serve-web"
+args = ["--port", "3000"]
+
+[infra]
+[[infra.services]]
+name = "smbd"
+binary = "/usr/sbin/smbd"
+args = ["--foreground"]
+
+[[infra.services]]
+name = "code-insiders"
+binary = "/usr/local/bin/code-insiders"
+args = ["serve-web", "--port", "8443"]
