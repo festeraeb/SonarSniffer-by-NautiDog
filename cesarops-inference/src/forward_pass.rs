@@ -222,6 +222,16 @@ pub fn execute_layer(
     }
     kv_cache.current_len = pos + 1;
 
+    // KV cache diagnostic: dump first few positions (only for first layer via current_len check)
+    if pos <= 4 && kv_cache.current_len <= 5 && pos == kv_cache.current_len - 1 {
+        let stride = (config.n_kv_heads * config.head_dim * 4) as u64;
+        for p in 0..=pos {
+            let offset = (p as u64) * stride;
+            let k_vals = readback_f32_offset(device, queue, &kv_cache.key_cache, offset, 4);
+            tracing::info!("  [KV pos={}] K[0:4]={:?}", p, k_vals);
+        }
+    }
+
     // ── Step 4: Multi-head attention ────────────────────────────────────────
     // Each head gets its own submit to avoid buffer reuse sync issues
     let attn_output = create_temp_buffer(device, "attn_out", hidden_bytes);
@@ -335,6 +345,33 @@ pub fn readback_f32(device: &wgpu::Device, queue: &wgpu::Queue, buf: &wgpu::Buff
     enc.copy_buffer_to_buffer(buf, 0, &staging, 0, size);
     queue.submit(std::iter::once(enc.finish()));
 
+    let slice = staging.slice(..);
+    let (tx, rx) = std::sync::mpsc::channel();
+    slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+    loop {
+        device.poll(wgpu::Maintain::Poll);
+        if rx.try_recv().is_ok() { break; }
+        std::thread::sleep(std::time::Duration::from_micros(10));
+    }
+    let data = slice.get_mapped_range();
+    let vals: Vec<f32> = bytemuck::cast_slice(&data)[..n].to_vec();
+    drop(data);
+    staging.unmap();
+    vals
+}
+
+/// Read back f32 values from a GPU buffer at a specific byte offset.
+pub fn readback_f32_offset(device: &wgpu::Device, queue: &wgpu::Queue, buf: &wgpu::Buffer, offset: u64, n: usize) -> Vec<f32> {
+    let size = (n * 4) as u64;
+    let staging = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("diag_staging_off"),
+        size,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    enc.copy_buffer_to_buffer(buf, offset, &staging, 0, size);
+    queue.submit(std::iter::once(enc.finish()));
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
