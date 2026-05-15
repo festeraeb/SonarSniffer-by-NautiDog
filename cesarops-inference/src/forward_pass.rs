@@ -126,8 +126,8 @@ pub struct ModelConfig {
 
 /// Execute one transformer layer (autoregressive decode, single token).
 ///
-/// Uses separate command encoder submits between dependent operations
-/// to avoid storage buffer read-after-write hazards on P100 Vulkan.
+/// Uses a single command encoder for most operations with one strategic
+/// submit before attention (to ensure KV cache writes are visible).
 ///
 /// Input: `hidden_state` buffer [hidden_dim] f32
 /// Output: `hidden_state` buffer updated in-place with layer output
@@ -143,212 +143,107 @@ pub fn execute_layer(
     pos: u32,
 ) {
     let hidden_bytes = (config.hidden_dim * 4) as u64;
-    let intermediate_bytes = (config.intermediate_dim * 4) as u64;
     let kv_dim_bytes = (config.n_kv_heads * config.head_dim * 4) as u64;
+    let intermediate_bytes = (config.intermediate_dim * 4) as u64;
 
-    // Submit any pending work from the caller's encoder, replace with fresh one
-    queue.submit(std::iter::once(
-        std::mem::replace(encoder, device.create_command_encoder(
-            &wgpu::CommandEncoderDescriptor { label: Some("layer_tail") }
-        )).finish()
-    ));
-
-    // ── Step 1: Attention RMSNorm ───────────────────────────────────────────
+    // Scratch buffers — all live until end of function scope
     let normed = create_temp_buffer(device, "normed", hidden_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        pipelines.rmsnorm.dispatch(
-            device, queue, &mut enc,
-            hidden_state, &weights.attn_norm, &normed,
-            config.hidden_dim, 1, config.rms_norm_eps,
-        );
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // ── Step 2: QKV projections + biases + RoPE ─────────────────────────────
     let q_buf = create_temp_buffer(device, "q", hidden_bytes);
     let k_buf = create_temp_buffer(device, "k", kv_dim_bytes);
     let v_buf = create_temp_buffer(device, "v", kv_dim_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &normed, &weights.q_proj, &q_buf,
-            1, config.hidden_dim, config.hidden_dim);
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &normed, &weights.k_proj, &k_buf,
-            1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &normed, &weights.v_proj, &v_buf,
-            1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // Biases + RoPE
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        if let Some(ref q_bias) = weights.q_bias {
-            let q_tmp = create_temp_buffer(device, "q_biased", hidden_bytes);
-            dispatch_add(device, queue, &mut enc, pipelines,
-                &q_buf, q_bias, &q_tmp, config.hidden_dim);
-            enc.copy_buffer_to_buffer(&q_tmp, 0, &q_buf, 0, hidden_bytes);
-        }
-        if let Some(ref k_bias) = weights.k_bias {
-            let k_tmp = create_temp_buffer(device, "k_biased", kv_dim_bytes);
-            dispatch_add(device, queue, &mut enc, pipelines,
-                &k_buf, k_bias, &k_tmp, config.n_kv_heads * config.head_dim);
-            enc.copy_buffer_to_buffer(&k_tmp, 0, &k_buf, 0, kv_dim_bytes);
-        }
-        if let Some(ref v_bias) = weights.v_bias {
-            let v_tmp = create_temp_buffer(device, "v_biased", kv_dim_bytes);
-            dispatch_add(device, queue, &mut enc, pipelines,
-                &v_buf, v_bias, &v_tmp, config.n_kv_heads * config.head_dim);
-            enc.copy_buffer_to_buffer(&v_tmp, 0, &v_buf, 0, kv_dim_bytes);
-        }
-        dispatch_rope(device, queue, &mut enc, pipelines, &q_buf,
-            config.head_dim, pos, config.n_heads);
-        dispatch_rope(device, queue, &mut enc, pipelines, &k_buf,
-            config.head_dim, pos, config.n_kv_heads);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // RoPE diagnostic: dump Q and K after RoPE for first layer at pos 2-5
-    // current_len is still 0 at this point (set in Step 3 below)
-    if pos >= 2 && pos <= 5 && kv_cache.current_len == pos {
-        // current_len == pos means this layer hasn't been written yet for this pos
-        // (it was pos from the previous token's write). First layer will have current_len = pos.
-        let q_after = readback_f32(device, queue, &q_buf, 8);
-        let k_after = readback_f32(device, queue, &k_buf, 8);
-        tracing::info!("  POS={} FIRST_LAYER Q_rope[0:8]={:?}", pos, q_after);
-        tracing::info!("  POS={} FIRST_LAYER K_rope[0:8]={:?}", pos, k_after);
-    }
-
-    // ── Step 3: KV cache update ─────────────────────────────────────────────
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        let k_offset = (pos * config.n_kv_heads * config.head_dim * 4) as u64;
-        let v_offset = k_offset;
-        enc.copy_buffer_to_buffer(&k_buf, 0, &kv_cache.key_cache, k_offset, kv_dim_bytes);
-        enc.copy_buffer_to_buffer(&v_buf, 0, &kv_cache.value_cache, v_offset, kv_dim_bytes);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-    kv_cache.current_len = pos + 1;
-
-    // KV cache diagnostic: dump first few positions (only for first layer via current_len check)
-    if pos <= 4 && kv_cache.current_len <= 5 && pos == kv_cache.current_len - 1 {
-        let stride = (config.n_kv_heads * config.head_dim * 4) as u64;
-        for p in 0..=pos {
-            let offset = (p as u64) * stride;
-            let k_vals = readback_f32_offset(device, queue, &kv_cache.key_cache, offset, 4);
-            tracing::info!("  [KV pos={}] K[0:4]={:?}", p, k_vals);
-        }
-    }
-
-    // ── Step 4: Multi-head attention ────────────────────────────────────────
-    // Each head gets its own submit to avoid buffer reuse sync issues
+    let bias_tmp = create_temp_buffer(device, "bias_tmp", hidden_bytes);
     let attn_output = create_temp_buffer(device, "attn_out", hidden_bytes);
-    {
-        crate::attention_dispatch::dispatch_multihead_attention_split(
-            device, queue,
-            &pipelines.attention, &pipelines.attention_bgl,
-            &pipelines.softmax, &pipelines.softmax_bgl,
-            &pipelines.av, &pipelines.av_bgl,
-            &q_buf,
-            &kv_cache.key_cache,
-            &kv_cache.value_cache,
-            &attn_output,
-            config.n_heads,
-            config.n_kv_heads,
-            config.head_dim,
-            pos,
-        );
-    }
-
-    // Attention diagnostic: dump attn_output after attention (first token, first layer only)
-    if pos == 0 && kv_cache.current_len == 1 {
-        let attn_vals = readback_f32(device, queue, &attn_output, 4);
-        tracing::info!("  [ATTN DIAG L0] attn_output[0:4]: {:?} (ref: [0.6333, 0.2469, -0.1557, -0.0024])", attn_vals);
-    }
-    // Attention output for pos >= 2 (first layer only: current_len == pos+1 after Step 3)
-    if pos >= 2 && pos <= 5 && kv_cache.current_len == pos + 1 {
-        // All layers will match this, so just print first 28 times... 
-        // Actually let's just limit to when current_len just became pos+1 (always true)
-        // Use a simpler approach: only print if the first value is non-trivial
-        let attn_vals = readback_f32(device, queue, &attn_output, 8);
-        if kv_cache.current_len == pos + 1 {
-            tracing::info!("  POS={} kv_len={} ATTN_OUTPUT[0:8]={:?}", pos, kv_cache.current_len, attn_vals);
-        }
-    }
-
-    // ── Step 5: Output projection + attention residual ──────────────────────
     let attn_projected = create_temp_buffer(device, "attn_proj", hidden_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &attn_output, &weights.o_proj, &attn_projected,
-            1, config.hidden_dim, config.hidden_dim);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        let residual_temp = create_temp_buffer(device, "res_attn", hidden_bytes);
-        dispatch_add(device, queue, &mut enc, pipelines,
-            hidden_state, &attn_projected, &residual_temp, config.hidden_dim);
-        enc.copy_buffer_to_buffer(&residual_temp, 0, hidden_state, 0, hidden_bytes);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // ── Step 6: FFN RMSNorm ─────────────────────────────────────────────────
+    let residual_tmp = create_temp_buffer(device, "res_tmp", hidden_bytes);
     let ffn_normed = create_temp_buffer(device, "ffn_normed", hidden_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        pipelines.rmsnorm.dispatch(
-            device, queue, &mut enc,
-            hidden_state, &weights.ffn_norm, &ffn_normed,
-            config.hidden_dim, 1, config.rms_norm_eps,
-        );
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // ── Step 7: Gate + Up projections ───────────────────────────────────────
     let gate_out = create_temp_buffer(device, "gate", intermediate_bytes);
     let up_out = create_temp_buffer(device, "up", intermediate_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &ffn_normed, &weights.gate_proj, &gate_out,
-            1, config.hidden_dim, config.intermediate_dim);
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &ffn_normed, &weights.up_proj, &up_out,
-            1, config.hidden_dim, config.intermediate_dim);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // ── Step 8: SwiGLU ──────────────────────────────────────────────────────
     let ffn_activated = create_temp_buffer(device, "ffn_act", intermediate_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        dispatch_swiglu(device, queue, &mut enc, pipelines,
-            &gate_out, &up_out, &ffn_activated, config.intermediate_dim);
-        queue.submit(std::iter::once(enc.finish()));
-    }
-
-    // ── Step 9: Down projection ─────────────────────────────────────────────
     let ffn_out = create_temp_buffer(device, "ffn_out", hidden_bytes);
-    {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &ffn_activated, &weights.down_proj, &ffn_out,
-            1, config.intermediate_dim, config.hidden_dim);
-        queue.submit(std::iter::once(enc.finish()));
+
+    // ── 1. Attention RMSNorm ────────────────────────────────────────────────
+    pipelines.rmsnorm.dispatch(
+        device, queue, encoder,
+        hidden_state, &weights.attn_norm, &normed,
+        config.hidden_dim, 1, config.rms_norm_eps,
+    );
+
+    // ── 2. QKV Projections + Biases + RoPE ──────────────────────────────────
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &normed, &weights.q_proj, &q_buf, 1, config.hidden_dim, config.hidden_dim);
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &normed, &weights.k_proj, &k_buf, 1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &normed, &weights.v_proj, &v_buf, 1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+
+    if let Some(ref qb) = weights.q_bias {
+        dispatch_add(device, queue, encoder, pipelines, &q_buf, qb, &bias_tmp, config.hidden_dim);
+        encoder.copy_buffer_to_buffer(&bias_tmp, 0, &q_buf, 0, hidden_bytes);
+    }
+    if let Some(ref kb) = weights.k_bias {
+        dispatch_add(device, queue, encoder, pipelines, &k_buf, kb, &bias_tmp, config.n_kv_heads * config.head_dim);
+        encoder.copy_buffer_to_buffer(&bias_tmp, 0, &k_buf, 0, kv_dim_bytes);
+    }
+    if let Some(ref vb) = weights.v_bias {
+        dispatch_add(device, queue, encoder, pipelines, &v_buf, vb, &bias_tmp, config.n_kv_heads * config.head_dim);
+        encoder.copy_buffer_to_buffer(&bias_tmp, 0, &v_buf, 0, kv_dim_bytes);
     }
 
-    // ── Step 10: FFN residual ───────────────────────────────────────────────
-    let residual_temp2 = create_temp_buffer(device, "res_ffn", hidden_bytes);
+    dispatch_rope(device, queue, encoder, pipelines, &q_buf, config.head_dim, pos, config.n_heads);
+    dispatch_rope(device, queue, encoder, pipelines, &k_buf, config.head_dim, pos, config.n_kv_heads);
+
+    // ── 3. KV Cache Write ───────────────────────────────────────────────────
+    let k_offset = (pos as u64) * (config.n_kv_heads as u64) * (config.head_dim as u64) * 4;
+    encoder.copy_buffer_to_buffer(&k_buf, 0, &kv_cache.key_cache, k_offset, kv_dim_bytes);
+    encoder.copy_buffer_to_buffer(&v_buf, 0, &kv_cache.value_cache, k_offset, kv_dim_bytes);
+    kv_cache.current_len = pos + 1;
+
+    // ── SUBMIT: ensure KV cache visible before attention reads ───────────────
+    queue.submit(std::iter::once(
+        std::mem::replace(encoder, device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("layer_post_kv") }
+        )).finish()
+    ));
+
+    // ── 4. Multi-Head Attention ─────────────────────────────────────────────
+    crate::attention_dispatch::dispatch_multihead_attention_split(
+        device, queue,
+        &pipelines.attention, &pipelines.attention_bgl,
+        &pipelines.softmax, &pipelines.softmax_bgl,
+        &pipelines.av, &pipelines.av_bgl,
+        &q_buf, &kv_cache.key_cache, &kv_cache.value_cache, &attn_output,
+        config.n_heads, config.n_kv_heads, config.head_dim, pos,
+    );
+
+    // ── 5. O Projection + Attention Residual ────────────────────────────────
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &attn_output, &weights.o_proj, &attn_projected,
+        1, config.hidden_dim, config.hidden_dim);
     dispatch_add(device, queue, encoder, pipelines,
-        hidden_state, &ffn_out, &residual_temp2, config.hidden_dim);
-    encoder.copy_buffer_to_buffer(&residual_temp2, 0, hidden_state, 0, hidden_bytes);
-    // Caller will submit this final encoder
+        hidden_state, &attn_projected, &residual_tmp, config.hidden_dim);
+    encoder.copy_buffer_to_buffer(&residual_tmp, 0, hidden_state, 0, hidden_bytes);
+
+    // ── 6. FFN Block ────────────────────────────────────────────────────────
+    pipelines.rmsnorm.dispatch(
+        device, queue, encoder,
+        hidden_state, &weights.ffn_norm, &ffn_normed,
+        config.hidden_dim, 1, config.rms_norm_eps,
+    );
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &ffn_normed, &weights.gate_proj, &gate_out,
+        1, config.hidden_dim, config.intermediate_dim);
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &ffn_normed, &weights.up_proj, &up_out,
+        1, config.hidden_dim, config.intermediate_dim);
+    dispatch_swiglu(device, queue, encoder, pipelines,
+        &gate_out, &up_out, &ffn_activated, config.intermediate_dim);
+    dispatch_tiled_matmul(device, queue, encoder, pipelines,
+        &ffn_activated, &weights.down_proj, &ffn_out,
+        1, config.intermediate_dim, config.hidden_dim);
+    dispatch_add(device, queue, encoder, pipelines,
+        hidden_state, &ffn_out, &residual_tmp, config.hidden_dim);
+    encoder.copy_buffer_to_buffer(&residual_tmp, 0, hidden_state, 0, hidden_bytes);
+    // Caller submits this encoder
 }
 
 // ── FFN Diagnostic: step-by-step with readback ──────────────────────────────
