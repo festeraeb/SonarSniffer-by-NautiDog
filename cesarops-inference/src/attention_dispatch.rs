@@ -6,6 +6,7 @@
 
 use bytemuck::{Pod, Zeroable};
 use crate::forward_pass::SoftmaxParams;
+use tracing;
 
 /// Params for the attention QK^T shader (with KV stride).
 #[repr(C)]
@@ -325,5 +326,64 @@ pub fn dispatch_multihead_attention_split(
             drop(pass);
             queue.submit(std::iter::once(enc.finish()));
         }
+
+        // Diagnostic: dump scores and probs for head 0 at kv_len=2 (pos=1), layer 0 only
+        if h == 0 && kv_len == 2 {
+            let scores_vals = readback_attn_f32(device, queue, &scores_buf, kv_len as usize);
+            let probs_vals = readback_attn_f32(device, queue, &probs_buf, kv_len as usize);
+            // Also read back the output for this head
+            let out_vals = readback_attn_f32_offset(device, queue, output_buf, out_offset, 4);
+            tracing::info!("  [ATTN SCORES] head=0 kv_len=2: scores={:?} probs={:?} out[0:4]={:?}", scores_vals, probs_vals, out_vals);
+        }
     }
+}
+
+fn readback_attn_f32(device: &wgpu::Device, queue: &wgpu::Queue, buf: &wgpu::Buffer, n: usize) -> Vec<f32> {
+    let size = (n * 4) as u64;
+    let staging = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("attn_diag_staging"), size,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    enc.copy_buffer_to_buffer(buf, 0, &staging, 0, size);
+    queue.submit(std::iter::once(enc.finish()));
+    let slice = staging.slice(..);
+    let (tx, rx) = std::sync::mpsc::channel();
+    slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+    loop {
+        device.poll(wgpu::Maintain::Poll);
+        if rx.try_recv().is_ok() { break; }
+        std::thread::sleep(std::time::Duration::from_micros(10));
+    }
+    let data = slice.get_mapped_range();
+    let vals: Vec<f32> = bytemuck::cast_slice(&data)[..n].to_vec();
+    drop(data);
+    staging.unmap();
+    vals
+}
+
+fn readback_attn_f32_offset(device: &wgpu::Device, queue: &wgpu::Queue, buf: &wgpu::Buffer, offset: u64, n: usize) -> Vec<f32> {
+    let size = (n * 4) as u64;
+    let staging = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("attn_diag_staging2"), size,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    enc.copy_buffer_to_buffer(buf, offset, &staging, 0, size);
+    queue.submit(std::iter::once(enc.finish()));
+    let slice = staging.slice(..);
+    let (tx, rx) = std::sync::mpsc::channel();
+    slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+    loop {
+        device.poll(wgpu::Maintain::Poll);
+        if rx.try_recv().is_ok() { break; }
+        std::thread::sleep(std::time::Duration::from_micros(10));
+    }
+    let data = slice.get_mapped_range();
+    let vals: Vec<f32> = bytemuck::cast_slice(&data)[..n].to_vec();
+    drop(data);
+    staging.unmap();
+    vals
 }

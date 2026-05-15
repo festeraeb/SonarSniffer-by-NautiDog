@@ -204,11 +204,10 @@ pub fn execute_layer(
                 &v_buf, v_bias, &v_tmp, config.n_kv_heads * config.head_dim);
             enc.copy_buffer_to_buffer(&v_tmp, 0, &v_buf, 0, kv_dim_bytes);
         }
-        // RoPE disabled for testing
-        // dispatch_rope(device, queue, &mut enc, pipelines, &q_buf,
-        //     config.head_dim, pos, config.n_heads);
-        // dispatch_rope(device, queue, &mut enc, pipelines, &k_buf,
-        //     config.head_dim, pos, config.n_kv_heads);
+        dispatch_rope(device, queue, &mut enc, pipelines, &q_buf,
+            config.head_dim, pos, config.n_heads);
+        dispatch_rope(device, queue, &mut enc, pipelines, &k_buf,
+            config.head_dim, pos, config.n_kv_heads);
         queue.submit(std::iter::once(enc.finish()));
     }
 
