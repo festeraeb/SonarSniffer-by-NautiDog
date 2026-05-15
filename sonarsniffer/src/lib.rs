@@ -12,6 +12,7 @@ pub mod channel_alignment;
 pub mod channel_discovery;
 pub mod probing;
 pub mod egn;
+pub mod adaptive_tvg;
 pub mod outputs;
 pub mod mosaic;
 pub mod curvelet_diag;

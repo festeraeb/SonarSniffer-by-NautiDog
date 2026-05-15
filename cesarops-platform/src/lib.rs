@@ -8,6 +8,7 @@ pub mod admin;
 pub mod plugins;
 pub mod agent;
 pub mod detection;
+pub mod satellite;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
