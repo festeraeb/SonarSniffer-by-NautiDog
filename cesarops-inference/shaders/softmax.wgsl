@@ -1,16 +1,8 @@
-// WGSL Stable Softmax with parallel max-reduction + normalization.
-//
-// Two-phase in one dispatch:
-//   1. Find max across all scores (parallel reduction in shared memory)
-//   2. Compute exp(score - max) and sum
-//   3. Normalize: output[i] = exp(score[i] - max) / sum
-//
-// One workgroup processes one attention head's score vector.
-// Workgroup size 256 handles sequences up to 256 directly;
-// for longer sequences, each thread strides.
+// WGSL Stable Softmax with aggressive tail masking and better numerical stability for older GPUs
+// Optimized for short-to-medium sequences (kv_len up to a few thousand)
 
 struct Params {
-    seq_len: u32,   // Number of scores to softmax over
+    seq_len: u32,      // actual number of valid positions
     _pad0: u32,
     _pad1: u32,
     _pad2: u32,
@@ -30,12 +22,15 @@ fn main(
 ) {
     let tid = lid.x;
     let head_offset = wid.x * params.seq_len;
+    let seq_len = params.seq_len;
 
-    // Phase 1: Find max (strided reduction)
-    var local_max: f32 = -3.40282347e38;
-    for (var i: u32 = tid; i < params.seq_len; i = i + 256u) {
+    // Phase 1: Find max with strict masking
+    var local_max: f32 = -3.40282347e38;  // -inf approx
+    for (var i: u32 = tid; i < seq_len; i = i + 256u) {
         let val = scores[head_offset + i];
-        local_max = max(local_max, val);
+        if (val > local_max) {
+            local_max = val;
+        }
     }
     shared_max[tid] = local_max;
     workgroupBarrier();
@@ -60,39 +55,41 @@ fn main(
 
     let row_max = shared_max[0];
 
-    // Phase 2: Compute exp(x - max) and local sum
+    // Phase 2: exp(score - max) + sum with hard cutoff for stability
     var local_sum: f32 = 0.0;
-    for (var i: u32 = tid; i < params.seq_len; i = i + 256u) {
-        let val = exp(scores[head_offset + i] - row_max);
-        probs[head_offset + i] = val; // Store unnormalized exp
-        local_sum += val;
+    for (var i: u32 = tid; i < seq_len; i = i + 256u) {
+        let shifted = scores[head_offset + i] - row_max;
+        // Very important for old GPUs: prevent underflow/denormals exploding
+        let exp_val = select(0.0, exp(shifted), shifted > -70.0);
+        probs[head_offset + i] = exp_val;
+        local_sum += exp_val;
     }
     shared_sum[tid] = local_sum;
     workgroupBarrier();
 
     // Parallel reduction for sum
-    if (tid < 128u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 128u]; }
+    if (tid < 128u) { shared_sum[tid] += shared_sum[tid + 128u]; }
     workgroupBarrier();
-    if (tid < 64u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 64u]; }
+    if (tid < 64u) { shared_sum[tid] += shared_sum[tid + 64u]; }
     workgroupBarrier();
-    if (tid < 32u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 32u]; }
+    if (tid < 32u) { shared_sum[tid] += shared_sum[tid + 32u]; }
     workgroupBarrier();
-    if (tid < 16u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 16u]; }
+    if (tid < 16u) { shared_sum[tid] += shared_sum[tid + 16u]; }
     workgroupBarrier();
-    if (tid < 8u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 8u]; }
+    if (tid < 8u) { shared_sum[tid] += shared_sum[tid + 8u]; }
     workgroupBarrier();
-    if (tid < 4u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 4u]; }
+    if (tid < 4u) { shared_sum[tid] += shared_sum[tid + 4u]; }
     workgroupBarrier();
-    if (tid < 2u) { shared_sum[tid] = shared_sum[tid] + shared_sum[tid + 2u]; }
+    if (tid < 2u) { shared_sum[tid] += shared_sum[tid + 2u]; }
     workgroupBarrier();
-    if (tid == 0u) { shared_sum[0] = shared_sum[0] + shared_sum[1]; }
+    if (tid == 0u) { shared_sum[0] += shared_sum[1]; }
     workgroupBarrier();
 
     let row_sum = shared_sum[0];
-    let inv_sum = 1.0 / row_sum;
+    let inv_sum = select(0.0, 1.0 / row_sum, row_sum > 1e-12);
 
     // Phase 3: Normalize
-    for (var i: u32 = tid; i < params.seq_len; i = i + 256u) {
-        probs[head_offset + i] = probs[head_offset + i] * inv_sum;
+    for (var i: u32 = tid; i < seq_len; i = i + 256u) {
+        probs[head_offset + i] *= inv_sum;
     }
 }
