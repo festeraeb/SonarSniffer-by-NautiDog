@@ -1,3 +1,4 @@
+use crate::garmin_rsd_parser::{ParseResult, Ping};
 use serde::{Deserialize, Serialize};
 // Assuming these are available in the crate context
 // use crate::garmin_rsd_parser::ParseResult; 
@@ -95,7 +96,7 @@ pub fn detect_targets(
 
     // 1. Thresholding: Find samples above the noise floor
     // We use sensitivity to adjust the threshold relative to the mean intensity
-    let mut all_samples = Vec::new();
+    let mut all_samples: Vec<u16> = Vec::new();
     let mut mean_intensity = 0.0;
     let mut count = 0;
 
@@ -146,17 +147,17 @@ pub fn detect_targets(
                     
                     // Calculate spatial metrics (mocking geometry based on ping/sample)
                     // In real sonar, range = speed * time / 2
-                    let range_m = parse.ping_metadata[p_idx].range_m; 
-                    let depth_m = parse.ping_metadata[p_idx].depth_m;
+                    let range_m = parse.pings[p_idx].depth_m; 
+                    let depth_m = parse.pings[p_idx].depth_m;
 
                     detections.push(Detection {
                         ping_index: p_idx,
                         sample_start: start_s,
                         sample_end: end_s,
                         intensity: max_i,
-                        estimated_depth_m: Some(depth_m),
-                        longitude: parse.ping_metadata[p_idx].longitude,
-                        latitude: parse.ping_metadata[p_idx].latitude,
+                        estimated_depth_m: Some(depth_m as f64),
+                        longitude: parse.pings[p_idx].longitude,
+                        latitude: parse.pings[p_idx].latitude,
                         classification: class,
                         size_class: size_cls,
                         blob_area: area,
@@ -164,9 +165,9 @@ pub fn detect_targets(
                         length_m: area * 0.1, // Placeholder for sample spacing
                         avg_intensity: avg_i,
                         confidence: (avg_i / (mean_intensity + 1.0)).min(1.0),
-                        depth_m,
-                        range_m,
-                        channel: parse.ping_metadata[p_idx].channel,
+                        depth_m: depth_m as f64,
+                        range_m: depth_m as f64,
+                        channel: parse.pings[p_idx].channel,
                         channel_type: "SideScan".to_string(),
                     });
                 }
