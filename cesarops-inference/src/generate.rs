@@ -117,6 +117,25 @@ pub fn generate_tokens(
         // Read logits back to CPU for sampling
         let logits = read_buffer_f32(device, queue, &logits_buf, config.vocab_size as usize);
 
+        // Diagnostic: print top-5 logits for first generated token
+        if output_tokens.is_empty() {
+            // Also check hidden state after final norm
+            let hs_vals = crate::forward_pass::readback_f32(device, queue, &hidden_state, 4);
+            tracing::info!("  Hidden state after final_norm[0:4]: {:?}", hs_vals);
+
+            let mut indexed: Vec<(usize, f32)> = logits.iter().enumerate().map(|(i, &v)| (i, v)).collect();
+            indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            tracing::info!("═══ TOP-5 LOGITS (first generated token) ═══");
+            for (idx, val) in indexed.iter().take(5) {
+                tracing::info!("  token {} = {:.4}", idx, val);
+            }
+            tracing::info!("  logits[0..4] = {:?}", &logits[..4]);
+            tracing::info!("  logits stats: min={:.4} max={:.4} mean={:.4}",
+                logits.iter().cloned().fold(f32::INFINITY, f32::min),
+                logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max),
+                logits.iter().sum::<f32>() / logits.len() as f32);
+        }
+
         // Sample next token
         let next_token = sample_next_token(&logits, params.temperature, params.top_p);
 
@@ -207,6 +226,14 @@ fn execute_single_token(
             hidden_state, pos,
         );
         queue.submit(std::iter::once(encoder.finish()));
+
+        // Dump hidden state magnitude after each layer for first token
+        if pos == 0 && (layer_idx == 0 || layer_idx == 13 || layer_idx == 27) {
+            let vals = crate::forward_pass::readback_f32(device, queue, hidden_state, 4);
+            let all_vals = crate::forward_pass::readback_f32(device, queue, hidden_state, config.hidden_dim as usize);
+            let rms: f32 = (all_vals.iter().map(|x| x*x).sum::<f32>() / all_vals.len() as f32).sqrt();
+            tracing::info!("  [LAYER {}] hidden[0:4]={:?} rms={:.4}", layer_idx, vals, rms);
+        }
 
         // Telemetry: after layer 0 on second token, dump KV cache values
         if layer_idx == 0 && pos == 1 {

@@ -307,7 +307,16 @@ async fn run_generate_mode(
         n_kv_heads: weights.n_kv_heads as u32,
         head_dim: (weights.hidden_dim / weights.n_heads) as u32,
         n_layers: weights.n_layers as u32,
-        vocab_size: weights.vocab_size as u32,
+        vocab_size: {
+            // Use actual tensor shape instead of metadata (which may be padded)
+            let embed_name = "token_embd.weight".to_string();
+            if let Some(region) = weights.tensors.get(&embed_name) {
+                // GGUF shape [ne0, ne1] = [hidden_dim, vocab_size]
+                region.shape.get(1).copied().unwrap_or(weights.vocab_size) as u32
+            } else {
+                weights.vocab_size as u32
+            }
+        },
         max_seq_len: 2048,
         rms_norm_eps: 1e-6,
     };
@@ -475,7 +484,7 @@ async fn run_generate_mode(
 
     // Tokenize
     let prompt_tokens = tokenizer.encode(prompt);
-    info!("Prompt: {} tokens", prompt_tokens.len());
+    info!("Prompt: {} tokens — IDs: {:?}", prompt_tokens.len(), &prompt_tokens[..prompt_tokens.len().min(20)]);
 
     // Build LayerWeights from registry
     info!("Mapping tensors to layer weight structures...");
@@ -559,6 +568,7 @@ async fn run_generate_mode(
             let output_text = tokenizer.decode(&output_tokens);
             println!("{}", output_text);
             println!("\n────────────────────────────────────────");
+            println!("Token IDs: {:?}", &output_tokens[..output_tokens.len().min(20)]);
             println!("Generated {} tokens in {:.2?} ({:.1} t/s)",
                 output_tokens.len(), elapsed,
                 output_tokens.len() as f64 / elapsed.as_secs_f64());
