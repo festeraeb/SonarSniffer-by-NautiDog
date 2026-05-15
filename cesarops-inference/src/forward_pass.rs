@@ -211,6 +211,17 @@ pub fn execute_layer(
         queue.submit(std::iter::once(enc.finish()));
     }
 
+    // RoPE diagnostic: dump Q and K after RoPE for first layer at pos 2-5
+    // current_len is still 0 at this point (set in Step 3 below)
+    if pos >= 2 && pos <= 5 && kv_cache.current_len == pos {
+        // current_len == pos means this layer hasn't been written yet for this pos
+        // (it was pos from the previous token's write). First layer will have current_len = pos.
+        let q_after = readback_f32(device, queue, &q_buf, 8);
+        let k_after = readback_f32(device, queue, &k_buf, 8);
+        tracing::info!("  POS={} FIRST_LAYER Q_rope[0:8]={:?}", pos, q_after);
+        tracing::info!("  POS={} FIRST_LAYER K_rope[0:8]={:?}", pos, k_after);
+    }
+
     // ── Step 3: KV cache update ─────────────────────────────────────────────
     {
         let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
@@ -256,6 +267,16 @@ pub fn execute_layer(
     if pos == 0 && kv_cache.current_len == 1 {
         let attn_vals = readback_f32(device, queue, &attn_output, 4);
         tracing::info!("  [ATTN DIAG L0] attn_output[0:4]: {:?} (ref: [0.6333, 0.2469, -0.1557, -0.0024])", attn_vals);
+    }
+    // Attention output for pos >= 2 (first layer only: current_len == pos+1 after Step 3)
+    if pos >= 2 && pos <= 5 && kv_cache.current_len == pos + 1 {
+        // All layers will match this, so just print first 28 times... 
+        // Actually let's just limit to when current_len just became pos+1 (always true)
+        // Use a simpler approach: only print if the first value is non-trivial
+        let attn_vals = readback_f32(device, queue, &attn_output, 8);
+        if kv_cache.current_len == pos + 1 {
+            tracing::info!("  POS={} kv_len={} ATTN_OUTPUT[0:8]={:?}", pos, kv_cache.current_len, attn_vals);
+        }
     }
 
     // ── Step 5: Output projection + attention residual ──────────────────────

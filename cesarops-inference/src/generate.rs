@@ -235,6 +235,14 @@ fn execute_single_token(
             tracing::info!("  [LAYER {}] hidden[0:4]={:?} rms={:.4}", layer_idx, vals, rms);
         }
 
+        // Per-position per-layer diagnostics for prefill debugging
+        if pos >= 2 && pos <= 6 && (layer_idx == 0 || layer_idx == 5 || layer_idx == 10 || layer_idx == 15 || layer_idx == 27) {
+            let hs = crate::forward_pass::readback_f32(device, queue, hidden_state, 8);
+            let all_vals = crate::forward_pass::readback_f32(device, queue, hidden_state, config.hidden_dim as usize);
+            let rms: f32 = (all_vals.iter().map(|x| x*x).sum::<f32>() / all_vals.len() as f32).sqrt();
+            tracing::info!("  POS={} LAYER={:2} hidden[0:8]={:?} RMS={:.4}", pos, layer_idx, hs, rms);
+        }
+
         // Telemetry: after layer 0 on second token, dump KV cache values
         if layer_idx == 0 && pos == 1 {
             let dump_size = 16u64; // 4 f32 values
