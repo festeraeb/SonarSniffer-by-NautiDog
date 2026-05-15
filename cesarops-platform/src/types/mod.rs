@@ -62,3 +62,23 @@ pub struct DispatchEvent {
     pub description: String,
     pub operator: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SegmentUpdate {
+    pub status: Option<SegmentStatus>,
+    pub pod_score: Option<f64>,
+    pub assigned_team: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpsUpdate {
+    pub member_id: Uuid,
+    pub lat: f64,
+    pub lon: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatusUpdate {
+    pub status: ResponderStatus,
+}
+
