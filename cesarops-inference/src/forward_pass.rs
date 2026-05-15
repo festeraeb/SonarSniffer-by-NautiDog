@@ -198,7 +198,9 @@ pub fn execute_layer(
     encoder.copy_buffer_to_buffer(&v_buf, 0, &kv_cache.value_cache, k_offset, kv_dim_bytes);
     kv_cache.current_len = pos + 1;
 
-    // ── SUBMIT: ensure KV cache visible before attention reads ───────────────
+    // MUST submit before attention because dispatch_multihead_attention_split
+    // uses its own separate encoders+submits internally. Without this submit,
+    // the KV copy above hasn't been sent to GPU yet when attention reads the cache.
     queue.submit(std::iter::once(
         std::mem::replace(encoder, device.create_command_encoder(
             &wgpu::CommandEncoderDescriptor { label: Some("layer_post_kv") }
