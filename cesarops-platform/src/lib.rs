@@ -1,4 +1,5 @@
 pub mod types;
+pub mod search_theory;
 pub mod dispatch;
 pub mod mapping;
 pub mod tracking;
