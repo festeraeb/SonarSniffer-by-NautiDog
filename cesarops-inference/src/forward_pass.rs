@@ -204,10 +204,11 @@ pub fn execute_layer(
                 &v_buf, v_bias, &v_tmp, config.n_kv_heads * config.head_dim);
             enc.copy_buffer_to_buffer(&v_tmp, 0, &v_buf, 0, kv_dim_bytes);
         }
-        dispatch_rope(device, queue, &mut enc, pipelines, &q_buf,
-            config.head_dim, pos, config.n_heads);
-        dispatch_rope(device, queue, &mut enc, pipelines, &k_buf,
-            config.head_dim, pos, config.n_kv_heads);
+        // RoPE disabled for testing
+        // dispatch_rope(device, queue, &mut enc, pipelines, &q_buf,
+        //     config.head_dim, pos, config.n_heads);
+        // dispatch_rope(device, queue, &mut enc, pipelines, &k_buf,
+        //     config.head_dim, pos, config.n_kv_heads);
         queue.submit(std::iter::once(enc.finish()));
     }
 
@@ -242,6 +243,12 @@ pub fn execute_layer(
         );
     }
 
+    // Attention diagnostic: dump attn_output after attention (first token, first layer only)
+    if pos == 0 && kv_cache.current_len == 1 {
+        let attn_vals = readback_f32(device, queue, &attn_output, 4);
+        tracing::info!("  [ATTN DIAG L0] attn_output[0:4]: {:?} (ref: [0.6333, 0.2469, -0.1557, -0.0024])", attn_vals);
+    }
+
     // ── Step 5: Output projection + attention residual ──────────────────────
     let attn_projected = create_temp_buffer(device, "attn_proj", hidden_bytes);
     {
@@ -251,6 +258,13 @@ pub fn execute_layer(
             1, config.hidden_dim, config.hidden_dim);
         queue.submit(std::iter::once(enc.finish()));
     }
+
+    // Attention diagnostic: dump O_proj output (first layer only)
+    if pos == 0 && kv_cache.current_len == 1 {
+        let oproj_vals = readback_f32(device, queue, &attn_projected, 4);
+        tracing::info!("  [ATTN DIAG L0] O_proj[0:4]: {:?} (ref: [0.2887, -0.0820, 0.0700, 0.0632])", oproj_vals);
+    }
+
     {
         let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         let residual_temp = create_temp_buffer(device, "res_attn", hidden_bytes);
@@ -258,6 +272,12 @@ pub fn execute_layer(
             hidden_state, &attn_projected, &residual_temp, config.hidden_dim);
         enc.copy_buffer_to_buffer(&residual_temp, 0, hidden_state, 0, hidden_bytes);
         queue.submit(std::iter::once(enc.finish()));
+    }
+
+    // Attention diagnostic: dump after residual (first layer only)
+    if pos == 0 && kv_cache.current_len == 1 {
+        let res_vals = readback_f32(device, queue, hidden_state, 4);
+        tracing::info!("  [ATTN DIAG L0] h_after_attn[0:4]: {:?} (ref: [0.2876, -0.0788, 0.0815, 0.0453])", res_vals);
     }
 
     // ── Step 6: FFN RMSNorm ─────────────────────────────────────────────────

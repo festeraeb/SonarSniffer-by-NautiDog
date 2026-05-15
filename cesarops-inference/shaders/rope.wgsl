@@ -22,9 +22,10 @@ struct Params {
 fn main(
     @builtin(global_invocation_id) gid: vec3<u32>,
     @builtin(workgroup_id) wid: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
 ) {
     let head_idx = wid.x;
-    let pair_idx = gid.x; // Which rotation pair within this head
+    let pair_idx = lid.x; // Local thread index within workgroup = pair within head
     let half_dim = params.head_dim / 2u;
 
     if (pair_idx >= half_dim) { return; }
