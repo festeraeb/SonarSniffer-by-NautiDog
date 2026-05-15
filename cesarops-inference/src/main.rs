@@ -235,11 +235,19 @@ async fn run_generate_mode(
 ) -> anyhow::Result<()> {
     use std::io::Write;
 
-    let prompt = if args.prompt.is_empty() {
-        "Hello, I am CESARops, a search and rescue AI assistant."
+    let raw_prompt = if args.prompt.is_empty() {
+        "Hello, I am CESARops, a search and rescue AI assistant.".to_string()
     } else {
-        &args.prompt
+        args.prompt.clone()
     };
+
+    // Apply Qwen chat template if prompt doesn't already contain special tokens
+    let prompt = if raw_prompt.contains("<|im_start|>") {
+        raw_prompt
+    } else {
+        format!("<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n", raw_prompt)
+    };
+    let prompt = prompt.as_str();
 
     info!("=== NATIVE GPU GENERATION MODE ===");
     info!("Prompt: \"{}\"", &prompt[..prompt.len().min(80)]);
