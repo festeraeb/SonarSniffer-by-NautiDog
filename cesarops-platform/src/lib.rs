@@ -6,6 +6,8 @@ pub mod tracking;
 pub mod reporting;
 pub mod admin;
 pub mod plugins;
+pub mod agent;
+pub mod detection;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
