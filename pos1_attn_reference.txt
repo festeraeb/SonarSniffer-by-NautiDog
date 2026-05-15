@@ -1,0 +1,26 @@
+Loading GGUF...
+Loading weights...
+  Layer 0/28...
+  Layer 7/28...
+  Layer 14/28...
+  Layer 21/28...
+
+=== PREFILL: token 9707 at pos=0 ===
+  After 28 layers: rms=12.6531
+
+=== DECODE: token 135144 at pos=1 ===
+  Input embed rms: 0.0240
+  [L0 H0] scores=[181.9620, 183.6052] probs=[0.1620, 0.8380]
+  [L0 H0] context[0:4]=[-0.08374221  0.34268208  0.0194337   0.39464408]
+  Layer 0: rms=0.3255 h[0:4]=[ 0.47954    -0.09176255 -0.00518729  0.05398762]
+  Layer 13: rms=7.0412 h[0:4]=[ 0.54712594  4.455446   -3.951353   -0.08698082]
+  Layer 27: rms=11.8182 h[0:4]=[-7.674114   0.6696882  1.9549165 -2.088247 ]
+
+  Final norm h[0:4]: [-2.8611908   0.26030916  0.5479407  -0.8172276 ]
+  logit[0] (token '!'): -3.4001
+  logit max: 18.4943 at token 88359
+  Top-5: [(88359, '18.4943'), (37031, '16.7986'), (85871, '16.4485'), (139197, '16.4460'), (9647, '16.1114')]
+
+=== COMPARE THESE VALUES AGAINST RUST ENGINE ===
+If Rust engine layer 0 head 0 scores match, attention is correct.
+If they don't match, the bug is in RoPE or KV cache stride at pos>0.
