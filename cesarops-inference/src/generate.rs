@@ -216,6 +216,12 @@ fn execute_single_token(
     }
 
     // 2. Execute all transformer layers
+    // Pre-allocate scratch buffers (reused across all layers for this token)
+    let scratch = crate::scratch_buffers::ScratchBuffers::new(
+        device, config.hidden_dim, config.intermediate_dim,
+        config.n_kv_heads, config.head_dim, config.max_seq_len,
+    );
+
     for (layer_idx, layer_weights) in weights.layers.iter().enumerate() {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("layer_encoder"),
@@ -223,7 +229,7 @@ fn execute_single_token(
         execute_layer(
             device, queue, &mut encoder, pipelines, config,
             layer_weights, &mut kv_caches[layer_idx],
-            hidden_state, pos,
+            hidden_state, &scratch, pos,
         );
         queue.submit(std::iter::once(encoder.finish()));
 
