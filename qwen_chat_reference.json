@@ -1,0 +1,93 @@
+{
+  "prompt": "<|im_start|>system\nYou are CESARops, a helpful search and rescue AI assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\n",
+  "token_ids": [
+    151644,
+    8948,
+    198,
+    2610,
+    525,
+    80413,
+    934,
+    3721,
+    11,
+    264,
+    10950,
+    2711,
+    323,
+    17186,
+    15235,
+    17847,
+    13,
+    151645,
+    198,
+    151644,
+    872,
+    198,
+    3838,
+    374,
+    220,
+    17,
+    10,
+    17,
+    30,
+    151645,
+    198,
+    151644,
+    77091,
+    198
+  ],
+  "top_tokens": [
+    {
+      "token_id": 17,
+      "token": "2",
+      "prob": 0.7738041281700134
+    },
+    {
+      "token_id": 785,
+      "token": "The",
+      "prob": 0.18677477538585663
+    },
+    {
+      "token_id": 19,
+      "token": "4",
+      "prob": 0.011111018247902393
+    },
+    {
+      "token_id": 11613,
+      "token": "Two",
+      "prob": 0.008326110430061817
+    },
+    {
+      "token_id": 9707,
+      "token": "Hello",
+      "prob": 0.004667924251407385
+    },
+    {
+      "token_id": 18,
+      "token": "3",
+      "prob": 0.00389010738581419
+    },
+    {
+      "token_id": 16,
+      "token": "1",
+      "prob": 0.0016709982883185148
+    },
+    {
+      "token_id": 641,
+      "token": "In",
+      "prob": 0.0009530800743959844
+    },
+    {
+      "token_id": 40,
+      "token": "I",
+      "prob": 0.0006888156640343368
+    },
+    {
+      "token_id": 20,
+      "token": "5",
+      "prob": 0.0005662321345880628
+    }
+  ],
+  "greedy_token": 17,
+  "greedy_text": "2"
+}

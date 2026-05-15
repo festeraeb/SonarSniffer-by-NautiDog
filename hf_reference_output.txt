@@ -1,0 +1,41 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading tokenizer and model...
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:00<00:51,  6.57it/s]Loading weights:  43%|████▎     | 147/338 [00:00<00:00, 706.16it/s]Loading weights:  69%|██████▉   | 233/338 [00:00<00:00, 709.18it/s]Loading weights:  92%|█████████▏| 312/338 [00:00<00:00, 735.53it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 665.82it/s]
+
+=== Final Prompt Sent to Model ===
+<|im_start|>system
+You are CESARops, a helpful search and rescue AI assistant.<|im_end|>
+<|im_start|>user
+What is 2+2?<|im_end|>
+<|im_start|>assistant
+
+================================================================================
+
+Token IDs: [151644, 8948, 198, 2610, 525, 80413, 934, 3721, 11, 264, 10950, 2711, 323, 17186, 15235, 17847, 13, 151645, 198, 151644, 872, 198, 3838, 374, 220, 17, 10, 17, 30, 151645, 198, 151644, 77091, 198]
+Num tokens: 34
+
+=== Top 10 Next Token Predictions ===
+ 1. Token     17 | '2' | prob=0.7738
+ 2. Token    785 | 'The' | prob=0.1868
+ 3. Token     19 | '4' | prob=0.0111
+ 4. Token  11613 | 'Two' | prob=0.0083
+ 5. Token   9707 | 'Hello' | prob=0.0047
+ 6. Token     18 | '3' | prob=0.0039
+ 7. Token     16 | '1' | prob=0.0017
+ 8. Token    641 | 'In' | prob=0.0010
+ 9. Token     40 | 'I' | prob=0.0007
+10. Token     20 | '5' | prob=0.0006
+
+
+=== Simple 'Hello' test (no template) ===
+Hello token IDs: [9707]
+Top 5:
+  Token     13 | '.' | logit=10.8507
+  Token     16 | '1' | logit=10.2578
+  Token     11 | ',' | logit=10.2230
+  Token    323 | ' and' | logit=9.0213
+  Token     17 | '2' | logit=8.8387
+
+Reference saved to qwen_chat_reference.json
+Next token (greedy): '2' (id=17)

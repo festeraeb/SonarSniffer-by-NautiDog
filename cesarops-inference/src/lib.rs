@@ -46,3 +46,4 @@ pub mod satellite_stitch;
 pub mod optical_mass;
 pub mod galvanic_battery;
 pub mod magnetic_eraser;
+pub mod model_arch;
