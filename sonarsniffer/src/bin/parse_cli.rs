@@ -1,6 +1,17 @@
-use std::env;
+/// parse_cli — Full pipeline CLI for SonarSniffer.
+///
+/// Parses a sonar file, runs the output pipeline, and prints results as JSON.
+///
+/// Usage:
+///   cargo run --bin parse_cli -- <file> [--light] [--output-dir DIR] [--no-video]
+///     [--no-kml] [--no-kmz] [--no-mbtiles] [--no-mosaic] [--no-waterfall]
+///     [--no-arcgis] [--no-viewer] [--summary] [--first-n N]
 
-use sonarsniffer_lib::{run_pipeline_internal, outputs::PipelineOptions};
+use std::env;
+use std::path::Path;
+
+use sonarsniffer_lib::format_detector;
+use sonarsniffer_lib::outputs::{build_outputs, PipelineOptions};
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -76,16 +87,38 @@ fn main() {
         std::process::exit(1);
     };
 
-    let mut resp = run_pipeline_internal(&file_name, Some(options), None);
-    eprintln!("parsed pings: {}", resp.parse.pings.len());
+    let path = Path::new(&file_name);
+    if !path.exists() {
+        eprintln!("File not found: {}", file_name);
+        std::process::exit(1);
+    }
+
+    // Detect format and parse
+    let detected = format_detector::detect_and_parse(path);
+    let mut parse_result = detected.parse;
+    eprintln!("parsed pings: {}", parse_result.pings.len());
+    eprintln!("format: {}", detected.format);
+
+    // Run output pipeline if we have pings
+    let output_summary = if !parse_result.pings.is_empty() {
+        match build_outputs(path, &parse_result, &options, None, None) {
+            Ok(summary) => Some(summary),
+            Err(e) => {
+                eprintln!("Output pipeline error: {:#}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
 
     if summary_only {
-        resp.parse.pings.clear();
+        parse_result.pings.clear();
     } else if let Some(n) = first_n {
-        resp.parse.pings.truncate(n);
-        for (i, p) in resp.parse.pings.iter().enumerate() {
+        parse_result.pings.truncate(n);
+        for (i, p) in parse_result.pings.iter().enumerate() {
             eprintln!(
-                "PING {i}: ch={} seq={} t_ms={} depth_m={:.2} depth_ft={:.2} samples={} lat={} lon={} beam={} heading={:?} pitch={:?} roll={:?} format={} sonar_size={}",
+                "PING {i}: ch={} seq={} t_ms={} depth_m={:.2} depth_ft={:.2} samples={} lat={} lon={}",
                 p.channel,
                 p.sequence,
                 p.timestamp_ms,
@@ -94,15 +127,19 @@ fn main() {
                 p.sample_count,
                 p.latitude,
                 p.longitude,
-                p.beam_angle_deg,
-                p.heading_deg,
-                p.pitch_deg,
-                p.roll_deg,
-                p.sample_format,
-                p.sonar_size,
             );
         }
     }
 
-    println!("{}", serde_json::to_string_pretty(&resp).unwrap_or_else(|_| "<failed to serialize response>".to_string()));
+    // Output JSON summary
+    let output = serde_json::json!({
+        "input_file": file_name,
+        "format": detected.format.to_string(),
+        "record_count": parse_result.record_count,
+        "ping_count": parse_result.pings.len(),
+        "channels": parse_result.channels,
+        "outputs": output_summary,
+    });
+
+    println!("{}", serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_string()));
 }

@@ -1,11 +1,10 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post, put},
+    routing::{delete, post, put},
     Json, Router,
 };
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use serde::Deserialize;
 use uuid::Uuid;
 use crate::AppState;
 use crate::types::{TeamMember, ResponderStatus};

@@ -13,6 +13,10 @@ path = "src/lib.rs"
 name = "sonarsniffer-cli"
 path = "src/bin/probe_cli.rs"
 
+[[bin]]
+name = "parse_cli"
+path = "src/bin/parse_cli.rs"
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

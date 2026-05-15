@@ -126,6 +126,9 @@ pub struct ModelConfig {
 
 /// Execute one transformer layer (autoregressive decode, single token).
 ///
+/// Uses separate command encoder submits between dependent operations
+/// to avoid storage buffer read-after-write hazards on P100 Vulkan.
+///
 /// Input: `hidden_state` buffer [hidden_dim] f32
 /// Output: `hidden_state` buffer updated in-place with layer output
 pub fn execute_layer(
@@ -141,130 +144,335 @@ pub fn execute_layer(
 ) {
     let hidden_bytes = (config.hidden_dim * 4) as u64;
     let intermediate_bytes = (config.intermediate_dim * 4) as u64;
-
-    // ── Attention Block ─────────────────────────────────────────────────────
-
-    // 1. RMSNorm(hidden_state) → normed
-    let normed = create_temp_buffer(device, "normed", hidden_bytes);
-    pipelines.rmsnorm.dispatch(
-        device, queue, encoder,
-        hidden_state, &weights.attn_norm, &normed,
-        config.hidden_dim, 1, config.rms_norm_eps,
-    );
-
-    // 2. Q/K/V projections: normed × W_q, normed × W_k, normed × W_v
-    let q_buf = create_temp_buffer(device, "q", hidden_bytes);
     let kv_dim_bytes = (config.n_kv_heads * config.head_dim * 4) as u64;
+
+    // Submit any pending work from the caller's encoder, replace with fresh one
+    queue.submit(std::iter::once(
+        std::mem::replace(encoder, device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("layer_tail") }
+        )).finish()
+    ));
+
+    // ── Step 1: Attention RMSNorm ───────────────────────────────────────────
+    let normed = create_temp_buffer(device, "normed", hidden_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        pipelines.rmsnorm.dispatch(
+            device, queue, &mut enc,
+            hidden_state, &weights.attn_norm, &normed,
+            config.hidden_dim, 1, config.rms_norm_eps,
+        );
+        queue.submit(std::iter::once(enc.finish()));
+    }
+
+    // ── Step 2: QKV projections + biases + RoPE ─────────────────────────────
+    let q_buf = create_temp_buffer(device, "q", hidden_bytes);
     let k_buf = create_temp_buffer(device, "k", kv_dim_bytes);
     let v_buf = create_temp_buffer(device, "v", kv_dim_bytes);
-
-    // These use the matvec shader (GGUF native layout)
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &normed, &weights.q_proj, &q_buf,
-        1, config.hidden_dim, config.hidden_dim);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &normed, &weights.k_proj, &k_buf,
-        1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &normed, &weights.v_proj, &v_buf,
-        1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-
-    // Add QKV biases (Qwen-specific) — use temp buffers to avoid aliasing
-    if let Some(ref q_bias) = weights.q_bias {
-        let q_tmp = create_temp_buffer(device, "q_biased", hidden_bytes);
-        dispatch_add(device, queue, encoder, pipelines,
-            &q_buf, q_bias, &q_tmp, config.hidden_dim);
-        encoder.copy_buffer_to_buffer(&q_tmp, 0, &q_buf, 0, hidden_bytes);
-    }
-    if let Some(ref k_bias) = weights.k_bias {
-        let k_tmp = create_temp_buffer(device, "k_biased", kv_dim_bytes);
-        dispatch_add(device, queue, encoder, pipelines,
-            &k_buf, k_bias, &k_tmp, config.n_kv_heads * config.head_dim);
-        encoder.copy_buffer_to_buffer(&k_tmp, 0, &k_buf, 0, kv_dim_bytes);
-    }
-    if let Some(ref v_bias) = weights.v_bias {
-        let v_tmp = create_temp_buffer(device, "v_biased", kv_dim_bytes);
-        dispatch_add(device, queue, encoder, pipelines,
-            &v_buf, v_bias, &v_tmp, config.n_kv_heads * config.head_dim);
-        encoder.copy_buffer_to_buffer(&v_tmp, 0, &v_buf, 0, kv_dim_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &normed, &weights.q_proj, &q_buf,
+            1, config.hidden_dim, config.hidden_dim);
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &normed, &weights.k_proj, &k_buf,
+            1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &normed, &weights.v_proj, &v_buf,
+            1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+        queue.submit(std::iter::once(enc.finish()));
     }
 
-    // 3. Apply RoPE to Q and K (DISABLED FOR DIAGNOSTIC)
-    // dispatch_rope(device, queue, encoder, pipelines, &q_buf,
-    //     config.head_dim, pos, config.n_heads);
-    // dispatch_rope(device, queue, encoder, pipelines, &k_buf,
-    //     config.head_dim, pos, config.n_kv_heads);
+    // Biases + RoPE
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        if let Some(ref q_bias) = weights.q_bias {
+            let q_tmp = create_temp_buffer(device, "q_biased", hidden_bytes);
+            dispatch_add(device, queue, &mut enc, pipelines,
+                &q_buf, q_bias, &q_tmp, config.hidden_dim);
+            enc.copy_buffer_to_buffer(&q_tmp, 0, &q_buf, 0, hidden_bytes);
+        }
+        if let Some(ref k_bias) = weights.k_bias {
+            let k_tmp = create_temp_buffer(device, "k_biased", kv_dim_bytes);
+            dispatch_add(device, queue, &mut enc, pipelines,
+                &k_buf, k_bias, &k_tmp, config.n_kv_heads * config.head_dim);
+            enc.copy_buffer_to_buffer(&k_tmp, 0, &k_buf, 0, kv_dim_bytes);
+        }
+        if let Some(ref v_bias) = weights.v_bias {
+            let v_tmp = create_temp_buffer(device, "v_biased", kv_dim_bytes);
+            dispatch_add(device, queue, &mut enc, pipelines,
+                &v_buf, v_bias, &v_tmp, config.n_kv_heads * config.head_dim);
+            enc.copy_buffer_to_buffer(&v_tmp, 0, &v_buf, 0, kv_dim_bytes);
+        }
+        dispatch_rope(device, queue, &mut enc, pipelines, &q_buf,
+            config.head_dim, pos, config.n_heads);
+        dispatch_rope(device, queue, &mut enc, pipelines, &k_buf,
+            config.head_dim, pos, config.n_kv_heads);
+        queue.submit(std::iter::once(enc.finish()));
+    }
 
-    // 4. Update KV cache (append K and V at position `pos`)
-    let k_offset = (pos * config.n_kv_heads * config.head_dim * 4) as u64;
-    let v_offset = k_offset;
-    encoder.copy_buffer_to_buffer(&k_buf, 0, &kv_cache.key_cache, k_offset, kv_dim_bytes);
-    encoder.copy_buffer_to_buffer(&v_buf, 0, &kv_cache.value_cache, v_offset, kv_dim_bytes);
+    // ── Step 3: KV cache update ─────────────────────────────────────────────
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        let k_offset = (pos * config.n_kv_heads * config.head_dim * 4) as u64;
+        let v_offset = k_offset;
+        enc.copy_buffer_to_buffer(&k_buf, 0, &kv_cache.key_cache, k_offset, kv_dim_bytes);
+        enc.copy_buffer_to_buffer(&v_buf, 0, &kv_cache.value_cache, v_offset, kv_dim_bytes);
+        queue.submit(std::iter::once(enc.finish()));
+    }
     kv_cache.current_len = pos + 1;
 
-    // 5. Attention scores + softmax + context (per head)
+    // ── Step 4: Multi-head attention ────────────────────────────────────────
+    // Each head gets its own submit to avoid buffer reuse sync issues
     let attn_output = create_temp_buffer(device, "attn_out", hidden_bytes);
-    crate::attention_dispatch::dispatch_multihead_attention(
-        device, queue, encoder,
-        &pipelines.attention, &pipelines.attention_bgl,
-        &pipelines.softmax, &pipelines.softmax_bgl,
-        &pipelines.av, &pipelines.av_bgl,
-        &q_buf,
-        &kv_cache.key_cache,
-        &kv_cache.value_cache,
-        &attn_output,
-        config.n_heads,
-        config.n_kv_heads,
-        config.head_dim,
-        pos,
-    );
+    {
+        crate::attention_dispatch::dispatch_multihead_attention_split(
+            device, queue,
+            &pipelines.attention, &pipelines.attention_bgl,
+            &pipelines.softmax, &pipelines.softmax_bgl,
+            &pipelines.av, &pipelines.av_bgl,
+            &q_buf,
+            &kv_cache.key_cache,
+            &kv_cache.value_cache,
+            &attn_output,
+            config.n_heads,
+            config.n_kv_heads,
+            config.head_dim,
+            pos,
+        );
+    }
 
-    // 6. Output projection: attn_output × W_o → projected
+    // ── Step 5: Output projection + attention residual ──────────────────────
     let attn_projected = create_temp_buffer(device, "attn_proj", hidden_bytes);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &attn_output, &weights.o_proj, &attn_projected,
-        1, config.hidden_dim, config.hidden_dim);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &attn_output, &weights.o_proj, &attn_projected,
+            1, config.hidden_dim, config.hidden_dim);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        let residual_temp = create_temp_buffer(device, "res_attn", hidden_bytes);
+        dispatch_add(device, queue, &mut enc, pipelines,
+            hidden_state, &attn_projected, &residual_temp, config.hidden_dim);
+        enc.copy_buffer_to_buffer(&residual_temp, 0, hidden_state, 0, hidden_bytes);
+        queue.submit(std::iter::once(enc.finish()));
+    }
 
-    // 7. Residual add: DISABLED — skip attention contribution entirely
-    //    hidden_state passes through unchanged to FFN
-    // let residual_temp = create_temp_buffer(device, "res_attn", hidden_bytes);
-    // dispatch_add(device, queue, encoder, pipelines,
-    //     hidden_state, &attn_projected, &residual_temp, config.hidden_dim);
-    // encoder.copy_buffer_to_buffer(&residual_temp, 0, hidden_state, 0, hidden_bytes);
-
-    // ── FFN Block (DISABLED FOR DIAGNOSTIC) ───────────────────────────────
-    // Skip FFN entirely — only RMSNorm + attention residual (also disabled) active
-
-    // 8-12: FFN ENABLED FOR DIAGNOSTIC (1 layer only via generate.rs take(1))
+    // ── Step 6: FFN RMSNorm ─────────────────────────────────────────────────
     let ffn_normed = create_temp_buffer(device, "ffn_normed", hidden_bytes);
-    pipelines.rmsnorm.dispatch(
-        device, queue, encoder,
-        hidden_state, &weights.ffn_norm, &ffn_normed,
-        config.hidden_dim, 1, config.rms_norm_eps,
-    );
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        pipelines.rmsnorm.dispatch(
+            device, queue, &mut enc,
+            hidden_state, &weights.ffn_norm, &ffn_normed,
+            config.hidden_dim, 1, config.rms_norm_eps,
+        );
+        queue.submit(std::iter::once(enc.finish()));
+    }
 
+    // ── Step 7: Gate + Up projections ───────────────────────────────────────
     let gate_out = create_temp_buffer(device, "gate", intermediate_bytes);
     let up_out = create_temp_buffer(device, "up", intermediate_bytes);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &ffn_normed, &weights.gate_proj, &gate_out,
-        1, config.hidden_dim, config.intermediate_dim);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &ffn_normed, &weights.up_proj, &up_out,
-        1, config.hidden_dim, config.intermediate_dim);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &ffn_normed, &weights.gate_proj, &gate_out,
+            1, config.hidden_dim, config.intermediate_dim);
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &ffn_normed, &weights.up_proj, &up_out,
+            1, config.hidden_dim, config.intermediate_dim);
+        queue.submit(std::iter::once(enc.finish()));
+    }
 
+    // ── Step 8: SwiGLU ──────────────────────────────────────────────────────
     let ffn_activated = create_temp_buffer(device, "ffn_act", intermediate_bytes);
-    dispatch_swiglu(device, queue, encoder, pipelines,
-        &gate_out, &up_out, &ffn_activated, config.intermediate_dim);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_swiglu(device, queue, &mut enc, pipelines,
+            &gate_out, &up_out, &ffn_activated, config.intermediate_dim);
+        queue.submit(std::iter::once(enc.finish()));
+    }
 
+    // ── Step 9: Down projection ─────────────────────────────────────────────
     let ffn_out = create_temp_buffer(device, "ffn_out", hidden_bytes);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &ffn_activated, &weights.down_proj, &ffn_out,
-        1, config.intermediate_dim, config.hidden_dim);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &ffn_activated, &weights.down_proj, &ffn_out,
+            1, config.intermediate_dim, config.hidden_dim);
+        queue.submit(std::iter::once(enc.finish()));
+    }
 
+    // ── Step 10: FFN residual ───────────────────────────────────────────────
     let residual_temp2 = create_temp_buffer(device, "res_ffn", hidden_bytes);
     dispatch_add(device, queue, encoder, pipelines,
         hidden_state, &ffn_out, &residual_temp2, config.hidden_dim);
     encoder.copy_buffer_to_buffer(&residual_temp2, 0, hidden_state, 0, hidden_bytes);
+    // Caller will submit this final encoder
+}
+
+// ── FFN Diagnostic: step-by-step with readback ──────────────────────────────
+
+/// Read back f32 values from a GPU buffer for diagnostic comparison.
+fn readback_f32(device: &wgpu::Device, queue: &wgpu::Queue, buf: &wgpu::Buffer, n: usize) -> Vec<f32> {
+    let size = (n * 4) as u64;
+    let staging = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("diag_staging"),
+        size,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    enc.copy_buffer_to_buffer(buf, 0, &staging, 0, size);
+    queue.submit(std::iter::once(enc.finish()));
+
+    let slice = staging.slice(..);
+    let (tx, rx) = std::sync::mpsc::channel();
+    slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+    loop {
+        device.poll(wgpu::Maintain::Poll);
+        if rx.try_recv().is_ok() { break; }
+        std::thread::sleep(std::time::Duration::from_micros(10));
+    }
+    let data = slice.get_mapped_range();
+    let vals: Vec<f32> = bytemuck::cast_slice(&data)[..n].to_vec();
+    drop(data);
+    staging.unmap();
+    vals
+}
+
+/// Execute FFN block step-by-step with readback after each operation.
+/// Compares against Python reference values for token 9707 ("Hello").
+/// Call this INSTEAD of execute_layer for diagnostic purposes.
+pub fn execute_layer_diagnostic(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    pipelines: &LayerPipelines,
+    config: &ModelConfig,
+    weights: &LayerWeights,
+    hidden_state: &wgpu::Buffer,
+) {
+    let h = config.hidden_dim;
+    let i = config.intermediate_dim;
+    let eps = config.rms_norm_eps;
+    let hidden_bytes = (h * 4) as u64;
+    let intermediate_bytes = (i * 4) as u64;
+
+    tracing::info!("═══ FFN DIAGNOSTIC: Step-by-step with readback ═══");
+    tracing::info!("  hidden_dim={}, intermediate_dim={}, eps={}", h, i, eps);
+
+    // Python reference values for token 9707 through layer 0 FFN:
+    let ref_normed = [-0.03002f32, 0.18692, 0.48619, -1.04201];
+    let ref_gate = [-0.15846f32, 0.49651, -0.12629, 0.01424];
+    let ref_up = [0.18722f32, -1.51797, 0.37551, -0.11288];
+    let ref_swiglu = [-0.01366f32, -0.46852, -0.02222, -0.00081];
+    let ref_down = [-0.15616f32, -0.06285, -0.41493, 0.24988];
+    let ref_residual = [-0.15722f32, -0.05969, -0.40335, 0.23199];
+
+    // Step 0: Read input hidden state
+    let input_vals = readback_f32(device, queue, hidden_state, 8);
+    tracing::info!("  INPUT hidden_state[0:8]: {:?}", input_vals);
+
+    // Step 1: RMSNorm with ffn_norm weight
+    let ffn_normed = create_temp_buffer(device, "diag_ffn_normed", hidden_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        pipelines.rmsnorm.dispatch(
+            device, queue, &mut enc,
+            hidden_state, &weights.ffn_norm, &ffn_normed,
+            h, 1, eps,
+        );
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    let normed_vals = readback_f32(device, queue, &ffn_normed, 4);
+    let normed_ok = normed_vals.iter().zip(ref_normed.iter())
+        .all(|(a, e)| (a - e).abs() < 0.02);
+    tracing::info!("  [{}] FFN RMSNorm  | Got: {:?} | Ref: {:?}",
+        if normed_ok { "PASS" } else { "FAIL" }, normed_vals, ref_normed);
+
+    // Step 2: Gate projection
+    let gate_out = create_temp_buffer(device, "diag_gate", intermediate_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &ffn_normed, &weights.gate_proj, &gate_out,
+            1, h, i);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    let gate_vals = readback_f32(device, queue, &gate_out, 4);
+    let gate_ok = gate_vals.iter().zip(ref_gate.iter())
+        .all(|(a, e)| (a - e).abs() < 0.02);
+    tracing::info!("  [{}] Gate proj    | Got: {:?} | Ref: {:?}",
+        if gate_ok { "PASS" } else { "FAIL" }, gate_vals, ref_gate);
+
+    // Step 3: Up projection
+    let up_out = create_temp_buffer(device, "diag_up", intermediate_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &ffn_normed, &weights.up_proj, &up_out,
+            1, h, i);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    let up_vals = readback_f32(device, queue, &up_out, 4);
+    let up_ok = up_vals.iter().zip(ref_up.iter())
+        .all(|(a, e)| (a - e).abs() < 0.02);
+    tracing::info!("  [{}] Up proj      | Got: {:?} | Ref: {:?}",
+        if up_ok { "PASS" } else { "FAIL" }, up_vals, ref_up);
+
+    // Step 4: SwiGLU
+    let activated = create_temp_buffer(device, "diag_swiglu", intermediate_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_swiglu(device, queue, &mut enc, pipelines,
+            &gate_out, &up_out, &activated, i);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    let swiglu_vals = readback_f32(device, queue, &activated, 4);
+    let swiglu_ok = swiglu_vals.iter().zip(ref_swiglu.iter())
+        .all(|(a, e)| (a - e).abs() < 0.02);
+    tracing::info!("  [{}] SwiGLU       | Got: {:?} | Ref: {:?}",
+        if swiglu_ok { "PASS" } else { "FAIL" }, swiglu_vals, ref_swiglu);
+
+    // Step 5: Down projection
+    let ffn_out = create_temp_buffer(device, "diag_down", hidden_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+            &activated, &weights.down_proj, &ffn_out,
+            1, i, h);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    let down_vals = readback_f32(device, queue, &ffn_out, 4);
+    let down_ok = down_vals.iter().zip(ref_down.iter())
+        .all(|(a, e)| (a - e).abs() < 0.02);
+    tracing::info!("  [{}] Down proj    | Got: {:?} | Ref: {:?}",
+        if down_ok { "PASS" } else { "FAIL" }, down_vals, ref_down);
+
+    // Step 6: Residual add (hidden_state + ffn_out -> hidden_state)
+    let residual_out = create_temp_buffer(device, "diag_residual", hidden_bytes);
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        dispatch_add(device, queue, &mut enc, pipelines,
+            hidden_state, &ffn_out, &residual_out, h);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+    let res_vals = readback_f32(device, queue, &residual_out, 4);
+    let res_ok = res_vals.iter().zip(ref_residual.iter())
+        .all(|(a, e)| (a - e).abs() < 0.02);
+    tracing::info!("  [{}] Residual add | Got: {:?} | Ref: {:?}",
+        if res_ok { "PASS" } else { "FAIL" }, res_vals, ref_residual);
+
+    // Copy result back to hidden_state for downstream use
+    {
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        enc.copy_buffer_to_buffer(&residual_out, 0, hidden_state, 0, hidden_bytes);
+        queue.submit(std::iter::once(enc.finish()));
+    }
+
+    tracing::info!("═══ FFN DIAGNOSTIC COMPLETE ═══");
 }
 
 // ── Dispatch helpers ────────────────────────────────────────────────────────

@@ -73,7 +73,7 @@ path = "/codebase/models"
 name = "T440 (local)"
 ip = "127.0.0.1"
 gpu = "2x P100 16GB"
-ports = [5002, 5010, 5011]
+ports = [5002, 5010, 5011, 8090]
 
 [[known_nodes]]
 name = "Cesarops2 (1070)"
@@ -93,6 +93,43 @@ ip = "100.110.214.86"
 gpu = "Maxwell (Laptop)"
 ports = [5002]
 
+# Agent nicknames — human-friendly names mapped to endpoints
+# Use these in the forge chat: "ask scout to review this" or "delegate to marvin"
+[[agent]]
+name = "moe"
+endpoint = "http://127.0.0.1:5001"
+hardware = "P100 #0+#1 (T440)"
+role = "Main coder"
+model = "Qwen3.6-35B"
+
+[[agent]]
+name = "marvin"
+endpoint = "http://100.102.158.111:5555"
+hardware = "GTX 1070 (cesarops2)"
+role = "Corrector/Reviewer"
+model = "14B Coder"
+
+[[agent]]
+name = "scout"
+endpoint = "http://100.105.77.74:5570"
+hardware = "GTX 1060 (cesarops3)"
+role = "Thinker"
+model = "R1 7B"
+
+[[agent]]
+name = "nautik"
+endpoint = "http://100.110.214.86:5002"
+hardware = "Maxwell (Laptop)"
+role = "Available"
+model = ""
+
+[[agent]]
+name = "picasso"
+endpoint = "http://100.102.158.111:5571"
+hardware = "P1000 (cesarops2)"
+role = "Vision/Validator"
+model = ""
+
 [routing]
 default_mode = "auto"
 
@@ -109,3 +146,13 @@ max_generation_tokens = 16384
 temperature = 0.4
 # Disable corrector for heavy tasks (set true to skip correction pass)
 skip_corrector = false
+
+# Worker nicknames — human-friendly names mapped to endpoints
+[nicknames]
+coder = "http://127.0.0.1:5001"
+thinker = "http://100.105.77.74:5570"
+corrector = "http://100.102.158.111:5555"
+scout = "http://100.110.214.86:5002"
+bootstrap = "http://127.0.0.1:5002"
+r1-cpu = "http://127.0.0.1:5557"
+mcp-local = "http://127.0.0.1:8090"

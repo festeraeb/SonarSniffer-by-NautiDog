@@ -7718,3 +7718,817 @@ pub fn scan_models(base_dir: &Path) -> Vec<ModelEntry> {
                     path: path.to_string_lossy().into_owned(),
                     size_mb,
                     s
+
+## [tool_result,read_file,context_overflow] 1778775244
+Tool result from read_file(/codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): use serde::Serialize;
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use crate::healing_api;
+
+const MAGIC_REC_HDR: u32 = 0xB7E9DA86;
+const MAGIC_REC_TRL: u32 = 0xD9264B7C;
+const MAX_BACKTRACK_HEADER_START: usize = 64;
+const MAX_SEARCH_WINDOW: usize = 16 * 1024 * 1024;
+
+/// Sample encoding hint derived from channel generation.
+/// Classic (ch 0–3): 8-bit u8 samples (Garmin non-UHD hardware).
+/// UHD / UHD2 (ch 4+): 16-bit signed i16 samples (UHD CHIRP hardware).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SampleHint {
+    U8,
+    I16,
+    Unknown, // fall back to heuristic
+}
+
+/// Detected hardware generation for a Garmin RSD file.
+/// Controls how body varstruct fields are interpreted — critically, body field 7
+/// is XID metadata in Gen1 but sample_count in Gen2+.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum RsdGeneration {
+    /// Pre-UHD Echomap (channels 0–3, 8-bit u8, body field 7 = XID not sample_count)
+    Gen1Classic,
+    /// UHD series (channels 4–7, 16-bit i16, body field 7 = sample_count)
+    UHD,
+    /// UHD2 and later (channels 8+, 16-bit i16, body field 7 = sample_count)
+    UHD2,
+    /// Indeterminate — per-record heuristics applied
+    Unknown,
+}
+
+impl std::fmt::Display for RsdGeneration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Gen1Classic => write!(f, "gen1"),
+            Self::UHD => write!(f, "uhd"),
+            Self::UHD2 => write!(f, "uhd2"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChannelInfo {
+    pub id: u32,
+    pub name: String,
+    pub detected: bool,
+    /// Beam type: "port_sidescan" | "starboard_sidescan" | "chirp_downscan" | "depth_temp"
+    pub mapped_type: Option<String>,
+    /// Hardware generation: "classic" | "uhd" | "uhd2"
+    pub generation: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Ping {
+    pub file_offset: usize,
+    pub sequence: u32,
+    pub timestamp_ms: u64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_m: f32,
+    /// Depth converted to US customary feet (depth_m × 3.28084).
+    pub depth_ft: f32,
+    pub altitude_m: f32,
+    pub temp_c: Option<f32>,
+    pub beam_angle_deg: f32,
+    pub heading_deg: Option<f32>,
+    pub pitch_deg: Option<f32>,
+    pub roll_deg: Option<f32>,
+    pub channel: u32,
+    pub sample_count: usize,
+    pub sonar_offset: usize,
+    pub sonar_size: usize,
+    pub sample_format: String,
+    pub samples: Vec<u16>,
+    /// Raw hardware gain / TVG byte from field 7 (Gen1Classic only, 0–255).
+    /// For UHD/UHD2, field 7 encodes sample_count — this is `None`.
+    pub hardware_gain: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseResult {
+    pub record_count: usize,
+    pub recov
+
+## [tool_result,read_file,context_overflow] 1778775257
+Tool result from read_file(/codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): use serde::Serialize;
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use crate::healing_api;
+
+const MAGIC_REC_HDR: u32 = 0xB7E9DA86;
+const MAGIC_REC_TRL: u32 = 0xD9264B7C;
+const MAX_BACKTRACK_HEADER_START: usize = 64;
+const MAX_SEARCH_WINDOW: usize = 16 * 1024 * 1024;
+
+/// Sample encoding hint derived from channel generation.
+/// Classic (ch 0–3): 8-bit u8 samples (Garmin non-UHD hardware).
+/// UHD / UHD2 (ch 4+): 16-bit signed i16 samples (UHD CHIRP hardware).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SampleHint {
+    U8,
+    I16,
+    Unknown, // fall back to heuristic
+}
+
+/// Detected hardware generation for a Garmin RSD file.
+/// Controls how body varstruct fields are interpreted — critically, body field 7
+/// is XID metadata in Gen1 but sample_count in Gen2+.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum RsdGeneration {
+    /// Pre-UHD Echomap (channels 0–3, 8-bit u8, body field 7 = XID not sample_count)
+    Gen1Classic,
+    /// UHD series (channels 4–7, 16-bit i16, body field 7 = sample_count)
+    UHD,
+    /// UHD2 and later (channels 8+, 16-bit i16, body field 7 = sample_count)
+    UHD2,
+    /// Indeterminate — per-record heuristics applied
+    Unknown,
+}
+
+impl std::fmt::Display for RsdGeneration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Gen1Classic => write!(f, "gen1"),
+            Self::UHD => write!(f, "uhd"),
+            Self::UHD2 => write!(f, "uhd2"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChannelInfo {
+    pub id: u32,
+    pub name: String,
+    pub detected: bool,
+    /// Beam type: "port_sidescan" | "starboard_sidescan" | "chirp_downscan" | "depth_temp"
+    pub mapped_type: Option<String>,
+    /// Hardware generation: "classic" | "uhd" | "uhd2"
+    pub generation: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Ping {
+    pub file_offset: usize,
+    pub sequence: u32,
+    pub timestamp_ms: u64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_m: f32,
+    /// Depth converted to US customary feet (depth_m × 3.28084).
+    pub depth_ft: f32,
+    pub altitude_m: f32,
+    pub temp_c: Option<f32>,
+    pub beam_angle_deg: f32,
+    pub heading_deg: Option<f32>,
+    pub pitch_deg: Option<f32>,
+    pub roll_deg: Option<f32>,
+    pub channel: u32,
+    pub sample_count: usize,
+    pub sonar_offset: usize,
+    pub sonar_size: usize,
+    pub sample_format: String,
+    pub samples: Vec<u16>,
+    /// Raw hardware gain / TVG byte from field 7 (Gen1Classic only, 0–255).
+    /// For UHD/UHD2, field 7 encodes sample_count — this is `None`.
+    pub hardware_gain: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseResult {
+    pub record_count: usize,
+    pub recov
+
+## [tool_result,run_command,context_overflow] 1778775260
+Tool result from run_command(sed -n '50,130p' /codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): #[derive(Debug, Clone, Serialize)]
+pub struct ChannelInfo {
+    pub id: u32,
+    pub name: String,
+    pub detected: bool,
+    /// Beam type: "port_sidescan" | "starboard_sidescan" | "chirp_downscan" | "depth_temp"
+    pub mapped_type: Option<String>,
+    /// Hardware generation: "classic" | "uhd" | "uhd2"
+    pub generation: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Ping {
+    pub file_offset: usize,
+    pub sequence: u32,
+    pub timestamp_ms: u64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_m: f32,
+    /// Depth converted to US customary feet (depth_m × 3.28084).
+    pub depth_ft: f32,
+    pub altitude_m: f32,
+    pub temp_c: Option<f32>,
+    pub beam_angle_deg: f32,
+    pub heading_deg: Option<f32>,
+    pub pitch_deg: Option<f32>,
+    pub roll_deg: Option<f32>,
+    pub channel: u32,
+    pub sample_count: usize,
+    pub sonar_offset: usize,
+    pub sonar_size: usize,
+    pub sample_format: String,
+    pub samples: Vec<u16>,
+    /// Raw hardware gain / TVG byte from field 7 (Gen1Classic only, 0–255).
+    /// For UHD/UHD2, field 7 encodes sample_count — this is `None`.
+    pub hardware_gain: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseResult {
+    pub record_count: usize,
+    pub recovered_records: usize,
+    pub dropped_bytes: usize,
+    pub parser_magic: String,
+    /// Detected hardware generation (Gen1Classic, UHD, UHD2, Unknown)
+    pub detected_generation: Option<RsdGeneration>,
+    /// Firmware version from header field 1 (raw u32), if available
+    pub firmware_version: Option<u32>,
+    pub channels: Vec<ChannelInfo>,
+    pub channel_counts: BTreeMap<u32, usize>,
+    /// Per-field histogram: field_id → value → ping_count.
+    /// Body fields use IDs 0–99 (as-is); header varstruct fields are offset by 100
+    /// so header field 3 appears as key 103. This allows spotting frequency /
+    /// offset constants that live in the record he...[truncated, 3068 total bytes]
+
+## [tool_result,run_command,context_overflow] 1778775263
+Tool result from run_command(sed -n '62,95p' /codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): pub struct Ping {
+    pub file_offset: usize,
+    pub sequence: u32,
+    pub timestamp_ms: u64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_m: f32,
+    /// Depth converted to US customary feet (depth_m × 3.28084).
+    pub depth_ft: f32,
+    pub altitude_m: f32,
+    pub temp_c: Option<f32>,
+    pub beam_angle_deg: f32,
+    pub heading_deg: Option<f32>,
+    pub pitch_deg: Option<f32>,
+    pub roll_deg: Option<f32>,
+    pub channel: u32,
+    pub sample_count: usize,
+    pub sonar_offset: usize,
+    pub sonar_size: usize,
+    pub sample_format: String,
+    pub samples: Vec<u16>,
+    /// Raw hardware gain / TVG byte from field 7 (Gen1Classic only, 0–255).
+    /// For UHD/UHD2, field 7 encodes sample_count — this is `None`.
+    pub hardware_gain: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseResult {
+    pub record_count: usize,
+    pub recovered_records: usize,
+    pub dropped_bytes: usize,
+    pub parser_magic: String,
+    /// Detected hardware generation (Gen1Classic, UHD, UHD2, Unknown)
+    pub detected_generation: Option<RsdGeneration>,
+
+
+## [tool_result,run_command,context_overflow] 1778775267
+Tool result from run_command(sed -n '89,120p' /codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): pub struct ParseResult {
+    pub record_count: usize,
+    pub recovered_records: usize,
+    pub dropped_bytes: usize,
+    pub parser_magic: String,
+    /// Detected hardware generation (Gen1Classic, UHD, UHD2, Unknown)
+    pub detected_generation: Option<RsdGeneration>,
+    /// Firmware version from header field 1 (raw u32), if available
+    pub firmware_version: Option<u32>,
+    pub channels: Vec<ChannelInfo>,
+    pub channel_counts: BTreeMap<u32, usize>,
+    /// Per-field histogram: field_id → value → ping_count.
+    /// Body fields use IDs 0–99 (as-is); header varstruct fields are offset by 100
+    /// so header field 3 appears as key 103. This allows spotting frequency /
+    /// offset constants that live in the record header rather than the body.
+    pub field_channel_counts: BTreeMap<u32, BTreeMap<u32, usize>>,
+    /// Unique decoded u32 values seen per field_id across all pings (same
+    /// 0–99 body / 100+ header offset scheme). A constant entry (single value)
+    /// is a strong signal of a per-file config field (e.g. frequency_hz).
+    pub unique_field_values: BTreeMap<u32, Vec<u32>>,
+    pub unknown_channels: Vec<String>,
+    pub healing_actions: Vec<String>,
+    pub error_message: Option<String>,
+    pub pings: Vec<Ping>,
+    pub crc_mismatch_count: usize,
+}
+
+impl ParseResult {
+    pub fn normalize_nadir_direction(&mut self) {
+        if self.pings.is_empty() {
+            return;
+        }
+
+
+## [tool_result,run_command,context_overflow] 1778775282
+Tool result from run_command(sed -n '50,130p' /codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): #[derive(Debug, Clone, Serialize)]
+pub struct ChannelInfo {
+    pub id: u32,
+    pub name: String,
+    pub detected: bool,
+    /// Beam type: "port_sidescan" | "starboard_sidescan" | "chirp_downscan" | "depth_temp"
+    pub mapped_type: Option<String>,
+    /// Hardware generation: "classic" | "uhd" | "uhd2"
+    pub generation: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Ping {
+    pub file_offset: usize,
+    pub sequence: u32,
+    pub timestamp_ms: u64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_m: f32,
+    /// Depth converted to US customary feet (depth_m × 3.28084).
+    pub depth_ft: f32,
+    pub altitude_m: f32,
+    pub temp_c: Option<f32>,
+    pub beam_angle_deg: f32,
+    pub heading_deg: Option<f32>,
+    pub pitch_deg: Option<f32>,
+    pub roll_deg: Option<f32>,
+    pub channel: u32,
+    pub sample_count: usize,
+    pub sonar_offset: usize,
+    pub sonar_size: usize,
+    pub sample_format: String,
+    pub samples: Vec<u16>,
+    /// Raw hardware gain / TVG byte from field 7 (Gen1Classic only, 0–255).
+    /// For UHD/UHD2, field 7 encodes sample_count — this is `None`.
+    pub hardware_gain: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseResult {
+    pub record_count: usize,
+    pub recovered_records: usize,
+    pub dropped_bytes: usize,
+    pub parser_magic: String,
+    /// Detected hardware generation (Gen1Classic, UHD, UHD2, Unknown)
+    pub detected_generation: Option<RsdGeneration>,
+    /// Firmware version from header field 1 (raw u32), if available
+    pub firmware_version: Option<u32>,
+    pub channels: Vec<ChannelInfo>,
+    pub channel_counts: BTreeMap<u32, usize>,
+    /// Per-field histogram: field_id → value → ping_count.
+    /// Body fields use IDs 0–99 (as-is); header varstruct fields are offset by 100
+    /// so header field 3 appears as key 103. This allows spotting frequency /
+    /// offset constants that live in the record he...[truncated, 3068 total bytes]
+
+## [tool_result,think_harder,context_overflow] 1778775296
+Tool result from think_harder(Ping struct and ParseResult struct definitions from garmin_rsd_parser.rs): [nautivecs]: {"results":[{"score":0.016393442,"file_path":"cesarops/rust/sonarsniffer/src-tauri/src/garmin_rsd_parser.rs","function_name":"GarminRSDParser","symbol_type":"impl","line_start":226,"line_end":778,"text":"impl GarminRSDParser {\r\n    pub fn new() -> Self {\r\n        Self\r\n    }\r\n\r\n    pub fn parse_file(&mut self, path: &Path) -> ParseResult {\r\n        let bytes = match fs::read(path) {\r\n            Ok(content) => content,\r\n            Err(err) => {\r\n                return ParseResult::empty_with_error(format!(\"Failed to read file: {err}\"));\r\n            }\r\n        };\r\n\r\n        if bytes.len() < 16 {\r\n            return ParseResult::empty_with_error(\"Input appears too small to contain sonar records.\");\r\n        }\r\n\r\n        let magic_candidates = load_magic_candidates(path);\r\n        let mut cursor = 0usize;\r\n        let mut pings = Vec::new();\r\n        let mut recovered_records = 0usize;\r\n        let mut dropped_bytes = 0usize;\r\n        let mut healing_actions = Vec::new();\r\n        let mut channel_counts: BTreeMap<u32, usize> = BTreeMap::new();\r\n        let mut field_channel_counts: BTreeMap<u32, BTreeMap<u32, usize>> = BTreeMap::new();\r\n        let mut unique_field_values: BTreeMap<u32, std::collections::BTreeSet<u32>> = BTreeMap::new();\r\n        let mut total_crc_mismatches: usize = 0;\r\n\r\n        let first_sync = find_next_magic(&bytes, &magic_candidates, 0, bytes.len());\r\n        let Some(mut scan_pos) = first_syn...[truncated, 76198 total bytes]
+
+[web search]: {"error":"Search engine unavailable: No search engines configured","query":"Ping struct and ParseResult struct definitions from garmin_rsd_parser.rs","results":[]}
+
+## [tool_result,read_file,context_overflow] 1778775312
+Tool result from read_file(/codebase/wreckhunter2000-1/backup/deploy/sonar/src/lib.rs): mod corpus_scan;
+pub mod garmin_rsd_parser;
+pub mod firmware_lookup;
+pub mod healing_api;
+pub mod channel_alignment;
+pub mod channel_discovery;
+pub mod probing;
+pub mod egn;
+pub mod outputs;
+pub mod mosaic;
+pub mod curvelet_diag;
+mod video;
+mod video_enhanced;
+pub mod lowrance_parser;
+pub mod humminbird_parser;
+pub mod xtf_parser;
+pub mod cerulean_parser;
+pub mod jsf_parser;
+pub mod format_detector;
+mod license;
+mod deps;
+mod target_detection;
+mod static_server;
+
+use corpus_scan::CorpusScanResult;
+use outputs::{build_outputs, PipelineOptions, estimate_curvelet_threshold};
+#[allow(unused_imports)]
+use format_detector::detect_and_parse;
+use serde::Serialize;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use tauri::{Emitter, Manager};
+use video::VideoExportResult;
+
+/// Expected video filename — MP4 when GStreamer is compiled in, GIF otherwise.
+/// The actual file produced may differ (GStreamer can fall back to GIF at runtime);
+/// the authoritative path comes from the `video-complete` event.
+fn video_filename() -> &'static str {
+    if cfg!(feature = "video-gstreamer") {
+        "sonar_waterfall_enhanced.mp4"
+    } else {
+        "sonar_waterfall.gif"
+    }
+}
+
+/// Set up environment so bundled GStreamer DLLs are found at runtime.
+/// Called once during app setup — safe to call even when GStreamer isn't bundled.
+///
+/// Search order (Windows):
+///   1. `<exe_dir>/gstreamer/` — bundled copy shipped alongside the executable
+///   2. `GSTREAMER_1_0_ROOT_MSVC_X86_64` env var (set by official SDK installer)
+///   3. `C:\gstreamer\1.0\msvc_x86_64` — official installer default path
+///   4. `C:\Program Files\gstreamer\1.0\msvc_x86_64` — alternate installer path
+#[cfg(target_os = "windows")]
+fn setup_bundled_gstreamer() {
+    let exe_dir = match std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
+        Some(d) => d,
+        None => return,
+    };
+
+    // Candidate search order
+    let mut candidates = vec![exe_dir.join("gstreamer")];
+    if let Ok(env_root) = std::env::var("GSTREAMER_1_0_ROOT_MSVC_X86_64") {
+        candidates.push(std::path::PathBuf::from(env_root));
+    }
+    if let Ok(env_root) = std::env::var("GSTREAMER_1_0_ROOT_MINGW_X86_64") {
+        candidates.push(std::path::PathBuf::from(env_root));
+    }
+    
+    // Hardcoded absolute paths (Common defaults)
+    let common_bases = [
+        r"C:\gstreamer\1.0",
+        r"D:\gstreamer\1.0",
+        r"C:\Program Files\gstreamer\1.0",
+        r"C:\Program Files (x86)\gstreamer\1.0",
+    ];
+    let common_archs = [
+        "msvc_x86_64",
+        "mingw_x86_64",
+        "x86_64",
+        "msvc_x86",
+        "mingw_x86",
+        "x86"
+    ];
+    for base in &common_bases {
+        for arch in &common_archs {
+            candidates.push(std::path::PathBuf::from(base).join(arch));
+        }
+    }
+
+    for gst_dir in candidates {
+        let gst_bin = gst_dir.join("bin
+
+## [tool_result,read_file,context_overflow] 1778775340
+Tool result from read_file(/codebase/wreckhunter2000-1/backup/deploy/sonar/src/garmin_rsd_parser.rs): use serde::Serialize;
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use crate::healing_api;
+
+const MAGIC_REC_HDR: u32 = 0xB7E9DA86;
+const MAGIC_REC_TRL: u32 = 0xD9264B7C;
+const MAX_BACKTRACK_HEADER_START: usize = 64;
+const MAX_SEARCH_WINDOW: usize = 16 * 1024 * 1024;
+
+/// Sample encoding hint derived from channel generation.
+/// Classic (ch 0–3): 8-bit u8 samples (Garmin non-UHD hardware).
+/// UHD / UHD2 (ch 4+): 16-bit signed i16 samples (UHD CHIRP hardware).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SampleHint {
+    U8,
+    I16,
+    Unknown, // fall back to heuristic
+}
+
+/// Detected hardware generation for a Garmin RSD file.
+/// Controls how body varstruct fields are interpreted — critically, body field 7
+/// is XID metadata in Gen1 but sample_count in Gen2+.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum RsdGeneration {
+    /// Pre-UHD Echomap (channels 0–3, 8-bit u8, body field 7 = XID not sample_count)
+    Gen1Classic,
+    /// UHD series (channels 4–7, 16-bit i16, body field 7 = sample_count)
+    UHD,
+    /// UHD2 and later (channels 8+, 16-bit i16, body field 7 = sample_count)
+    UHD2,
+    /// Indeterminate — per-record heuristics applied
+    Unknown,
+}
+
+impl std::fmt::Display for RsdGeneration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Gen1Classic => write!(f, "gen1"),
+            Self::UHD => write!(f, "uhd"),
+            Self::UHD2 => write!(f, "uhd2"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChannelInfo {
+    pub id: u32,
+    pub name: String,
+    pub detected: bool,
+    /// Beam type: "port_sidescan" | "starboard_sidescan" | "chirp_downscan" | "depth_temp"
+    pub mapped_type: Option<String>,
+    /// Hardware generation: "classic" | "uhd" | "uhd2"
+    pub generation: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Ping {
+    pub file_offset: usize,
+    pub sequence: u32,
+    pub timestamp_ms: u64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_m: f32,
+    /// Depth converted to US customary feet (depth_m × 3.28084).
+    pub depth_ft: f32,
+    pub altitude_m: f32,
+    pub temp_c: Option<f32>,
+    pub beam_angle_deg: f32,
+    pub heading_deg: Option<f32>,
+    pub pitch_deg: Option<f32>,
+    pub roll_deg: Option<f32>,
+    pub channel: u32,
+    pub sample_count: usize,
+    pub sonar_offset: usize,
+    pub sonar_size: usize,
+    pub sample_format: String,
+    pub samples: Vec<u16>,
+    /// Raw hardware gain / TVG byte from field 7 (Gen1Classic only, 0–255).
+    /// For UHD/UHD2, field 7 encodes sample_count — this is `None`.
+    pub hardware_gain: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ParseResult {
+    pub record_count: usize,
+    pub recov
+
+## [tool_result,think_harder,context_overflow] 1778775734
+Tool result from think_harder(What is the wreckhunter2000 project? What does it do? What files exist in the root directory?): [nautivecs]: {"results":[{"score":0.016393442,"file_path":"crates/mistral-rs-fork/mistralrs-core/src/scheduler/default_scheduler.rs","function_name":"bucket_and_waitlist_seqs_waiting","symbol_type":"function","line_start":81,"line_end":170,"text":"fn bucket_and_waitlist_seqs_waiting(\n        &mut self,\n        running: Vec<Sequence>,\n        mut waiting: Backer,\n        discrete: bool,\n    ) -> BucketedSeqs<Backer> {\n        // Now, get the sequences with the smallest sequence lengths, and allow them to catch up.\n        let mut seq_buckets: HashMap<BucketKey, Vec<Sequence>> = HashMap::new();\n        let mut seq_priorities: HashMap<BucketKey, f64> = HashMap::new();\n        for seq in running {\n            let len = seq.len();\n            match seq_buckets.get_mut(&(\n                len,\n                seq.images().is_some() && seq.is_prompt(),\n                seq.token_offset(),\n            )) {\n                Some(bucket) => {\n                    if !discrete {\n                        *seq_priorities\n                            .get_mut(&(\n                                len,\n                                seq.images().is_some() && seq.is_prompt(),\n                                seq.token_offset(),\n                            ))\n                            .unwrap() += seq.compute_priority();\n                    }\n                    bucket.push(seq);\n                }\n                None => {\n                    if !discrete {\n                        s...[truncated, 5889 total bytes]
+
+[web search]: {"error":"Search engine unavailable: No search engines configured","query":"What is the wreckhunter2000 project? What does it do? What files exist in the root directory?","results":[]}
+
+## [tool_result,run_command,context_overflow] 1778775743
+Tool result from run_command(ls -la /codebase/wreckhunter2000-1/): total 464
+drwxr-xr-x 42 cesarops cesarops  4096 May 14 12:26 .
+drwxrwxr-x  5 cesarops cesarops    73 May 10 11:37 ..
+-rw-r--r--  1 cesarops cesarops   408 May 13 06:44 ai_stack_docker-compose.yml
+drwxrwxr-x  7 cesarops cesarops  4096 May 14 11:19 backup
+-rw-r--r--  1 cesarops cesarops 57824 May  9 16:00 Cargo.lock
+-rw-r--r--  1 cesarops cesarops   581 May 10 07:47 Cargo.toml
+drwxr-xr-x  3 cesarops cesarops    17 May 10 11:36 cesarops-aeromagnetic-worker
+drwxr-xr-x  4 cesarops cesarops    89 May 13 02:49 cesarops-agent
+drwx------  3 cesarops cesarops    35 May  9 07:31 cesarops-detection
+drwxr-xr-x  4 cesarops cesarops    39 May 10 10:28 cesarops-forge
+drwxr-xr-x  4 cesarops cesarops   140 May 14 00:11 cesarops-forge-v2
+drwxr-xr-x  6 cesarops cesarops  4096 May 13 03:29 cesarops-inference
+drwx------  5 cesarops cesarops   189 May  8 09:38 cesarops-mcp-steered
+drwxr-xr-x  4 cesarops cesarops    67 May 14 14:28 cesarops-mcp-worker
+drwxr-xr-x  3 cesarops cesarops    35 May  9 01:15 cesarops-mission-control
+drwxr-xr-x  3 cesarops cesarops    40 May 10 07:34 cesarops-supervisor
+drwxr-xr-x  3 cesarops cesarops    35 May  9 00:37 cesarops-thought-engine
+drwxr-xr-x  3 cesarops cesarops    56 May 10 07:42 cesarops-watchdog
+drwxr-xr-x  4 cesarops cesarops    67 May 10 09:08 cesarops-wso
+drwxr-xr-x  4 cesarops cesarops    67 May 10 09:17 cesarops-wso-server
+drwxr-xr-x  4 cesarops cesarops    48 May 12 16:27 crates
+drwxr-xr-x  2 cesarops cesarops    92 May 13 10:20 db
+drwxr-xr-x  4 cesarops cesarops  4096 May 14 12:14 docs
+drwxr-xr-x  3 cesarops cesarops    17 May  9 07:47 downloads
+-rw-r--r--  1 cesarops cesarops  5940 May 13 14:50 FILE_INVENTORY.txt
+-rw-r--r--  1 cesarops cesarops  8467 May 13 03:17 GEMINI_WGPU_SPEC.md
+drwxr-xr-x  8 cesarops cesarops  4096 May 14 14:49 .git
+-rw-r--r--  1 cesarops cesarops  8513 May 13 06:06 IMPLEMENTATION_ROADMAP.md
+-rw-rw-r--  1 cesarops cesarops  9862 May 13 15:00 INVENTORY.md
+-rw-rw-r--  1 cesarops cesarops 69326 May 13 15:08 local_file_inv...[truncated, 4303 total bytes]
+
+## [tool_result,think_harder,context_overflow] 1778775765
+Tool result from think_harder(CESAROPS wreckhunter project structure and purpose): [nautivecs]: {"results":[{"score":0.016393442,"file_path":"cesarops-mcp-steered/src/tools.rs","function_name":"handle_tools_list","symbol_type":"function","line_start":158,"line_end":295,"text":"fn handle_tools_list(id: &Value) -> Value {\r\n    json!({\r\n        \"jsonrpc\": \"2.0\",\r\n        \"id\": id,\r\n        \"result\": {\r\n            \"tools\": [\r\n                {\r\n                    \"name\": \"steered_query\",\r\n                    \"description\": \"Ask a question grounded in the CESARops codebase. The LLM receives relevant code context via nautivecs vector injection, preventing hallucination while preserving creative reasoning.\",\r\n                    \"inputSchema\": {\r\n                        \"type\": \"object\",\r\n                        \"properties\": {\r\n                            \"query\": {\r\n                                \"type\": \"string\",\r\n                                \"description\": \"Your question or task\"\r\n                            },\r\n                            \"role\": {\r\n                                \"type\": \"string\",\r\n                                \"description\": \"Optional role hint for targeted context: sensor, geometry, orchestrator, research\",\r\n                                \"enum\": [\"sensor\", \"geometry\", \"orchestrator\", \"research\"]\r\n                            }\r\n                        },\r\n                        \"required\": [\"query\"]\r\n                    }\r\n             ...[truncated, 12573 total bytes]
+
+[web search]: {"error":"Search engine unavailable: No search engines configured","query":"CESAROPS wreckhunter project structure and purpose","results":[]}
+
+## [tool_result,read_file,context_overflow] 1778775768
+Tool result from read_file(/codebase/wreckhunter2000-1/INVENTORY.md): # Scan/Detection Pipeline — File Inventory & Status
+
+## Generated: May 13, 2026
+## Purpose: Organize scattered scan/detection code for true implementation spec
+
+---
+
+## WORKING IMPLEMENTATIONS (proven, use as-is or refactor into final pipeline)
+
+### Python — Core Detection
+| File | What it does | Status |
+|------|-------------|--------|
+| `scan_engine.py` | Unified 7-pass detection engine (anomaly, hydrocarbon, Stumpf bathymetry, NauticUVs LoG, SWIR silt erasure, mussel clearspot, triple-lock fusion). Full KMZ output. | ✅ WORKING |
+| `lake_michigan_scan.py` | Core processing functions (imported by scan_engine) | ✅ WORKING |
+| `lake_erie_scan.py` | Erie-specific (SWIR silt erasure, mussel clearspot) | ✅ WORKING |
+| `triple_lock_fusion.py` | Multi-sensor fusion (thermal+SAR+optical) | ✅ WORKING |
+| `weather_service.py` | Open-Meteo integration, storm/calm/post-storm classification | ✅ WORKING |
+| `universal_downloader.py` | 5-source satellite downloader (ASF, Copernicus, PO.DAAC, USGS, HLS) | ✅ WORKING |
+| `wreck_ml_trainer.py` | ML model training for wreck detection | ✅ WORKING |
+
+### Python — Magnetics (pipelines/mag/)
+| File | What it does | Status |
+|------|-------------|--------|
+| `erie_scanner_pipeline.py` | Erie magnetic scanning | ✅ WORKING |
+| `dipole_analysis.py` | Dipole detection and analysis | ✅ WORKING |
+| `flight_line_physics_v2.py` | Flight line correction (v2 is latest) | ✅ WORKING |
+| `datum_correction.py` | Datum correction for mag data | ✅ WORKING |
+| `erie_wellhead_discriminator.py` | Wellhead vs wreck discrimination | ✅ WORKING |
+| `final_magnetic_fusion.py` | Final fusion of magnetic sources | ✅ WORKING |
+| `loran_c_warp.py` | LORAN-C coordinate warping | ✅ WORKING |
+| `crossmatch_optical_mag.py` | Cross-match optical with magnetics | ✅ WORKING |
+
+### Python — Satellite (pipelines/satellite/)
+| File | What it does | Status |
+|------|-------------|--------|
+| `batch_download_manager.py` | Batch download management | ✅ WORKING |
+| `nasa_earthdata_client.py` | NASA Earthdata API client | ✅ WORKING |
+| `fetch_swot_data.py` | SWOT data fetching | ✅ WORKING |
+| `fetch_ecostress_data.py` | ECOSTRESS thermal data | ✅ WORKING |
+| `sar_temporal_persistence.py` | SAR temporal persistence analysis | ✅ WORKING |
+
+### Python — Bathymetry (pipelines/bag/)
+| File | What it does | Status |
+|------|-------------|--------|
+| `bag_wreck_detector.py` | BAG file wreck detection | ✅ WORKING |
+| `advanced_bag_scanner.py` | Advanced BAG scanning | ✅ WORKING |
+| `atl23_extract.py` | ICESat-2 ATL23 extraction | ✅ WORKING |
+
+### Python — ML (ml/)
+| File | What it does | Status |
+|------|-------------|--------|
+| `ml/inference/deep_water_detection.py` | Deep water wreck detection | ✅ WORKING |
+| `ml/inference/wreck_vs_obstruction_classifier.py` | Classification | ✅ WORKING |
+| `ml/training/train_wreck_classifier_gpu.py` | GPU training | ✅
+
+## [tool_result,think_harder,context_overflow] 1778775771
+Tool result from think_harder(CESAROPS wreckhunter scan engine python implementation details): [nautivecs]: {"results":[{"score":0.016393442,"file_path":"cesarops/rust/sonarsniffer/src-tauri/src/outputs.rs","function_name":"build_outputs","symbol_type":"function","line_start":170,"line_end":420,"text":"pub fn build_outputs(input_file: &Path, parsed: &ParseResult, options: &PipelineOptions, detections: Option<&DetectionSummary>, app: Option<tauri::AppHandle>) -> Result<OutputSummary> {\r\n    let parent = input_file\r\n        .parent()\r\n        .map_or_else(|| PathBuf::from(\".\"), Path::to_path_buf);\r\n\r\n    let stem = input_file\r\n        .file_stem()\r\n        .and_then(|s| s.to_str())\r\n        .unwrap_or(\"sniffer_output\");\r\n\r\n    // If user supplies an output_dir, nest runs under that dir as <stem>_<n> to avoid clobbering.\r\n    let output_dir = if let Some(user_dir) = &options.output_dir {\r\n        let base = PathBuf::from(user_dir);\r\n        fs::create_dir_all(&base)\r\n            .with_context(|| format!(\"Failed to create base output dir: {}\", base.display()))?;\r\n        next_available_dir(&base, stem)\r\n    } else {\r\n        next_available_dir(&parent, stem)\r\n    };\r\n\r\n    fs::create_dir_all(&output_dir)\r\n        .with_context(|| format!(\"Failed to create output dir: {}\", output_dir.display()))?;\r\n\r\n    let mut artifacts = Vec::new();\r\n\r\n    // ── Pre-compute expensive results shared by multiple output writers ──\r\n    // The sigma filter takes 4-7s per channel; compute once when both\r\n    // waterfall + mosaic need d...[truncated, 27424 total bytes]
+
+[web search]: {"error":"Search engine unavailable: No search engines configured","query":"CESAROPS wreckhunter scan engine python implementation details","results":[]}
+
+## [tool_result,read_file,context_overflow] 1778775884
+Tool result from read_file(/codebase/wreckhunter2000-1/IMPLEMENTATION_ROADMAP.md): # CesarOps Implementation Roadmap
+## May 13, 2026 — Post-Session Status
+
+---
+
+## WHAT'S WORKING RIGHT NOW
+
+| Component | Port | Status |
+|-----------|------|--------|
+| KoboldCPP (Qwen3.6-35B MoE) | 5001 | ✅ Running on both P100s |
+| Forge-v2 Web UI (chat + cluster panel) | 9100 | ✅ Running |
+| Nautivecs (vector search, 12.6k chunks) | 5003 | ✅ Running |
+| cesarops-inference (1.5B bootstrap, CPU) | 5002 | ⚠️ Stopped (was testing) |
+| Corrector "Marvin" (14B on 1070) | 5555 | ❌ Offline (cesarops2 not serving) |
+| WSO (web search oracle) | 5010 | ❌ Offline |
+| n8n (orchestration/translator) | 5678 | ❌ Offline |
+| Thinker/Translator | 5557 | ❌ Offline (was on n8n) |
+
+---
+
+## CRITICAL PATH — GET THE FORGE WORKING PROPERLY
+
+### Priority 1: Thinker/Translator Must Be Running
+**Problem**: The forge's thinker preflight runs (produces search queries + plan) but the main model ignores it and goes into a `<think>` spiral instead of calling tools.
+
+**Root Cause**: The thinker/translator on port 5557 (which was an n8n workflow) is what enforced tool execution. Without it, the model just reasons without acting.
+
+**Fix Options**:
+1. Get n8n back up with the translator workflow
+2. OR: Build the translator logic directly into forge-v2 (eliminate n8n dependency)
+3. OR: Disable Qwen3's thinking mode via `<think>\n\n</think>\n\n` prefill in the assistant turn
+
+### Priority 2: Corrector "Marvin" on Cesarops2
+**Problem**: Malformed tool calls can't be fixed because the 14B corrector on cesarops2:5555 is offline.
+
+**Fix**: Start KoboldCPP or cesarops-inference on cesarops2 with a 14B model.
+
+### Priority 3: WSO (Web Search)
+**Problem**: `think_harder` tool can't search the web because WSO on port 5010 is down.
+
+**Fix**: Restart WSO or point it at an alternative search backend.
+
+---
+
+## COMPLETED THIS SESSION
+
+1. ✅ **Q6_K dequantization fix** — correct interleaved bit extraction matching llama.cpp
+2. ✅ **Attention bias patch** — Q/K/V bias vectors applied after matmul
+3. ✅ **Chat template registry** — 6 templates (qwen2.5, qwen3, phi3, deepseek-r1, etc.)
+4. ✅ **Special token handling** — tokenizer splits around `<|im_start|>` etc.
+5. ✅ **Weight cache** — pre-dequantizes all tensors at load (5-8x CPU speedup)
+6. ✅ **GPU matmul via wgpu** — f32 tiled shader, tested correct on P100
+7. ✅ **GPU context** — device init, pipeline compile, buffer management
+8. ✅ **Forward pass GPU dispatch** — `do_matmul()` routes to GPU when available
+9. ✅ **CLI flags** — `--backend cpu|wgpu --gpu N`
+10. ✅ **Agent harness** — async tool loop (shell, file, http, scan)
+11. ✅ **Sub-agent router** — keyword dispatch to cluster nodes
+12. ✅ **Cluster control panel** — web UI at /cluster
+13. ✅ **Node discovery** — probes Tailscale IPs for online services
+14. ✅ **KoboldCPP fallback** — unsupported quant formats auto-route to koboldcpp
+15. ✅ **Forge timeout fix** — 600s instead of 120s
+
+---
+
+## NEXT SESSION PRIORITIES
+
+##
+
+## [tool_result,think_harder,context_overflow] 1778775913
+Tool result from think_harder(CesarOps Implementation Roadmap NEXT SESSION PRIORITIES wreckhunter adaptive detection): [nautivecs]: {"results":[{"score":0.016393442,"file_path":"cesarops-thought-engine/src/clients.rs","function_name":"CesaropsClient","symbol_type":"impl","line_start":115,"line_end":195,"text":"impl CesaropsClient {\n    pub fn new() -> Self {\n        Self {\n            client: Client::builder()\n                .timeout(std::time::Duration::from_secs(300)) // Longer timeout for 35B\n                .build()\n                .unwrap(),\n            base_url: std::env::var(\"CESAROPS_API_URL\")\n                .unwrap_or_else(|_| \"http://100.72.182.77:5001\".to_string()),\n        }\n    }\n\n    pub async fn execute_task(&self, spec: &PlanSpec, context: &[String]) -> Result<String> {\n        let url = format!(\"{}/chat/completions\", self.base_url.trim_end_matches('/'));\n        \n        let system_prompt = r#\"You are CESAROPS, a powerful code generation and analysis engine.\nYou receive structured tasks from a planning frontend.\nYour job is to produce high-quality, correct, and complete implementations.\n\nInput Format:\n- Sub-tasks: List of specific coding tasks.\n- Required Context: Code snippets or references to include.\n- Output Format: Expected structure of the result.\n\nInstructions:\n1. Follow the sub-tasks precisely.\n2. Use the provided context.\n3. Adhere strictly to the output format.\n4. If you encounter ambiguity, make reasonable assumptions and note them.\"#;\n\n        let user_content = format!(\n            \"Sub-tasks:\\n{}\\n\\nRequired Context:\\n{}\\n\\nOut...[truncated, 12508 total bytes]
+
+[web search]: {"error":"Search engine unavailable: No search engines configured","query":"CesarOps Implementation Roadmap NEXT SESSION PRIORITIES wreckhunter adaptive detection","results":[]}
+
+## [tool_result,run_command,context_overflow] 1778775997
+Tool result from run_command(ls -la /codebase/wreckhunter2000-1/): total 464
+drwxr-xr-x 43 cesarops cesarops  4096 May 14 16:26 .
+drwxrwxr-x  5 cesarops cesarops    73 May 10 11:37 ..
+-rw-r--r--  1 cesarops cesarops   408 May 13 06:44 ai_stack_docker-compose.yml
+drwxrwxr-x  7 cesarops cesarops  4096 May 14 11:19 backup
+-rw-r--r--  1 cesarops cesarops 57824 May  9 16:00 Cargo.lock
+-rw-r--r--  1 cesarops cesarops   581 May 10 07:47 Cargo.toml
+drwxr-xr-x  3 cesarops cesarops    17 May 10 11:36 cesarops-aeromagnetic-worker
+drwxr-xr-x  4 cesarops cesarops    89 May 13 02:49 cesarops-agent
+drwx------  3 cesarops cesarops    35 May  9 07:31 cesarops-detection
+drwxr-xr-x  4 cesarops cesarops    39 May 10 10:28 cesarops-forge
+drwxr-xr-x  4 cesarops cesarops   140 May 14 00:11 cesarops-forge-v2
+drwxr-xr-x  6 cesarops cesarops  4096 May 13 03:29 cesarops-inference
+drwx------  5 cesarops cesarops   189 May  8 09:38 cesarops-mcp-steered
+drwxr-xr-x  4 cesarops cesarops    67 May 14 14:28 cesarops-mcp-worker
+drwxr-xr-x  3 cesarops cesarops    35 May  9 01:15 cesarops-mission-control
+drwxr-xr-x  3 cesarops cesarops    40 May 10 07:34 cesarops-supervisor
+drwxr-xr-x  3 cesarops cesarops    35 May  9 00:37 cesarops-thought-engine
+drwxr-xr-x  3 cesarops cesarops    56 May 10 07:42 cesarops-watchdog
+drwxr-xr-x  4 cesarops cesarops    67 May 10 09:08 cesarops-wso
+drwxr-xr-x  4 cesarops cesarops    67 May 10 09:17 cesarops-wso-server
+drwxr-xr-x  4 cesarops cesarops    48 May 12 16:27 crates
+drwxr-xr-x  2 cesarops cesarops    92 May 13 10:20 db
+drwxr-xr-x  4 cesarops cesarops  4096 May 14 12:14 docs
+drwxr-xr-x  3 cesarops cesarops    17 May  9 07:47 downloads
+-rw-r--r--  1 cesarops cesarops  5940 May 13 14:50 FILE_INVENTORY.txt
+-rw-r--r--  1 cesarops cesarops  8467 May 13 03:17 GEMINI_WGPU_SPEC.md
+drwxr-xr-x  8 cesarops cesarops  4096 May 14 14:49 .git
+-rw-r--r--  1 cesarops cesarops  8513 May 13 06:06 IMPLEMENTATION_ROADMAP.md
+-rw-rw-r--  1 cesarops cesarops  9862 May 13 15:00 INVENTORY.md
+-rw-rw-r--  1 cesarops cesarops 69326 May 13 15:08 local_file_inv...[truncated, 4367 total bytes]
+
+## [tool_result,run_command,context_overflow] 1778776046
+Tool result from run_command(find /codebase/wreckhunter2000-1/ -name Cargo.toml): /codebase/wreckhunter2000-1/sovereign-cloud/Cargo.toml
+/codebase/wreckhunter2000-1/nauticuvs/Cargo.toml
+/codebase/wreckhunter2000-1/Cargo.toml
+/codebase/wreckhunter2000-1/model-team-tool/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-wso/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-thought-engine/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-mission-control/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-detection/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-watchdog/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-agent/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-wso-server/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-forge/cesarops-forge/Cargo.toml
+/codebase/wreckhunter2000-1/warp-grid-standalone/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-mcp-steered/Cargo.toml
+/codebase/wreckhunter2000-1/nautivecs/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-forge-v2/Cargo.toml
+/codebase/wreckhunter2000-1/cesarops-inference/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-audio/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-bench/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-cli/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-core/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-macros/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-mcp/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-paged-attn/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-pyo3/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-quant/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-server-core/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-server/Cargo.toml
+/codebase/wreckhunter2000-1/crates/mistral-rs-fork/mistralrs-vision/Cargo.toml
+/codebase/wreckhunter2000-1/crates/m...[truncated, 11130 total bytes]
+
+## [tool_result,think_harder,context_overflow] 1778776350
+Tool result from think_harder(CESAROPS Forge development environment setup rust cargo path): [nautivecs]: {"results":[{"score":0.016393442,"file_path":"cesarops-inference/src/mcp.rs","function_name":"tool_cargo_check","symbol_type":"function","line_start":365,"line_end":395,"text":"fn tool_cargo_check(args: &Value) -> Value {\r\n    let dir = match args.get(\"dir\").and_then(|d| d.as_str()) {\r\n        Some(d) => d,\r\n        None => return json!({\"error\": \"dir argument required\"}),\r\n    };\r\n\r\n    let full_dir = std::path::Path::new(PROJECT_ROOT).join(dir);\r\n    let output = std::process::Command::new(\"cargo\")\r\n        .args([\"check\", \"--message-format=short\"])\r\n        .current_dir(&full_dir)\r\n        .env(\"PATH\", format!(\"/home/cesarops/.cargo/bin:{}\", std::env::var(\"PATH\").unwrap_or_default()))\r\n        .output();\r\n\r\n    match output {\r\n        Ok(out) => {\r\n            let stdout = String::from_utf8_lossy(&out.stdout);\r\n            let stderr = String::from_utf8_lossy(&out.stderr);\r\n            if out.status.success() {\r\n                json!({\"status\": \"ok\", \"message\": \"cargo check passed\"})\r\n            } else {\r\n                let errors: String = stderr.lines()\r\n                    .filter(|l| l.contains(\"error\"))\r\n                    .take(10)\r\n                    .collect::<Vec<_>>()\r\n                    .join(\"\\n\");\r\n                json!({\"status\": \"error\", \"errors\": errors})\r\n            }\r\n        }\r\n        Err(e) => json!({\"error\": format!(\"Failed to run cargo: {}\", e)}),\r...[truncated, 17186 total bytes]
+
+[web search]: {"error":"Search engine unavailable: No search engines configured","query":"CESAROPS Forge development environment setup rust cargo path","results":[]}
+
+## [environment,cargo,path,cesarops-forge] 1778776379
+Current execution environment lacks 'cargo' in $PATH. Rust/Cargo installation is not standard; /root/.cargo/bin is permission-denied. Project root: /codebase/wreckhunter2000-1/ (contains nauticuvs crate). start_forge.sh initializes web UI on port 9100.

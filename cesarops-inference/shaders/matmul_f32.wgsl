@@ -2,16 +2,16 @@
 //   A is [m x k], B_T is [k x n] -> C is [m x n]
 // Each thread computes one element of C.
 
-[[group(0), binding(0)]] var<storage, read> bufA: array<f32>;
-[[group(0), binding(1)]] var<storage, read> bufBT: array<f32>;
-[[group(0), binding(2)]] var<storage, read_write> bufC: array<f32>;
-[[group(0), binding(3)]] var<uniform> dims: MatrixDimensions;
-
 struct MatrixDimensions {
     m: u32,
     k: u32,
     n: u32,
 }
+
+@group(0) @binding(0) var<storage, read> bufA: array<f32>;
+@group(0) @binding(1) var<storage, read> bufBT: array<f32>;
+@group(0) @binding(2) var<storage, read_write> bufC: array<f32>;
+@group(0) @binding(3) var<uniform> dims: MatrixDimensions;
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {

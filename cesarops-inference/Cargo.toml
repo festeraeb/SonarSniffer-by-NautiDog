@@ -41,6 +41,8 @@ anyhow = "1"
 
 # System calls (NUMA pinning, mlock)
 libc = "0.2"
+rand = "0.10.1"
+tokenizers = "0.23.1"
 
 # Candle ML framework (WebGPU backend for P100)
 # candle-core = { path = "../crates/candle-fork/candle-core" }

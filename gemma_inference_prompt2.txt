@@ -1,0 +1,171 @@
+Your previous analysis was incorrect. The SwiGLU dispatch IS correct. Let me explain why:
+
+1. The gate_out buffer is created with size `intermediate_dim * 4 bytes` = 8960 * 4 = 35840 bytes = 8960 f32 values
+2. The shader declares `gate_proj: array<vec4<f32>>` — so `gate_proj[0]` reads bytes 0-15 (floats 0-3), `gate_proj[1]` reads bytes 16-31 (floats 4-7), etc.
+3. `n_elements_vec4 = (8960 + 3) / 4 = 2240`
+4. The shader dispatches `(2240 + 255) / 256 = 9` workgroups, each thread checks `if (idx >= 2240) { return; }`
+5. Thread idx=0 processes floats 0-3, thread idx=1 processes floats 4-7, ..., thread idx=2239 processes floats 8956-8959
+6. Total: 2240 vec4s × 4 floats = 8960 floats = exactly the buffer size
+
+The vec4 indexing is correct. `gate_proj[idx]` where idx is a vec4 index (0..2239) correctly covers all 8960 elements.
+
+Now look again. The SwiGLU is fine. The matvec is fine (proven by lm_head working). What else could cause the FFN to produce wrong output?
+
+Here are additional facts:
+- The RMSNorm shader reads input as `array<vec4<f32>>` and weight as `array<vec4<f32>>`
+- The RMSNorm weight for ffn_norm is a 1D tensor [1536] loaded from GGUF
+- When loaded, 1D tensors get shape [1536, 1] in our code
+- The dequant produces 1536 f32 values which are uploaded to a GPU buffer of 6144 bytes
+- The RMSNorm shader params include `hidden_dim_vec4 = hidden_dim / 4 = 384`
+- The shader iterates: `for (var i: u32 = tid; i < params.hidden_dim_vec4; i = i + 256u)`
+
+Here's the RMSNorm dispatch function signature (from shader_ops.rs):
+```rust
+pub fn dispatch(&self, device, queue, encoder, input_buf, weight_buf, output_buf, hidden_dim, n_rows, epsilon)
+```
+
+It creates a params buffer with:
+```rust
+struct RmsNormParams {
+    hidden_dim: u32,
+    hidden_dim_vec4: u32,  // hidden_dim / 4
+    epsilon: f32,
+    _pad: u32,
+}
+```
+
+And dispatches 1 workgroup (for n_rows=1).
+
+The RMSNorm shader:
+```wgsl
+@compute @workgroup_size(256, 1, 1)
+fn main(lid, wid) {
+    let tid = lid.x;
+    let row = wid.x;
+    let row_offset = row * params.hidden_dim_vec4;  // For row 0: offset = 0
+
+    // Phase 1: sum of squares
+    var local_ss: f32 = 0.0;
+    for (var i: u32 = tid; i < params.hidden_dim_vec4; i = i + 256u) {
+        let v = input[row_offset + i];  // vec4 read
+        local_ss = local_ss + dot(v, v);
+    }
+    // ... parallel reduction ...
+    let mean_sq = shared_sum[0] / f32(params.hidden_dim);  // Divide by FULL hidden_dim (1536), not vec4 count
+    let rms_scale = 1.0 / sqrt(mean_sq + params.epsilon);
+
+    // Phase 4: Apply
+    for (var i: u32 = tid; i < params.hidden_dim_vec4; i = i + 256u) {
+        let idx = row_offset + i;
+        let x = input[idx];
+        let w = weight[i];  // NOTE: weight uses index `i`, not `row_offset + i`
+        output[idx] = (x * rms_scale) * w;
+    }
+}
+```
+
+Now consider: the matvec shader reads its input as `array<f32>` (scalar). The RMSNorm outputs to `array<vec4<f32>>`. When the matvec reads the RMSNorm output buffer, it reads it as `array<f32>`. Is there any issue with this? The buffer is the same bytes either way — vec4 is just a view. So `output[0]` as vec4 writes bytes 0-15, and `input[0]` through `input[3]` as f32 reads bytes 0-3, 4-7, 8-11, 12-15. Same data, different view. This should be fine.
+
+What about the weight buffer for the FFN projections? The matvec reads `weights[n * K + k]` as `array<f32>`. The weight buffer was uploaded as a flat array of f32 values from the dequantized GGUF data. No vec4 reinterpretation. This should be fine.
+
+So what IS wrong? Think about:
+1. Could the GGUF shape interpretation be wrong for the FFN weights specifically?
+2. Could there be an off-by-one in which layer's weights are being used?
+3. Could the intermediate_dim detection be wrong?
+4. Could the weight buffer for gate_proj actually contain up_proj data (or vice versa)?
+5. Is there something wrong with how the residual add works?
+
+The residual add in the FFN:
+```rust
+let residual_temp2 = create_temp_buffer(device, "res_ffn", hidden_bytes);
+dispatch_add(device, queue, encoder, pipelines,
+    hidden_state, &ffn_out, &residual_temp2, config.hidden_dim);
+encoder.copy_buffer_to_buffer(&residual_temp2, 0, hidden_state, 0, hidden_bytes);
+```
+
+The add shader:
+```wgsl
+@compute @workgroup_size(256, 1, 1)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if (idx >= params.n_elements) { return; }
+    output[idx] = a[idx] + b[idx];
+}
+```
+
+This adds hidden_state + ffn_out → residual_temp2, then copies back to hidden_state. Seems correct.
+
+What about the order of operations? In a standard transformer:
+1. x_normed = RMSNorm(x, attn_norm_weight)
+2. attn_out = Attention(x_normed)
+3. x = x + attn_out  (residual)
+4. x_normed2 = RMSNorm(x, ffn_norm_weight)
+5. ffn_out = FFN(x_normed2)
+6. x = x + ffn_out  (residual)
+
+In our code with attention disabled:
+1. normed = RMSNorm(hidden_state, attn_norm_weight)  ← this runs but result is unused
+2. (attention runs but residual add is commented out, so hidden_state unchanged)
+3. ffn_normed = RMSNorm(hidden_state, ffn_norm_weight)
+4. ffn_out = FFN(ffn_normed)
+5. hidden_state = hidden_state + ffn_out
+
+Wait — step 1 runs RMSNorm with attn_norm_weight into a temp buffer `normed`. Then step 3 runs RMSNorm on the ORIGINAL hidden_state (unchanged) with ffn_norm_weight. Is this correct?
+
+In a normal transformer with attention enabled, after step 3, hidden_state would be `x + attn_out`. But with attention disabled, hidden_state is still the raw embedding. So the FFN is normalizing the raw embedding with ffn_norm_weight and then projecting it. This is "wrong" in the sense that it's not what the model expects (it expects the post-attention residual), but it should still produce a deterministic, non-garbled output.
+
+Actually wait — could the issue be that we're using the WRONG norm weights? Let me re-read the code:
+- Step 1: `RMSNorm(hidden_state, weights.attn_norm, normed, ...)` — uses attn_norm weight
+- Step 3: `RMSNorm(hidden_state, weights.ffn_norm, ffn_normed, ...)` — uses ffn_norm weight
+
+These are different weight buffers loaded from different GGUF tensors:
+- `blk.0.attn_norm.weight` → weights.attn_norm
+- `blk.0.ffn_norm.weight` → weights.ffn_norm
+
+This seems correct. But could there be a bug in how these 1D tensors are loaded?
+
+For 1D tensors, the loading code does:
+```rust
+let shape = [region.shape[0], 1];  // e.g. [1536, 1]
+```
+
+And in load_tensor_safe:
+```rust
+let n_elements = rows * cols;  // 1536 * 1 = 1536
+let is_2d_weight = shape[0] > 1 && shape[1] > 1;  // 1536 > 1 && 1 > 1 = FALSE
+```
+
+So 1D tensors are NOT treated as 2D weights. They just get dequanted and uploaded. Good.
+
+But wait — what about the GGUF shape for norm weights? GGUF stores shapes as [ne0, ne1, ...]. For a 1D tensor of size 1536, the GGUF shape would be [1536]. In our code:
+```rust
+if region.shape.len() >= 2 {
+    [region.shape[1], region.shape[0]]
+} else {
+    [region.shape[0], 1]  // [1536, 1]
+}
+```
+
+For 1D tensors, `region.shape.len()` is 1, so we get `[1536, 1]`. n_elements = 1536. Correct.
+
+Now think harder. What if the issue is that the GGUF file stores the FFN gate and up weights with dimensions that don't match what we expect? What if for Qwen2.5, the gate and up are stored differently?
+
+Actually, here's a thought: what if `region.shape` for the gate weight is stored as `[ne0, ne1]` = `[1536, 8960]` in the GGUF metadata, but the actual data in the file is stored in a DIFFERENT order than we expect?
+
+In GGUF, the data is stored in row-major order where the FIRST dimension (ne0) is the fastest-varying. So for shape [1536, 8960]:
+- Element at logical position [i0, i1] is at flat index: i1 * ne0 + i0 = i1 * 1536 + i0
+- This means the data is laid out as: all 1536 elements of row 0, then all 1536 elements of row 1, etc.
+- There are 8960 rows of 1536 elements each.
+
+Our matvec computes: output[n] = sum_k(W[n * K + k] * input[k])
+With N=8960, K=1536: output[n] = sum_k(W[n * 1536 + k] * input[k])
+
+This reads row n of the weight matrix (1536 consecutive elements starting at offset n*1536) and dots it with the input vector. This matches the GGUF layout where row n starts at flat index n * ne0 = n * 1536.
+
+So the matvec IS reading the correct row for each output element. The weight layout matches.
+
+Unless... the GGUF shape metadata is [ne0, ne1] but we're reading it as region.shape[0] and region.shape[1]. How is region.shape populated from the GGUF file? Could there be a bug in the GGUF parser where the dimensions are swapped?
+
+Please investigate: what if the GGUF parser stores dimensions in a different order than [ne0, ne1]? What if region.shape = [8960, 1536] for the gate weight (already in [rows, cols] order), and then our code reverses it to [1536, 8960], making K=8960 and N=1536? That would mean the matvec computes output[n] = sum_k(W[n * 8960 + k] * input[k]) with n=0..1535 and k=0..8959. But the input is only 1536 elements! The matvec would read past the end of the input buffer.
+
+This is the most likely bug. Please analyze whether the GGUF parser might already be storing shapes in [rows, cols] order (reversed from GGUF native [ne0, ne1]), and our code is double-reversing them.

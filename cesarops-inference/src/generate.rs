@@ -197,7 +197,7 @@ fn execute_single_token(
     }
 
     // 2. Execute all transformer layers
-    for (layer_idx, layer_weights) in weights.layers.iter().enumerate().take(1) {
+    for (layer_idx, layer_weights) in weights.layers.iter().enumerate() {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("layer_encoder"),
         });

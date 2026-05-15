@@ -1,14 +1,14 @@
 {
   "coder_agent": true,
-  "coder_model": "test",
+  "coder_model": "/codebase/models/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
   "coder_safe": false,
   "corrector_agent": false,
-  "corrector_model": "",
+  "corrector_model": "/codebase/models/Qwen2.5-Coder-7B-Instruct-abliterated-Q8_0.gguf",
   "corrector_safe": true,
   "polisher_agent": false,
   "polisher_model": "",
   "polisher_safe": true,
   "thinker_agent": false,
-  "thinker_model": "test",
+  "thinker_model": "/codebase/models/Fortytwo_Strand-Rust-Coder-14B-v1-Q6_K.gguf",
   "thinker_safe": true
 }

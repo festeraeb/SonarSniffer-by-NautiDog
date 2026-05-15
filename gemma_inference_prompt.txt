@@ -1,0 +1,184 @@
+You are reviewing a custom LLM inference engine written in Rust + wgpu (WGSL compute shaders) running on a Tesla P100 via Vulkan. The engine loads GGUF models and generates tokens. It currently produces garbled output. I need you to find the bug.
+
+## What the engine does:
+- Loads a Qwen2.5-Coder-1.5B-Instruct Q6_K GGUF model
+- Dequantizes all weights to F32 at load time (CPU-side dequant, upload F32 to GPU)
+- Runs transformer forward pass: Embedding → [RMSNorm → QKV → RoPE → Attention → Residual → RMSNorm → FFN(SwiGLU) → Residual] × N_layers → Final RMSNorm → lm_head → Sample
+- Uses matvec shader for all projections (single-token decode, M=1)
+
+## Model parameters (Qwen2.5-Coder-1.5B):
+- hidden_dim = 1536
+- intermediate_dim = 8960
+- n_heads = 12
+- n_kv_heads = 2
+- head_dim = 128
+- n_layers = 28
+- vocab_size = 151936
+- rope_theta = 1000000.0
+
+## What we have tested and confirmed working:
+1. Dequant probe PASSES — GPU Q6_K dequant matches Python reference to 4 decimal places
+2. Embedding lookup is correct — verified by reading back embedding vectors
+3. Skipping ALL layers (embedding → final_norm → lm_head) produces correct repeated token output ("HelloHelloHello") — proves embedding table, final RMSNorm, lm_head projection, and sampling all work correctly
+4. With 1 layer enabled, output is CONSISTENT but WRONG (always produces "Document" or "ctrine" regardless of input) — this means the computation is deterministic but incorrect
+5. Layer 0 output magnitudes are reasonable (not NaN, not exploding)
+6. KV cache values are non-zero after layer execution (K cache is being written)
+7. The matvec shader produces correct results for lm_head (proven by test #3)
+
+## Current diagnostic state:
+- RoPE is DISABLED (commented out in forward_pass.rs)
+- Attention residual add is DISABLED (attention output is computed but NOT added back to hidden state)
+- FFN IS ENABLED — hidden_state goes through: FFN_RMSNorm → gate/up projections → SwiGLU → down projection → residual add
+- Only 1 layer runs (.take(1) in generate.rs)
+- So the current path is: embedding → FFN_only(layer0) → final_norm → lm_head → sample
+
+## What this tells us:
+- Since attention residual is disabled, the hidden state passes through ONLY the FFN block
+- The FFN block alone (with correct weights) should not produce "Document" from any input
+- Either the FFN computation is subtly wrong, OR the weight loading has an issue
+
+## GGUF tensor loading details:
+- GGUF stores shapes as [ne0, ne1] where ne0 is the inner/fast dimension
+- We reverse to [rows, cols] = [ne1, ne0] when loading
+- For a weight matrix W that maps input[K] → output[N]:
+  - GGUF stores it as shape [K, N] (ne0=K, ne1=N)
+  - We reverse to [N, K] for our shape tracking
+  - In memory, element W[n][k] is at flat index n*K + k (row-major)
+  - Our matvec shader computes: output[n] = sum_k(W[n*K + k] * input[k])
+  - This matches GGUF layout WITHOUT any transpose
+
+## Key question about weight dimensions:
+- For ffn_gate.weight: GGUF shape [ne0=1536, ne1=8960] → we store as [8960, 1536]
+  - Matvec: output[n] = sum_k(W[n*1536 + k] * input[k]), n=0..8959, k=0..1535
+  - This maps hidden_dim(1536) input → intermediate_dim(8960) output ✓
+- For ffn_down.weight: GGUF shape [ne0=8960, ne1=1536] → we store as [1536, 8960]
+  - Matvec: output[n] = sum_k(W[n*8960 + k] * input[k]), n=0..1535, k=0..8959
+  - This maps intermediate_dim(8960) input → hidden_dim(1536) output ✓
+
+## The code:
+
+### forward_pass.rs — dispatch_tiled_matmul (actually uses matvec for M=1):
+```rust
+fn dispatch_tiled_matmul(
+    device, queue, encoder, pipelines,
+    input, weights, output,
+    m: u32, k: u32, n: u32,  // m=1, k=input_dim, n=output_dim
+) {
+    // params: n_out=n, k_in=k
+    let params = MatvecParams { n_out: n, k_in: k, _pad0: 0, _pad1: 0 };
+    // dispatch (n+255)/256 workgroups
+}
+```
+
+Called as:
+```rust
+// Gate projection: hidden[1536] → gate[8960]
+dispatch_tiled_matmul(... &ffn_normed, &weights.gate_proj, &gate_out, 1, config.hidden_dim, config.intermediate_dim);
+// Up projection: hidden[1536] → up[8960]  
+dispatch_tiled_matmul(... &ffn_normed, &weights.up_proj, &up_out, 1, config.hidden_dim, config.intermediate_dim);
+// Down projection: activated[8960] → ffn_out[1536]
+dispatch_tiled_matmul(... &ffn_activated, &weights.down_proj, &ffn_out, 1, config.intermediate_dim, config.hidden_dim);
+```
+
+### matvec.wgsl:
+```wgsl
+@compute @workgroup_size(256, 1, 1)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let n = gid.x;
+    if (n >= params.N) { return; }
+    var sum: f32 = 0.0;
+    let w_base = n * params.K;
+    // output[n] = sum_k(W[n*K + k] * input[k])
+    for k in 0..K { sum += weights[w_base + k] * input[k]; }
+    output[n] = sum;
+}
+```
+
+### swiglu.wgsl:
+```wgsl
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if (idx >= params.n_elements_vec4) { return; }
+    let g = gate_proj[idx];  // vec4<f32>
+    let u = up_proj[idx];    // vec4<f32>
+    let silu = vec4<f32>(
+        g.x * sigmoid_fast(g.x),
+        g.y * sigmoid_fast(g.y),
+        g.z * sigmoid_fast(g.z),
+        g.w * sigmoid_fast(g.w)
+    );
+    output[idx] = silu * u;
+}
+```
+
+### rmsnorm.wgsl:
+```wgsl
+// Uses vec4 loads. Bindings:
+// @binding(0) input: array<vec4<f32>>
+// @binding(1) weight: array<vec4<f32>>
+// @binding(2) output: array<vec4<f32>>
+// @binding(3) params: Params { hidden_dim, hidden_dim_vec4, epsilon, _pad }
+
+// Phase 1: sum of squares via parallel reduction over input vec4s
+// Phase 2: rms_scale = 1.0 / sqrt(mean_sq + epsilon)  where mean_sq = sum_sq / hidden_dim
+// Phase 3: output[i] = input[i] * rms_scale * weight[i]   (all vec4 operations)
+```
+
+### RMSNorm dispatch in forward_pass.rs:
+```rust
+pipelines.rmsnorm.dispatch(
+    device, queue, encoder,
+    hidden_state, &weights.ffn_norm, &ffn_normed,
+    config.hidden_dim, 1, config.rms_norm_eps,
+);
+```
+
+The RMSNorm weight for ffn_norm is loaded from GGUF tensor "blk.0.ffn_norm.weight" with shape [1536] (1D).
+It's stored as a GPU buffer of 1536 f32 values = 6144 bytes.
+The shader reads it as array<vec4<f32>> so it reads 384 vec4 elements.
+
+### tensor_loader_safe.rs load path:
+```rust
+pub fn load_tensor_safe(&mut self, name: &str, shape: [usize; 2], data_type: TensorType, raw_bytes: &[u8]) {
+    // Dequant to F32
+    let f32_data = dequantize_to_f32(raw_bytes, n_elements, data_type);
+    // NO TRANSPOSE — GGUF layout matches shader expectation
+    // Upload F32 to GPU buffer
+}
+```
+
+### main.rs weight loading:
+```rust
+// For each layer tensor:
+let shape = if region.shape.len() >= 2 {
+    [region.shape[1], region.shape[0]]  // Reverse GGUF [ne0,ne1] → [ne1,ne0]
+} else {
+    [region.shape[0], 1]  // 1D tensors like norms
+};
+registry.load_tensor_safe(name, shape, dtype, bytes);
+```
+
+### How intermediate_dim is determined in main.rs:
+```rust
+intermediate_dim: {
+    let gate_name = format!("blk.0.ffn_gate.weight");
+    if let Some(region) = weights.tensors.get(&gate_name) {
+        // GGUF shape [ne0, ne1] — ne1 is the output dim for gate/up
+        region.shape.get(1).copied().unwrap_or(weights.hidden_dim * 4) as u32
+    } else {
+        (weights.hidden_dim * 4) as u32
+    }
+}
+```
+
+For Qwen2.5-1.5B, blk.0.ffn_gate.weight has GGUF shape [ne0=1536, ne1=8960].
+So region.shape = [1536, 8960], and region.shape.get(1) = Some(8960). This gives intermediate_dim = 8960. ✓
+
+## Additional context:
+- The RMSNorm epsilon is 1e-6 (config.rms_norm_eps)
+- Temperature is 0.0 (greedy/argmax sampling) for debugging
+- The model uses QKV biases (Qwen-specific) but attention is disabled so they don't matter right now
+- We verified the dequant is correct by comparing GPU output against Python gguf library output
+
+## What I need:
+Find the bug. Look at every detail. The fact that lm_head works proves matvec is correct in isolation. The fact that skipping layers works proves embedding+norm+lm_head are correct. Something in the FFN path is wrong. What is it?
