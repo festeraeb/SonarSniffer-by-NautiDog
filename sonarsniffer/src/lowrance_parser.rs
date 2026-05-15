@@ -186,5 +186,44 @@ impl LowranceParser {
 /// Free function wrapper for format_detector compatibility.
 pub fn parse_file(path: &std::path::Path) -> super::garmin_rsd_parser::ParseResult {
     let parser = LowranceParser::new();
-    parser.parse_file(path)
+    let lr = parser.parse_file(path);
+
+    super::garmin_rsd_parser::ParseResult {
+        record_count: lr.record_count,
+        recovered_records: lr.recovered_records,
+        dropped_bytes: lr.dropped_bytes,
+        parser_magic: lr.parser_magic,
+        detected_generation: None,
+        firmware_version: None,
+        channels: Vec::new(),
+        channel_counts: std::collections::BTreeMap::new(),
+        field_channel_counts: std::collections::BTreeMap::new(),
+        unique_field_values: std::collections::BTreeMap::new(),
+        unknown_channels: Vec::new(),
+        healing_actions: Vec::new(),
+        error_message: None,
+        pings: lr.pings.into_iter().map(|p| super::garmin_rsd_parser::Ping {
+            file_offset: p.file_offset,
+            sequence: p.sequence,
+            timestamp_ms: p.timestamp_ms,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            depth_m: p.depth_m,
+            depth_ft: p.depth_ft,
+            altitude_m: p.altitude_m.unwrap_or(0.0),
+            temp_c: p.temp_c,
+            beam_angle_deg: p.beam_angle_deg,
+            heading_deg: p.heading_deg,
+            pitch_deg: p.pitch_deg,
+            roll_deg: p.roll_deg,
+            channel: 0, // Lowrance uses channel_name, map to 0 for now
+            sample_count: p.raw_samples.len(),
+            sonar_offset: 0,
+            sonar_size: p.raw_samples.len(),
+            sample_format: "u8".to_string(),
+            samples: p.raw_samples.iter().map(|&b| b as u16).collect(),
+            hardware_gain: None,
+        }).collect(),
+        crc_mismatch_count: 0,
+    }
 }

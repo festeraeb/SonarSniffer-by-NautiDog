@@ -6,7 +6,7 @@ use anyhow::Result;
 use clap::Parser;
 use image::GrayImage;
 use std::path::Path;
-use tauri_appsonarsniffer_lib::{garmin_rsd_parser::GarminRSDParser, mosaic::feature::*};
+use sonarsniffer_lib::{garmin_rsd_parser::GarminRSDParser, mosaic::feature::*};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -175,7 +175,7 @@ fn main() -> Result<()> {
 }
 
 /// Convert ping samples to grayscale image for feature detection
-fn ping_to_grayscale(ping: &tauri_appsonarsniffer_lib::garmin_rsd_parser::Ping) -> GrayImage {
+fn ping_to_grayscale(ping: &sonarsniffer_lib::garmin_rsd_parser::Ping) -> GrayImage {
     let samples = &ping.samples;
     
     if samples.is_empty() {

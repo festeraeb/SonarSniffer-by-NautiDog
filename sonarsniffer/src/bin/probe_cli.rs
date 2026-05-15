@@ -187,7 +187,7 @@ fn main() {
             dump_preamble(path);
         }
         "heuristic" => {
-            use tauri_appsonarsniffer_lib::probing::probe_file_bytes;
+            use sonarsniffer_lib::probing::probe_file_bytes;
 
             println!("\n╔══════════════════════════════════════════════════════════════╗");
             println!("║          HeuristicProbe — Hardware Fingerprint Report         ║");
@@ -215,9 +215,9 @@ fn main() {
 
                 for ch in &report.channels {
                     let flip_icon = match ch.flip_status {
-                        tauri_appsonarsniffer_lib::probing::FlipStatus::Flipped       => " ⚠ FLIP",
-                        tauri_appsonarsniffer_lib::probing::FlipStatus::Normal        => "",
-                        tauri_appsonarsniffer_lib::probing::FlipStatus::Indeterminate => " ?flip",
+                        sonarsniffer_lib::probing::FlipStatus::Flipped       => " ⚠ FLIP",
+                        sonarsniffer_lib::probing::FlipStatus::Normal        => "",
+                        sonarsniffer_lib::probing::FlipStatus::Indeterminate => " ?flip",
                     };
                     println!("│  ch{:<3}  role={:<24}  nadir={:<8}  gap={:<5}  bit={:?}  noise={:.0}  records={}{}",
                         ch.channel_id,
@@ -234,15 +234,15 @@ fn main() {
                 // Summarise what the Mosaic Engine will do with this file
                 println!("├─────────────── mosaic interpretation ──────────────────────");
                 let has_single_port = report.channels.iter()
-                    .any(|c| matches!(c.suggested_role, tauri_appsonarsniffer_lib::probing::SuggestedRole::SingleSidePort));
+                    .any(|c| matches!(c.suggested_role, sonarsniffer_lib::probing::SuggestedRole::SingleSidePort));
                 let has_single_star = report.channels.iter()
-                    .any(|c| matches!(c.suggested_role, tauri_appsonarsniffer_lib::probing::SuggestedRole::SingleSideStarboard));
+                    .any(|c| matches!(c.suggested_role, sonarsniffer_lib::probing::SuggestedRole::SingleSideStarboard));
                 let has_paired = report.channels.iter()
                     .any(|c| matches!(c.suggested_role,
-                        tauri_appsonarsniffer_lib::probing::SuggestedRole::PairedPort |
-                        tauri_appsonarsniffer_lib::probing::SuggestedRole::PairedStarboard));
+                        sonarsniffer_lib::probing::SuggestedRole::PairedPort |
+                        sonarsniffer_lib::probing::SuggestedRole::PairedStarboard));
                 let flip_count = report.channels.iter()
-                    .filter(|c| matches!(c.flip_status, tauri_appsonarsniffer_lib::probing::FlipStatus::Flipped))
+                    .filter(|c| matches!(c.flip_status, sonarsniffer_lib::probing::FlipStatus::Flipped))
                     .count();
 
                 if has_single_port || has_single_star {
@@ -258,14 +258,50 @@ fn main() {
             }
             println!("\nDone — {} files probed.", paths.len());
         }
+        "process" => {
+            // Full pipeline: parse → build all outputs
+            use sonarsniffer_lib::outputs::{build_outputs, PipelineOptions};
+            use sonarsniffer_lib::garmin_rsd_parser::GarminRSDParser;
+
+            for path in &paths {
+                let fname = path.file_name().unwrap().to_string_lossy();
+                println!("\n═══ Processing: {} ═══", fname);
+
+                let mut parser = GarminRSDParser::new();
+                let parsed = parser.parse_file(path);
+                println!("  Parsed: {} records, {} pings", parsed.record_count, parsed.pings.len());
+
+                if parsed.pings.is_empty() {
+                    println!("  SKIP: no pings parsed");
+                    continue;
+                }
+
+                let mut opts = PipelineOptions::default();
+                // Use output dir next to the file
+                opts.output_dir = Some(path.parent().unwrap_or(std::path::Path::new("."))
+                    .join("output").to_string_lossy().to_string());
+
+                match build_outputs(path, &parsed, &opts, None, None) {
+                    Ok(summary) => {
+                        println!("  Output dir: {}", summary.output_dir);
+                        for art in &summary.artifacts {
+                            println!("    [{}] {} — {}", art.kind, art.path.split('/').last().unwrap_or(&art.path), art.details);
+                        }
+                    }
+                    Err(e) => {
+                        println!("  ERROR: {:#}", e);
+                    }
+                }
+            }
+        }
         _ => {
             for path in &paths {
-                let detected = tauri_appsonarsniffer_lib::format_detector::detect_and_parse(path);
+                let detected = sonarsniffer_lib::format_detector::detect_and_parse(path);
                 let probe = &detected.probe;
                 let parse = &detected.parse;
                 // For Garmin files the preamble channels are populated; for others it will be empty.
                 let ch_labels: Vec<String> = probe.preamble_channels.iter().map(|&ch| {
-                    let label = tauri_appsonarsniffer_lib::garmin_rsd_parser::map_channel_info(ch)
+                    let label = sonarsniffer_lib::garmin_rsd_parser::map_channel_info(ch)
                         .map(|(scan, family)| format!("{scan}/{family}"))
                         .unwrap_or_else(|| "?".to_string());
                     format!("{ch} ({label})")

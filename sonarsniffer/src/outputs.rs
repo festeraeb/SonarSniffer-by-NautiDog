@@ -15,6 +15,19 @@ use std::path::{Path, PathBuf};
 
 use zip::write::SimpleFileOptions;
 
+/// Progress callback for pipeline stages. Receives (step_description, percent_complete).
+/// When running under Tauri, this emits events to the frontend.
+/// When running headless/CLI, this can be a no-op or print to stderr.
+pub type ProgressCallback = dyn Fn(&str, u8);
+
+/// Helper to emit progress if a callback is provided.
+#[inline]
+fn emit_progress(cb: Option<&ProgressCallback>, step: &str, pct: u8) {
+    if let Some(f) = cb {
+        f(step, pct);
+    }
+}
+
 #[derive(Clone, serde::Serialize)]
 struct PipelineProgress {
     step: String,
@@ -190,7 +203,7 @@ pub fn build_outputs(
     parsed: &ParseResult,
     options: &PipelineOptions,
     detections: Option<&DetectionSummary>,
-    app: Option<String>,
+    progress: Option<&ProgressCallback>,
 ) -> Result<OutputSummary> {
     let parent = input_file
         .parent()
@@ -221,15 +234,7 @@ pub fn build_outputs(
     // waterfall + mosaic need denoised images from the same gray data.
     let denoised_cache: BTreeMap<u32, GrayImage> =
         if options.waterfall && options.mosaic && options.curvelet_denoise {
-            if let Some(a) = &app {
-                let _ = a.emit(
-                    "pipeline-progress",
-                    PipelineProgress {
-                        step: "Denoising channels...".into(),
-                        pct: 62,
-                    },
-                );
-            }
+            emit_progress(progress, "Denoising channels...", 62);
             let channels = pings_by_channel(parsed);
             channels
                 .iter()
@@ -252,15 +257,7 @@ pub fn build_outputs(
     let sidescan_pair = find_sidescan_pair(parsed);
 
     if options.waterfall {
-        if let Some(a) = &app {
-            let _ = a.emit(
-                "pipeline-progress",
-                PipelineProgress {
-                    step: "Rendering Waterfall Image...".into(),
-                    pct: 65,
-                },
-            );
-        }
+        emit_progress(progress, "Rendering Waterfall Image...", 65);
         artifacts.extend(write_waterfall_per_channel(
             parsed,
             &output_dir,
@@ -271,15 +268,7 @@ pub fn build_outputs(
     }
 
     if options.mosaic {
-        if let Some(a) = &app {
-            let _ = a.emit(
-                "pipeline-progress",
-                PipelineProgress {
-                    step: "Building Geographic Mosaic...".into(),
-                    pct: 75,
-                },
-            );
-        }
+        emit_progress(progress, "Building Geographic Mosaic...", 75);
         artifacts.extend(write_mosaic_per_channel(
             parsed,
             &output_dir,
@@ -408,15 +397,7 @@ pub fn build_outputs(
     }
 
     if options.kml {
-        if let Some(a) = &app {
-            let _ = a.emit(
-                "pipeline-progress",
-                PipelineProgress {
-                    step: "Generating KML...".into(),
-                    pct: 85,
-                },
-            );
-        }
+        emit_progress(progress, "Generating KML...", 85);
         let path = output_dir.join("track.kml");
         match write_kml(parsed, &path) {
             Ok(n) => artifacts.push(OutputArtifact {
@@ -436,15 +417,7 @@ pub fn build_outputs(
     }
 
     if options.kmz {
-        if let Some(a) = &app {
-            let _ = a.emit(
-                "pipeline-progress",
-                PipelineProgress {
-                    step: "Generating KMZ Map...".into(),
-                    pct: 90,
-                },
-            );
-        }
+        emit_progress(progress, "Generating KMZ Map...", 90);
         let kml = output_dir.join("track.kml");
         let kml_ready = kml.exists() || write_kml(parsed, &kml).is_ok();
         if kml_ready {
@@ -501,15 +474,7 @@ pub fn build_outputs(
     }
 
     if options.web_viewer {
-        if let Some(a) = &app {
-            let _ = a.emit(
-                "pipeline-progress",
-                PipelineProgress {
-                    step: "Generating Web Viewer...".into(),
-                    pct: 95,
-                },
-            );
-        }
+        emit_progress(progress, "Generating Web Viewer...", 95);
         let viewer_dir = output_dir.join("viewer");
         match write_native_viewer(
             parsed,

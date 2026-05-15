@@ -1,6 +1,6 @@
 use std::env;
 
-use tauri_appsonarsniffer_lib::{run_pipeline_internal, outputs::PipelineOptions};
+use sonarsniffer_lib::{run_pipeline_internal, outputs::PipelineOptions};
 
 fn main() {
     let mut args = env::args().skip(1);
