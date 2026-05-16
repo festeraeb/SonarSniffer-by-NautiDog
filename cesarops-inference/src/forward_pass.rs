@@ -237,6 +237,16 @@ pub fn execute_layer(
         config.n_heads, config.n_kv_heads, config.head_dim, pos,
     );
 
+    // Dump Q and V BEFORE attention to check projections
+    {
+        let normed_diag = readback_f32(device, queue, &normed, 4);
+        tracing::info!("  NORMED[0:4]={:?} (ref: [-0.0391, 0.0987, 0.4161, -0.8329])", normed_diag);
+        let q_diag = readback_f32(device, queue, &q_buf, 4);
+        let v_diag = readback_f32(device, queue, &v_buf, 4);
+        tracing::info!("  Q[0:4]={:?} (ref: [0.5833, -0.2750, -0.1517, 1.0229])", q_diag);
+        tracing::info!("  V[0:4]={:?} (ref: [0.6333, 0.2469, -0.1557, -0.0024])", v_diag);
+    }
+
     // Quick diagnostic: check attention output
     {
         let diag = readback_f32(device, queue, &attn_output, 4);
