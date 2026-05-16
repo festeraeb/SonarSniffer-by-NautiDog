@@ -35,6 +35,7 @@ pub mod tensor_chunker;
 pub mod tensor_loader_safe;
 pub mod device_profile;
 pub mod shader_ops;
+pub mod speculative;
 pub mod forward_pass;
 pub mod attention_dispatch;
 pub mod generate;
