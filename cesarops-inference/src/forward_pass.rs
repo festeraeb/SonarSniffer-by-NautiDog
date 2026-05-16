@@ -33,6 +33,11 @@ pub struct LayerPipelines {
     pub transpose_bgl: wgpu::BindGroupLayout,
     pub matvec: wgpu::ComputePipeline,
     pub matvec_bgl: wgpu::BindGroupLayout,
+    /// Optional push-constant matvec pipeline; populated when the device
+    /// reports `Features::PUSH_CONSTANTS`. When `Some`, dispatch_matvec uses
+    /// it instead of the uniform-buffer matvec for lower per-call overhead.
+    pub matvec_pc: Option<wgpu::ComputePipeline>,
+    pub matvec_pc_bgl: Option<wgpu::BindGroupLayout>,
     pub matvec_bias: wgpu::ComputePipeline,
     pub matvec_bias_bgl: wgpu::BindGroupLayout,
 }
@@ -494,6 +499,32 @@ fn dispatch_tiled_matmul(
     struct MatvecParams { n_out: u32, k_in: u32, _pad0: u32, _pad1: u32 }
 
     let params = MatvecParams { n_out: n, k_in: k, _pad0: 0, _pad1: 0 };
+
+    // Fast path: push constants when supported (saves a buffer write +
+    // one bind-group entry per call). Falls back to uniform-buffer matvec.
+    if let (Some(pipe), Some(bgl)) = (
+        pipelines.matvec_pc.as_ref(),
+        pipelines.matvec_pc_bgl.as_ref(),
+    ) {
+        let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("matvec_pc_bg"),
+            layout: bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: weights.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: output.as_entire_binding() },
+            ],
+        });
+
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+        pass.set_pipeline(pipe);
+        pass.set_bind_group(0, Some(&bg), &[]);
+        pass.set_push_constants(0, bytemuck::cast_slice(&[params]));
+        pass.dispatch_workgroups((n + 255) / 256, 1, 1);
+        return;
+    }
+
+    // Fallback uniform-buffer path (original).
     let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("matvec_params"),
         size: 16,

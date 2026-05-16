@@ -271,19 +271,40 @@ async fn run_generate_mode(
 
     let device_profile = DeviceProfile::from_adapter_info(&adapter_info);
 
+    // Try PUSH_CONSTANTS feature for low-overhead matvec params. Pascal supports
+    // it via Vulkan 1.0; fall back to uniform-buffer path if the adapter rejects.
+    let want_push_constants = adapter
+        .features()
+        .contains(wgpu::Features::PUSH_CONSTANTS);
+    let required_features = if want_push_constants {
+        wgpu::Features::PUSH_CONSTANTS
+    } else {
+        wgpu::Features::empty()
+    };
+    let mut limits = wgpu::Limits {
+        max_storage_buffer_binding_size: 900 * 1024 * 1024,
+        max_buffer_size: 900 * 1024 * 1024,
+        ..Default::default()
+    };
+    if want_push_constants {
+        limits.max_push_constant_size = 64; // we only need 16, take 64 for headroom
+    }
+
     let (device, queue) = adapter.request_device(
         &wgpu::DeviceDescriptor {
             label: Some("cesarops_generate"),
-            required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits {
-                max_storage_buffer_binding_size: 900 * 1024 * 1024,
-                max_buffer_size: 900 * 1024 * 1024,
-                ..Default::default()
-            },
+            required_features,
+            required_limits: limits,
             memory_hints: wgpu::MemoryHints::Performance,
         },
         None,
     ).await?;
+
+    if want_push_constants {
+        info!("PUSH_CONSTANTS enabled (matvec uses fast path)");
+    } else {
+        info!("PUSH_CONSTANTS unsupported on this adapter — matvec uses uniform path");
+    }
 
     let device = Arc::new(device);
     let queue = Arc::new(queue);
