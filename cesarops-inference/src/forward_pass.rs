@@ -238,6 +238,7 @@ pub fn execute_layer(
     );
 
     // Dump Q and V BEFORE attention to check projections
+    #[cfg(feature = "diagnostics")]
     {
         // Check hidden_state at start of execute_layer
         let hs_start = readback_f32(device, queue, hidden_state, 4);
@@ -254,6 +255,7 @@ pub fn execute_layer(
     }
 
     // Quick diagnostic: check attention output
+    #[cfg(feature = "diagnostics")]
     {
         let diag = readback_f32(device, queue, &attn_output, 4);
         tracing::info!("  ATTN_OUT[0:4]={:?} (ref: [0.6333, 0.2469, -0.1557, -0.0024])", diag);

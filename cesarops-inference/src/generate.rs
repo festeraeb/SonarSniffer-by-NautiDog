@@ -118,6 +118,7 @@ pub fn generate_tokens(
         let logits = read_buffer_f32(device, queue, &logits_buf, config.vocab_size as usize);
 
         // Diagnostic: print top-5 logits for first generated token
+        #[cfg(feature = "diagnostics")]
         if output_tokens.is_empty() {
             // Also check hidden state after final norm
             let hs_vals = crate::forward_pass::readback_f32(device, queue, &hidden_state, 4);
@@ -187,6 +188,7 @@ fn execute_single_token(
     queue.submit(std::iter::once(encoder.finish()));
 
     // Diagnostic: dump embedding vector before any layers process it
+    #[cfg(feature = "diagnostics")]
     if pos == 0 {
         let diag_size = 64u64;
         let staging = device.create_buffer(&wgpu::BufferDescriptor {
