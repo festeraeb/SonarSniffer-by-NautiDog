@@ -221,31 +221,49 @@ pub fn execute_layer(
         queue.submit(std::iter::once(enc.finish()));
     }
 
-    // ── S2: Q + K + V projections ───────────────────────────────────────────
-    // All read normed, write to different output buffers — safe to batch.
+    // ── S2: Q + K + V projections (with biases fused if present) ────────────
+    // When the model has QKV biases (Qwen-style), use matvec_bias to fuse the
+    // add into the matmul kernel — drops S3 entirely, saving one submit per
+    // layer per token. When no bias (Llama/Gemma), use plain matvec.
     {
         let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("s2_qkv") });
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &normed, &weights.q_proj, &q_buf,
-            1, config.hidden_dim, config.hidden_dim);
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &normed, &weights.k_proj, &k_buf,
-            1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-        dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
-            &normed, &weights.v_proj, &v_buf,
-            1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+        if let Some(ref qb) = weights.q_bias {
+            dispatch_matvec_bias(device, queue, &mut enc, pipelines,
+                &normed, &weights.q_proj, qb, &q_buf,
+                config.hidden_dim, config.hidden_dim);
+        } else {
+            dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+                &normed, &weights.q_proj, &q_buf,
+                1, config.hidden_dim, config.hidden_dim);
+        }
+        if let Some(ref kb) = weights.k_bias {
+            dispatch_matvec_bias(device, queue, &mut enc, pipelines,
+                &normed, &weights.k_proj, kb, &k_buf,
+                config.hidden_dim, config.n_kv_heads * config.head_dim);
+        } else {
+            dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+                &normed, &weights.k_proj, &k_buf,
+                1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+        }
+        if let Some(ref vb) = weights.v_bias {
+            dispatch_matvec_bias(device, queue, &mut enc, pipelines,
+                &normed, &weights.v_proj, vb, &v_buf,
+                config.hidden_dim, config.n_kv_heads * config.head_dim);
+        } else {
+            dispatch_tiled_matmul(device, queue, &mut enc, pipelines,
+                &normed, &weights.v_proj, &v_buf,
+                1, config.hidden_dim, config.n_kv_heads * config.head_dim);
+        }
         queue.submit(std::iter::once(enc.finish()));
     }
 
-    // ── S3: Biases (in-place add via residual_tmp) ──────────────────────────
-    // Each bias reads/writes its own buffer. They're independent of each other
-    // but each is a RAW on its own buffer, so batch all three in one encoder:
-    // q_buf → residual_tmp → q_buf  (copy back in same encoder is safe on P100
-    // because copy_buffer_to_buffer is ordered after the compute pass that wrote
-    // residual_tmp within the same encoder submission).
-    let has_bias = weights.q_bias.is_some() || weights.k_bias.is_some() || weights.v_bias.is_some();
+    // ── S3: Biases — eliminated when matvec_bias was used in S2 above.
+    //   For models without biases (Llama-family), this branch is a no-op.
+    //   The legacy split-bias path is kept compiled for fallback diagnostic
+    //   only; it never runs in the steady-state path.
+    let has_bias = false; // intentionally disabled — biases are now fused in S2
     if has_bias {
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("s3_bias") });
+        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("s3_bias_legacy") });
         if let Some(ref qb) = weights.q_bias {
             dispatch_add(device, queue, &mut enc, pipelines, &q_buf, qb, &residual_tmp, config.hidden_dim);
             enc.copy_buffer_to_buffer(&residual_tmp, 0, &q_buf, 0, hidden_bytes);
