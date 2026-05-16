@@ -37,6 +37,10 @@ pub struct ModelWeights {
     pub n_kv_heads: usize,
     pub vocab_size: usize,
     pub data_offset: usize,
+    /// Full GGUF metadata table — used by arch_detect for family/MoE/RoPE detection.
+    pub metadata: HashMap<String, GgufValue>,
+    /// All tensor names, in load order. Useful for quick checks like "any name ends in attn_q.bias".
+    pub tensor_names: Vec<String>,
     _mmap: Mmap, // Keep mmap alive
 }
 
@@ -49,14 +53,15 @@ pub struct TensorRegion {
     pub quant_type: u32,
 }
 
-/// GGUF value types
-#[derive(Debug)]
-enum GgufValue {
+/// GGUF metadata value types — exposed publicly so arch_detect can walk them.
+#[derive(Debug, Clone)]
+pub enum GgufValue {
     U32(u32),
     I32(i32),
     F32(f32),
     Str(String),
     U64(u64),
+    Bool(bool),
     Array(Vec<GgufValue>),
     Other,
 }
@@ -120,6 +125,7 @@ pub fn load(path: &Path, _profile: &IronProfile) -> Result<ModelWeights, io::Err
 
     // Parse tensor info
     let mut tensors: HashMap<String, TensorRegion> = HashMap::new();
+    let mut tensor_names: Vec<String> = Vec::with_capacity(n_tensors);
     for _ in 0..n_tensors {
         let name = read_gguf_string(&mmap, &mut cursor);
         let n_dims = read_u32(&mmap, &mut cursor);
@@ -132,6 +138,7 @@ pub fn load(path: &Path, _profile: &IronProfile) -> Result<ModelWeights, io::Err
 
         let size = compute_tensor_size(&shape, quant_type);
 
+        tensor_names.push(name.clone());
         tensors.insert(name, TensorRegion {
             offset,
             size,
@@ -155,6 +162,8 @@ pub fn load(path: &Path, _profile: &IronProfile) -> Result<ModelWeights, io::Err
         n_kv_heads,
         vocab_size,
         data_offset,
+        metadata,
+        tensor_names,
         _mmap: mmap,
     })
 }
@@ -217,10 +226,10 @@ fn read_gguf_value(data: &[u8], cursor: &mut usize) -> GgufValue {
         4 => GgufValue::U32(read_u32(data, cursor)),       // UINT16 (read as u32)
         5 => GgufValue::I32(read_i32(data, cursor)),       // INT16
         6 => GgufValue::F32(read_f32(data, cursor)),       // FLOAT64 (lossy)
-        7 => GgufValue::U32({                              // BOOL
+        7 => GgufValue::Bool({                              // BOOL
             let v = data[*cursor];
             *cursor += 1;
-            v as u32
+            v != 0
         }),
         8 => GgufValue::Str(read_gguf_string(data, cursor)), // STRING
         9 => {                                              // ARRAY
