@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::validator::{ValidatorConfig, run_validation, benchmark_tps, ping};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -29,7 +30,8 @@ pub async fn execute(name: &str, arguments: &Value, state: &AppState) -> String 
         },
         "remember" => { reset_think_counter(); remember(arguments, state).await },
         "run_command" => { reset_think_counter(); run_command(arguments, state).await },
-        _ => format!("Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command", name),
+        "speed_check" => { speed_check(arguments, state).await },
+        _ => format!("Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check", name),
     }
 }
 
@@ -271,6 +273,64 @@ async fn run_command(args: &Value, state: &AppState) -> String {
     } else {
         result
     }
+}
+
+/// Ad-hoc speed + accuracy check using the P1000 TinyLlama reference.
+///
+/// Fires the same prompt at both the main engine and the P1000 in parallel,
+/// compares token agreement, and reports t/s for both.
+///
+/// Usage: speed_check { "prompt": "optional — defaults to a fixed benchmark prompt" }
+async fn speed_check(args: &Value, state: &AppState) -> String {
+    let prompt = args
+        .get("prompt")
+        .and_then(|v| v.as_str())
+        .unwrap_or("The quick brown fox jumps over the lazy dog. In Rust, a vector is");
+
+    let validator_url = &state.config.validator_url;
+
+    // First check if P1000 is up
+    if !ping(validator_url).await {
+        // P1000 offline — just benchmark the main engine
+        info!("P1000 validator offline, benchmarking main engine only");
+        let main_tps = benchmark_tps(&state.config.coder_url, 10).await;
+        return match main_tps {
+            Some(tps) => format!(
+                "⚡ Speed check (P1000 offline — main engine only)\n\
+                 Main engine: {:.1} t/s\n\
+                 P1000 ({}): offline",
+                tps, validator_url
+            ),
+            None => format!(
+                "Speed check failed — main engine ({}) also unreachable",
+                state.config.coder_url
+            ),
+        };
+    }
+
+    let config = ValidatorConfig {
+        main_endpoint: state.config.coder_url.clone(),
+        ref_endpoint: validator_url.clone(),
+        n_tokens: 10,
+        min_agreement: 0.4, // TinyLlama vs 35B will diverge — 40% is fine
+    };
+
+    let result = run_validation(&config, prompt).await;
+
+    format!(
+        "⚡ Speed + Accuracy Check\n\
+         Prompt: \"{}\"\n\
+         {}\n\
+         Main tokens:  {}\n\
+         P1000 tokens: {}\n\
+         \n\
+         Note: Token agreement between different model sizes is expected to be ~40-70%.\n\
+         Low agreement (<30%) on simple prompts may indicate main engine issues.",
+        &prompt[..prompt.len().min(60)],
+        result.summary,
+        result.main_tokens.join(" "),
+        result.ref_tokens.join(" "),
+    )
 }
 
 // --- Helpers ---

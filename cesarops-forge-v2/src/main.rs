@@ -8,6 +8,7 @@ mod hardware;
 mod prompts;
 mod loop_engine;
 mod agent_dispatch;
+mod validator;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,8 @@ pub struct ForgeConfig {
     pub nautivecs_url: String,
     pub wso_url: String,
     pub project_root: String,
+    /// P1000 reference validator endpoint (cesarops2:5571)
+    pub validator_url: String,
 }
 
 #[derive(Deserialize)]
@@ -628,6 +631,59 @@ fn toml_to_json(val: &toml::Value) -> serde_json::Value {
     }
 }
 
+/// POST /validate { "prompt": "optional" }
+/// Runs the P1000 speed+accuracy check and returns JSON.
+async fn validate_endpoint(
+    State(state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let prompt = body
+        .get("prompt")
+        .and_then(|v| v.as_str())
+        .unwrap_or("The quick brown fox jumps over the lazy dog. In Rust, a vector is");
+
+    let config = validator::ValidatorConfig {
+        main_endpoint: state.config.coder_url.clone(),
+        ref_endpoint: state.config.validator_url.clone(),
+        n_tokens: 10,
+        min_agreement: 0.4,
+    };
+
+    let result = validator::run_validation(&config, prompt).await;
+    Json(serde_json::to_value(&result).unwrap_or_default())
+}
+
+/// GET /validate/ping — quick liveness check of both main engine and P1000.
+async fn validate_ping(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let main_up = validator::ping(&state.config.coder_url).await;
+    let p1000_up = validator::ping(&state.config.validator_url).await;
+
+    let main_tps = if main_up {
+        validator::benchmark_tps(&state.config.coder_url, 5).await
+    } else {
+        None
+    };
+    let p1000_tps = if p1000_up {
+        validator::benchmark_tps(&state.config.validator_url, 5).await
+    } else {
+        None
+    };
+
+    Json(serde_json::json!({
+        "main_engine": {
+            "url": state.config.coder_url,
+            "online": main_up,
+            "tps": main_tps,
+        },
+        "p1000_validator": {
+            "url": state.config.validator_url,
+            "online": p1000_up,
+            "tps": p1000_tps,
+        },
+        "status": if main_up { "ok" } else { "main_engine_down" },
+    }))
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -641,6 +697,7 @@ async fn main() {
         nautivecs_url: "http://127.0.0.1:5003/query".to_string(),
         wso_url: "http://127.0.0.1:5010/search".to_string(),
         project_root: "/codebase/wreckhunter2000-1".to_string(),
+        validator_url: "http://100.102.158.111:5571".to_string(), // P1000 TinyLlama — speed+accuracy canary
     };
 
     let state = AppState {
@@ -669,6 +726,8 @@ async fn main() {
         .route("/cluster/agent/run", post(run_agent_task))
         .route("/cluster/corrector/connect", post(corrector_connect))
         .route("/cluster/corrector/disconnect", post(corrector_disconnect))
+        .route("/validate", post(validate_endpoint))
+        .route("/validate/ping", get(validate_ping))
         .route("/cluster/worker/{idx}/start", post(start_worker))
         .route("/cluster/worker/{idx}/stop", post(stop_worker))
         .route("/cluster/start-all", post(start_all_workers))

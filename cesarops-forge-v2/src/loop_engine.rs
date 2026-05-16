@@ -6,7 +6,27 @@ use crate::translator::{self, FailureType, Message};
 use crate::{AppState, SendResponse};
 use tracing::{info, warn};
 
-const MAX_TOOL_ROUNDS: u32 = u32::MAX; // No limit — only loops/empty stop it
+const MAX_TOOL_ROUNDS: u32 = u32::MAX;
+
+// ── Corrector endpoint cascade ───────────────────────────────────────────────
+// Try each in order until one responds. This lets the P1000 TinyLlama act as
+// a fallback corrector when Marvin (14B on 1070) is offline.
+const CORRECTOR_CASCADE: &[(&str, &str)] = &[
+    ("marvin-14b",   "http://100.102.158.111:5555"),  // 14B on GTX 1070 — primary
+    ("picasso-tiny", "http://100.102.158.111:5571"),  // TinyLlama on P1000 — fallback
+    ("laptop-tiny",  "http://100.110.214.86:5571"),   // M2200 on ThinkPad — tertiary
+];
+
+// ── "Close enough" thresholds ────────────────────────────────────────────────
+// If a code block is this close to compilable, finish it ourselves.
+const CLOSE_ENOUGH_MISSING_BRACES: i32 = 3;   // ≤3 unmatched braces
+const CLOSE_ENOUGH_MISSING_LINES: usize = 15; // ≤15 lines of obvious boilerplate missing
+
+/// Result of the corrector's repetition justification check.
+struct RepetitionJudgment {
+    allowed: bool,
+    reason: String,
+}
 
 /// Read tuning params from cluster_config.toml
 fn read_tuning() -> (u32, u64, u64, u32, f32, bool) {
@@ -109,7 +129,7 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
         if let Some(ref failure_type) = normalized.failure {
             warn!("Failure detected: {:?} at round {}", failure_type, round);
 
-            // --- MalformedToolCall: Route to 14B Corrector (Marvin) ---
+            // --- MalformedToolCall: Route to corrector cascade ---
             if matches!(failure_type, FailureType::MalformedToolCall) {
                 if skip_corrector {
                     info!("Corrector disabled (skip_corrector=true). Treating as parse failure.");
@@ -117,39 +137,30 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
                     temperature = (temperature + 0.1).min(1.0);
                     continue;
                 }
-                info!("Routing malformed tool call to 14B Corrector (Marvin)");
-                let corrected = correct_and_execute(&raw_output, &normalized.content, state).await;
+                info!("Routing malformed tool call to corrector cascade");
+                let corrected = correct_and_execute_cascade(&raw_output, &normalized.content, state).await;
                 
-                if let Some((tool_name, result, correction_note)) = corrected {
-                    tool_actions.push(format!("{}(corrected)", tool_name));
+                if let Some((tool_name, result, correction_note, corrector_id)) = corrected {
+                    tool_actions.push(format!("{}(corrected-by:{})", tool_name, corrector_id));
                     
-                    // Feed result back to 35B WITH the correction
                     let feedback = format!(
-                        "{}\n\n[CORRECTION]: {}\nPattern: {{\"name\": \"TOOL_NAME\", \"arguments\": {{\"key\": \"value\"}}}}",
-                        result, correction_note
+                        "{}\n\n[CORRECTION by {}]: {}\nPattern: {{\"name\": \"TOOL_NAME\", \"arguments\": {{\"key\": \"value\"}}}}",
+                        result, corrector_id, correction_note
                     );
                     let formatted = translator::format_tool_result_for_qwen(&feedback, round, MAX_TOOL_ROUNDS);
                     
                     let mut conv = state.conversation.lock().await;
-                    conv.push(Message {
-                        role: "assistant".to_string(),
-                        content: normalized.content.clone(),
-                    });
-                    conv.push(Message {
-                        role: "user".to_string(),
-                        content: formatted,
-                    });
+                    conv.push(Message { role: "assistant".to_string(), content: normalized.content.clone() });
+                    conv.push(Message { role: "user".to_string(), content: formatted });
                     
-                    // Save correct format to nautivecs for future injection
                     let remember_args = serde_json::json!({
-                        "content": format!("Correct tool call format: {{\"name\": \"{}\", \"arguments\": {{...}}}}. The 35B produced malformed JSON. Fix applied by corrector.", tool_name),
+                        "content": format!("Correct tool call format: {{\"name\": \"{}\", \"arguments\": {{...}}}}. Fixed by {}.", tool_name, corrector_id),
                         "tags": "tool_call,format_fix,corrector"
                     });
                     let _ = tools::execute("remember", &remember_args, state).await;
-                    
                     continue;
                 }
-                // If corrector couldn't fix it either, fall through to diagnostics
+                // Corrector cascade exhausted — fall through to diagnostics
             }
 
             if failure_count >= max_diagnosis {
@@ -203,39 +214,95 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
             info!("Tool call round {}: {}", round, tool_call.name);
             tool_actions.push(tool_call.name.clone());
 
-            // Check for repeated tool calls — demand justification, terminate after 4
+            // Check for repeated tool calls — ask corrector cascade to judge
             if tool_actions.len() >= 3 {
                 let last_three = &tool_actions[tool_actions.len() - 3..];
-                if last_three.iter().all(|a| a == &last_three[0]) {
+                if last_three.iter().all(|a| a.trim_end_matches(|c: char| !c.is_alphabetic()) == tool_call.name.as_str()
+                    || a == &tool_call.name) {
                     let repeat_count = tool_actions.iter().rev()
-                        .take_while(|a| *a == &tool_call.name)
+                        .take_while(|a| a.starts_with(&tool_call.name))
                         .count();
 
-                    let msg = match repeat_count {
-                        3 => format!("[System]: You've called '{}' 3 times in a row. State WHY you need it again in your next response, then call it. If you cannot justify it, use a different tool.", tool_call.name),
-                        4 => format!("[System — FINAL WARNING]: '{}' called 4 times. You MUST either use a DIFFERENT tool or provide your final answer NOW. Next repetition = termination.", tool_call.name),
-                        _ => {
-                            // 5+ = terminate
-                            warn!("Terminated: {} called {}x with no progress", tool_call.name, repeat_count);
+                    if repeat_count >= 3 {
+                        // Ask corrector cascade whether this repetition is justified
+                        let judgment = check_repetition_justification_cascade(
+                            &tool_call.name, &tool_actions, &output_history, state
+                        ).await;
+
+                        if !judgment.allowed {
+                            warn!("Corrector BLOCKED repeated '{}': {}", tool_call.name, judgment.reason);
                             let mut conv = state.conversation.lock().await;
                             conv.push(Message {
                                 role: "user".to_string(),
-                                content: format!("[TERMINATED]: '{}' repeated {} times. Provide your answer in plain text NOW. No more tool calls.", tool_call.name, repeat_count),
+                                content: format!(
+                                    "[LOOP BLOCKED by corrector]: '{}' called {} times. Reason: {}. \
+                                     You MUST either use a DIFFERENT tool or provide your FINAL ANSWER now. \
+                                     No more '{}' calls.",
+                                    tool_call.name, repeat_count, judgment.reason, tool_call.name
+                                ),
+                            });
+                            failure_count += 1;
+                            continue;
+                        } else if repeat_count >= 5 {
+                            // Hard cap regardless of corrector judgment
+                            warn!("Hard cap: '{}' called {} times, terminating loop", tool_call.name, repeat_count);
+                            let mut conv = state.conversation.lock().await;
+                            conv.push(Message {
+                                role: "user".to_string(),
+                                content: format!(
+                                    "[TERMINATED]: '{}' repeated {} times. Provide your answer in plain text NOW.",
+                                    tool_call.name, repeat_count
+                                ),
                             });
                             continue;
+                        } else {
+                            info!("Corrector ALLOWED repeated '{}' ({}x): {}", tool_call.name, repeat_count, judgment.reason);
                         }
-                    };
-
-                    let mut conv = state.conversation.lock().await;
-                    conv.push(Message {
-                        role: "user".to_string(),
-                        content: msg,
-                    });
+                    }
                 }
             }
 
             // Execute the tool
             let result = tools::execute(&tool_call.name, &tool_call.arguments, state).await;
+
+            // ── "Close enough" detection ─────────────────────────────────────
+            // If the model just wrote a code file that's nearly complete (compile
+            // errors are minor / missing closing braces), finish it ourselves and
+            // queue a WIP commit rather than burning another full round.
+            if tool_call.name == "write_file" {
+                if let Some(content) = tool_call.arguments.get("content").and_then(|v| v.as_str()) {
+                    if let Some(path) = tool_call.arguments.get("path").and_then(|v| v.as_str()) {
+                        if path.ends_with(".rs") || path.ends_with(".wgsl") || path.ends_with(".toml") {
+                            if let Some(fix) = assess_close_enough(content, path) {
+                                info!("Close-enough detected for '{}': {}", path, fix.description);
+                                // Apply the fix ourselves
+                                if let Some(fixed_content) = &fix.fixed_content {
+                                    let write_args = serde_json::json!({
+                                        "path": path,
+                                        "content": fixed_content
+                                    });
+                                    let _ = tools::execute("write_file", &write_args, state).await;
+                                    tool_actions.push(format!("write_file(close-enough-fix:{})", path));
+                                    info!("Applied close-enough fix to '{}': {}", path, fix.description);
+                                }
+                                // Queue next round with targeted context
+                                let next_round_msg = format!(
+                                    "[CLOSE-ENOUGH AUTO-FIX]: '{}' was nearly complete. Applied fix: {}. \
+                                     Next step: run cargo_check on the project to verify it compiles, \
+                                     then commit with a WIP message. If cargo_check passes, \
+                                     call run_command with: git add {} && git commit -m 'WIP: {}'",
+                                    path, fix.description, path,
+                                    path.split('/').last().unwrap_or(path)
+                                );
+                                let mut conv = state.conversation.lock().await;
+                                conv.push(Message { role: "assistant".to_string(), content: normalized.content.clone() });
+                                conv.push(Message { role: "user".to_string(), content: next_round_msg });
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
 
             // --- Context Window Management ---
             // If the result is large, compress it for conversation and store full in nautivecs
@@ -456,46 +523,94 @@ async fn hard_reset(state: &AppState) {
     info!("Hard reset: conversation cleared to last user message");
 }
 
-/// Route a malformed tool call to the 14B Corrector (Marvin) on the 1070.
-/// The corrector fixes the JSON, we execute the tool, and return the result + correction note.
-async fn correct_and_execute(
+/// Route a malformed tool call through the corrector cascade.
+/// Tries each corrector in order until one fixes it.
+/// Returns (tool_name, result, correction_note, corrector_id) or None.
+async fn correct_and_execute_cascade(
     raw_output: &str,
     stripped_content: &str,
     state: &AppState,
-) -> Option<(String, String, String)> {
+) -> Option<(String, String, String, String)> {
+    // Build the corrector URL list: config corrector first, then cascade fallbacks
+    let mut endpoints: Vec<(String, String)> = Vec::new();
+
+    // Primary from config (may be disabled/empty)
+    let primary = &state.config.corrector_url;
+    if !primary.is_empty() && !primary.contains("0.0.0.0") {
+        endpoints.push(("config-corrector".to_string(), primary.clone()));
+    }
+
+    // Cascade fallbacks
+    for (id, url) in CORRECTOR_CASCADE {
+        if !endpoints.iter().any(|(_, u)| u == url) {
+            endpoints.push((id.to_string(), url.to_string()));
+        }
+    }
+
+    for (corrector_id, corrector_url) in &endpoints {
+        info!("Trying corrector '{}' at {}", corrector_id, corrector_url);
+        if let Some(result) = try_corrector(raw_output, stripped_content, corrector_url, corrector_id, state).await {
+            return Some(result);
+        }
+        warn!("Corrector '{}' failed or unreachable, trying next", corrector_id);
+    }
+
+    warn!("All correctors exhausted — cannot fix malformed tool call");
+    None
+}
+
+/// Try a single corrector endpoint. Returns None if unreachable or can't fix.
+async fn try_corrector(
+    raw_output: &str,
+    stripped_content: &str,
+    corrector_url: &str,
+    corrector_id: &str,
+    state: &AppState,
+) -> Option<(String, String, String, String)> {
     let client = reqwest::Client::new();
 
-    // Ask the 14B to fix the malformed tool call
-    let fix_prompt = format!(
-        r#"<|im_start|>system
-You are a tool-call JSON fixer. The main model produced malformed JSON for a tool call.
-Fix it and output ONLY the corrected JSON. Nothing else.
+    // Smaller models need a simpler, more direct prompt
+    let is_tiny = corrector_id.contains("tiny") || corrector_id.contains("picasso") || corrector_id.contains("laptop");
+    let max_length = if is_tiny { 200 } else { 600 };
 
-Available tools: write_file, read_file, cargo_check, think_harder, remember, run_command
-
-Correct format: {{"name": "tool_name", "arguments": {{"key": "value"}}}}
+    let fix_prompt = if is_tiny {
+        // TinyLlama / small model — ultra-minimal prompt
+        format!(
+            "Fix this JSON tool call. Output ONLY valid JSON, nothing else.\n\
+             Format: {{\"name\": \"tool_name\", \"arguments\": {{\"key\": \"value\"}}}}\n\
+             Tools: write_file, read_file, cargo_check, think_harder, remember, run_command\n\
+             Input: {}\nFixed JSON:",
+            &stripped_content[..stripped_content.len().min(300)]
+        )
+    } else {
+        // Full corrector prompt for 14B+
+        format!(
+            r#"<|im_start|>system
+You are a tool-call JSON fixer. Output ONLY the corrected JSON. Nothing else.
+Format: {{"name": "tool_name", "arguments": {{"key": "value"}}}}
+Tools: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check
 <|im_end|>
 <|im_start|>user
-Fix this malformed tool call:
-{}
+Fix: {}
 <|im_end|>
 <|im_start|>assistant
 "#,
-        stripped_content
-    );
+            stripped_content
+        )
+    };
 
     let payload = serde_json::json!({
         "prompt": fix_prompt,
-        "max_length": 600,
-        "temperature": 0.1,
+        "max_length": max_length,
+        "temperature": 0.05,
         "top_p": 0.9,
-        "stop_sequence": ["<|im_end|>", "\n\n"],
+        "stop_sequence": if is_tiny { vec!["\n\n", "```"] } else { vec!["<|im_end|>", "\n\n"] },
     });
 
     let resp = client
-        .post(format!("{}/api/v1/generate", state.config.corrector_url))
+        .post(format!("{}/api/v1/generate", corrector_url))
         .json(&payload)
-        .timeout(std::time::Duration::from_secs(90))
+        .timeout(std::time::Duration::from_secs(if is_tiny { 20 } else { 60 }))
         .send()
         .await
         .ok()?;
@@ -509,117 +624,237 @@ Fix this malformed tool call:
         .and_then(|t| t.as_str())
         .unwrap_or("");
 
-    // Try to parse the corrector's output as a valid tool call
-    let normalized = translator::normalize(fixed_text);
+    // Extract JSON from the response (may have surrounding text for small models)
+    let json_text = extract_json_from_text(fixed_text);
+
+    let normalized = translator::normalize(&json_text);
     if let Some(ref tool_call) = normalized.tool_call {
-        info!("Corrector fixed tool call: {} (Marvin grudgingly approves)", tool_call.name);
-        
-        // Execute the corrected tool call
+        info!("Corrector '{}' fixed tool call: {}", corrector_id, tool_call.name);
         let result = tools::execute(&tool_call.name, &tool_call.arguments, state).await;
-        
         let correction_note = format!(
-            "Your tool call JSON was malformed. The corrector fixed it. You wrote something like: {}... Correct format: {{\"name\": \"{}\", \"arguments\": {{...}}}}. Do it right next time.",
-            &raw_output[..raw_output.len().min(100)],
-            tool_call.name
+            "Your tool call JSON was malformed. Fixed by {}. \
+             Correct format: {{\"name\": \"{}\", \"arguments\": {{...}}}}",
+            corrector_id, tool_call.name
         );
-        
-        Some((tool_call.name.clone(), result, correction_note))
+        Some((tool_call.name.clone(), result, correction_note, corrector_id.to_string()))
     } else {
-        warn!("Corrector couldn't fix the tool call either");
         None
     }
 }
 
-/// Result of the corrector's repetition justification check.
-struct RepetitionJudgment {
-    allowed: bool,
-    reason: String,
+/// Extract the first JSON object from a string (handles small models that add surrounding text).
+fn extract_json_from_text(text: &str) -> String {
+    // Try to find { ... } pattern
+    if let Some(start) = text.find('{') {
+        let substr = &text[start..];
+        let mut depth = 0i32;
+        let mut end = 0;
+        for (i, c) in substr.char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = i + 1;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        if end > 0 {
+            return substr[..end].to_string();
+        }
+    }
+    text.to_string()
 }
 
-/// Ask the 14B corrector whether a repeated tool call is justified.
-/// The corrector sees the tool history and recent outputs, then decides
-/// if the model is legitimately exploring (different args) or stuck in a loop.
-async fn check_repetition_justification(
+/// Ask the corrector cascade whether a repeated tool call is justified.
+async fn check_repetition_justification_cascade(
     tool_name: &str,
     tool_history: &[String],
     output_history: &[String],
     state: &AppState,
 ) -> RepetitionJudgment {
-    let client = reqwest::Client::new();
-
-    let recent_outputs = output_history.iter().rev().take(3)
-        .map(|s| s.chars().take(200).collect::<String>())
+    let recent_outputs = output_history.iter().rev().take(2)
+        .map(|s| s.chars().take(150).collect::<String>())
         .collect::<Vec<_>>()
         .join("\n---\n");
+    let recent_tools = tool_history.iter().rev().take(5).cloned().collect::<Vec<_>>().join(", ");
 
-    let recent_tools = tool_history.iter().rev().take(5)
-        .cloned()
-        .collect::<Vec<_>>()
-        .join(", ");
+    // Build endpoint list
+    let mut endpoints: Vec<(String, String)> = Vec::new();
+    let primary = &state.config.corrector_url;
+    if !primary.is_empty() && !primary.contains("0.0.0.0") {
+        endpoints.push(("config-corrector".to_string(), primary.clone()));
+    }
+    for (id, url) in CORRECTOR_CASCADE {
+        if !endpoints.iter().any(|(_, u)| u == url) {
+            endpoints.push((id.to_string(), url.to_string()));
+        }
+    }
 
-    let prompt = format!(
-        r#"<|im_start|>system
-You are a loop detection judge. A coding model has called the same tool multiple times in a row.
-Decide if this is legitimate exploration (different arguments, making progress) or a stuck loop (same thing repeatedly, no progress).
+    for (corrector_id, corrector_url) in &endpoints {
+        let is_tiny = corrector_id.contains("tiny") || corrector_id.contains("picasso") || corrector_id.contains("laptop");
 
-Respond with ONLY one of:
-ALLOW: <reason>
-BLOCK: <reason>
+        let prompt = if is_tiny {
+            format!(
+                "Is calling '{}' again justified? Recent calls: [{}]. Recent output: {}...\n\
+                 Answer ALLOW or BLOCK with one reason.",
+                tool_name, recent_tools, &recent_outputs[..recent_outputs.len().min(100)]
+            )
+        } else {
+            format!(
+                r#"<|im_start|>system
+Loop detection judge. Respond ONLY: ALLOW: <reason> or BLOCK: <reason>
 <|im_end|>
 <|im_start|>user
-Tool being repeated: "{}"
-Recent tool calls: [{}]
-Recent outputs (truncated):
-{}
-
-Is this repetition justified?<|im_end|>
+Tool repeated: "{}" | Recent: [{}]
+Output: {}
+Justified?<|im_end|>
 <|im_start|>assistant
 "#,
-        tool_name, recent_tools, recent_outputs
-    );
+                tool_name, recent_tools, &recent_outputs[..recent_outputs.len().min(150)]
+            )
+        };
 
-    let payload = serde_json::json!({
-        "prompt": prompt,
-        "max_length": 100,
-        "temperature": 0.1,
-        "stop_sequence": ["<|im_end|>", "\n\n"],
-    });
+        let client = reqwest::Client::new();
+        let payload = serde_json::json!({
+            "prompt": prompt,
+            "max_length": 60,
+            "temperature": 0.1,
+            "stop_sequence": ["\n\n", "<|im_end|>"],
+        });
 
-    let resp = client
-        .post(format!("{}/api/v1/generate", state.config.corrector_url))
-        .json(&payload)
-        .timeout(std::time::Duration::from_secs(15))
-        .send()
-        .await;
+        let resp = client
+            .post(format!("{}/api/v1/generate", corrector_url))
+            .json(&payload)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await;
 
-    match resp {
-        Ok(r) => {
+        if let Ok(r) = resp {
             if let Ok(body) = r.json::<serde_json::Value>().await {
                 let text = body.get("results")
                     .and_then(|r| r.as_array())
                     .and_then(|a| a.first())
                     .and_then(|r| r.get("text"))
                     .and_then(|t| t.as_str())
-                    .unwrap_or("ALLOW: corrector unavailable");
+                    .unwrap_or("ALLOW: unavailable")
+                    .trim()
+                    .to_string();
 
-                let trimmed = text.trim();
-                if trimmed.starts_with("BLOCK") {
-                    let reason = trimmed.strip_prefix("BLOCK:").unwrap_or(trimmed).trim().to_string();
-                    RepetitionJudgment { allowed: false, reason }
+                info!("Repetition judgment from '{}': {}", corrector_id, &text[..text.len().min(80)]);
+
+                if text.to_uppercase().starts_with("BLOCK") {
+                    let reason = text.splitn(2, ':').nth(1).unwrap_or(&text).trim().to_string();
+                    return RepetitionJudgment { allowed: false, reason };
                 } else {
-                    let reason = trimmed.strip_prefix("ALLOW:").unwrap_or(trimmed).trim().to_string();
-                    RepetitionJudgment { allowed: true, reason }
+                    let reason = text.splitn(2, ':').nth(1).unwrap_or(&text).trim().to_string();
+                    return RepetitionJudgment { allowed: true, reason };
                 }
-            } else {
-                // Can't parse response — allow by default
-                RepetitionJudgment { allowed: true, reason: "corrector response unparseable".to_string() }
             }
         }
-        Err(_) => {
-            // Corrector unreachable — allow by default (don't block work if corrector is down)
-            RepetitionJudgment { allowed: true, reason: "corrector unreachable, allowing".to_string() }
-        }
+        // This corrector failed, try next
     }
+
+    // All correctors unreachable — allow by default
+    RepetitionJudgment { allowed: true, reason: "all correctors unreachable".to_string() }
+}
+
+/// Assessment of whether a code file is "close enough" to complete.
+struct CloseEnoughFix {
+    description: String,
+    fixed_content: Option<String>,
+}
+
+/// Check if a code file is close enough to complete that we should fix it ourselves.
+/// Returns Some(fix) if we can patch it, None if it needs a full round.
+fn assess_close_enough(content: &str, path: &str) -> Option<CloseEnoughFix> {
+    if path.ends_with(".rs") {
+        return assess_rust_close_enough(content);
+    }
+    if path.ends_with(".wgsl") {
+        return assess_wgsl_close_enough(content);
+    }
+    None
+}
+
+fn assess_rust_close_enough(content: &str) -> Option<CloseEnoughFix> {
+    // Count unmatched braces
+    let open = content.chars().filter(|&c| c == '{').count() as i32;
+    let close = content.chars().filter(|&c| c == '}').count() as i32;
+    let brace_diff = open - close;
+
+    // Check for truncated function (ends mid-function without closing)
+    let ends_cleanly = content.trim_end().ends_with('}')
+        || content.trim_end().ends_with("};")
+        || content.trim_end().ends_with(")\n}");
+
+    if brace_diff > 0 && brace_diff <= CLOSE_ENOUGH_MISSING_BRACES && !ends_cleanly {
+        // Missing closing braces — append them
+        let mut fixed = content.to_string();
+        // Add a newline if needed
+        if !fixed.ends_with('\n') { fixed.push('\n'); }
+        for _ in 0..brace_diff {
+            fixed.push_str("}\n");
+        }
+        return Some(CloseEnoughFix {
+            description: format!("appended {} missing closing braces", brace_diff),
+            fixed_content: Some(fixed),
+        });
+    }
+
+    // Check for file that ends with a comment or doc string (truncated mid-write)
+    let trimmed = content.trim_end();
+    if trimmed.ends_with("//") || trimmed.ends_with("///") || trimmed.ends_with("/*") {
+        // Truncated comment — remove it and close
+        let without_comment = trimmed.trim_end_matches('/').trim_end_matches('*').trim_end();
+        let mut fixed = without_comment.to_string();
+        if !fixed.ends_with('\n') { fixed.push('\n'); }
+        // Close any open braces
+        let open2 = fixed.chars().filter(|&c| c == '{').count() as i32;
+        let close2 = fixed.chars().filter(|&c| c == '}').count() as i32;
+        for _ in 0..(open2 - close2).max(0) {
+            fixed.push_str("}\n");
+        }
+        return Some(CloseEnoughFix {
+            description: "removed truncated comment and closed open braces".to_string(),
+            fixed_content: Some(fixed),
+        });
+    }
+
+    None
+}
+
+fn assess_wgsl_close_enough(content: &str) -> Option<CloseEnoughFix> {
+    let open = content.chars().filter(|&c| c == '{').count() as i32;
+    let close = content.chars().filter(|&c| c == '}').count() as i32;
+    let diff = open - close;
+
+    if diff > 0 && diff <= CLOSE_ENOUGH_MISSING_BRACES {
+        let mut fixed = content.to_string();
+        if !fixed.ends_with('\n') { fixed.push('\n'); }
+        for _ in 0..diff {
+            fixed.push_str("}\n");
+        }
+        return Some(CloseEnoughFix {
+            description: format!("appended {} missing WGSL closing braces", diff),
+            fixed_content: Some(fixed),
+        });
+    }
+    None
+}
+
+/// Keep the old single-corrector function for backward compat (now delegates to cascade).
+async fn correct_and_execute(
+    raw_output: &str,
+    stripped_content: &str,
+    state: &AppState,
+) -> Option<(String, String, String)> {
+    correct_and_execute_cascade(raw_output, stripped_content, state)
+        .await
+        .map(|(name, result, note, _id)| (name, result, note))
 }
 
 /// Compress a tool result for conversation context.
