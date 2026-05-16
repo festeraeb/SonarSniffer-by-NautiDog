@@ -3,791 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CesarOps Cluster Control</title>
+    <title>CESAROPS | Cluster Control</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            padding: 2rem;
-            font-size: 1.1rem;
+        :root {
+            --bg: #0f0f1a; --card-bg: #1a1a2e; --accent: #00d4ff;
+            --success: #4caf50; --warning: #ff9800; --danger: #ff4b2b;
+            --text: #e0e0e0; --text-dim: #a0a0a0; --border: #2d2d44;
         }
-        h1 { color: #00d4ff; margin-bottom: 1rem; font-size: 2rem; }
-        h2 { color: #4caf50; margin: 2rem 0 1rem 0; font-size: 1.4rem; }
-        h3 { color: #ff9800; margin: 1.5rem 0 0.8rem 0; font-size: 1.2rem; }
-
-        .card {
-            background: #16213e;
-            border: 2px solid #0f3460;
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .card-title { font-size: 1.3rem; font-weight: bold; }
-
-        .status-dot {
-            width: 16px; height: 16px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .dot-green { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
-        .dot-red { background: #f44336; }
-        .dot-yellow { background: #ff9800; }
-        .dot-off { background: #555; }
-
-        .row {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            margin: 0.8rem 0;
-            flex-wrap: wrap;
-        }
-        label {
-            font-size: 1rem;
-            color: #aaa;
-            min-width: 80px;
-        }
-        select, input[type="text"] {
-            padding: 0.7rem 1rem;
-            font-size: 1.1rem;
-            border: 2px solid #0f3460;
-            border-radius: 10px;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            min-width: 250px;
-        }
-        select:focus, input:focus { border-color: #00d4ff; outline: none; }
-
-        button {
-            padding: 0.8rem 1.5rem;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        button:hover { opacity: 0.85; transform: scale(1.02); }
-        button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-        .btn-start { background: #4caf50; color: white; }
-        .btn-stop { background: #f44336; color: white; }
-        .btn-apply { background: #00d4ff; color: #1a1a2e; }
-        .btn-back { background: #333; color: #aaa; border: 1px solid #555; }
-        .btn-preset {
-            background: linear-gradient(135deg, #ff6b00, #ff9800);
-            color: white;
-            font-size: 1.3rem;
-            padding: 1rem 2.5rem;
-            border-radius: 14px;
-            box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);
-        }
-        .btn-preset:hover { box-shadow: 0 6px 20px rgba(255, 107, 0, 0.5); }
-        .btn-preset.active {
-            background: linear-gradient(135deg, #4caf50, #66bb6a);
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
-        }
-        .btn-configure {
-            background: #333;
-            color: #ff9800;
-            border: 2px solid #ff9800;
-            font-size: 1rem;
-            padding: 0.6rem 1.2rem;
-        }
-
-        .preset-summary {
-            background: #0a0a1a;
-            border: 1px solid #333;
-            border-radius: 10px;
-            padding: 1rem 1.5rem;
-            margin-top: 1rem;
-            color: #666;
-            font-size: 0.95rem;
-        }
-        .preset-summary.locked {
-            border-color: #4caf50;
-            color: #888;
-        }
-        .preset-summary .item {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.3rem 0;
-            border-bottom: 1px solid #222;
-        }
-        .preset-summary .item:last-child { border-bottom: none; }
-        .preset-summary .item-label { color: #666; }
-        .preset-summary .item-value { color: #888; font-family: monospace; }
-
-        .node-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .node-card {
-            background: #0f1a2e;
-            border: 2px solid #333;
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-            transition: border-color 0.3s;
-        }
-        .node-card.online { border-color: #4caf50; }
-        .node-card.offline { border-color: #555; opacity: 0.6; }
-        .node-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; }
-        .node-ip { color: #666; font-size: 0.85rem; font-family: monospace; }
-        .node-gpu { color: #00d4ff; font-size: 0.9rem; margin-top: 0.3rem; }
-        .node-services { margin-top: 0.5rem; font-size: 0.8rem; color: #888; }
-
-        .gpu-group {
-            background: #0f1a2e;
-            border: 2px solid #0f3460;
-            border-radius: 12px;
-            padding: 1.2rem;
-            margin: 0.8rem 0;
-        }
-        .gpu-group-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.8rem;
-        }
-        .gpu-group-title { color: #00d4ff; font-weight: bold; }
-        .gpu-bar {
-            height: 8px;
-            background: #333;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 0.5rem;
-        }
-        .gpu-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4caf50, #ff9800);
-            border-radius: 4px;
-            transition: width 0.5s;
-        }
-
-        .log-box {
-            background: #0a0a1a;
-            border: 1px solid #333;
-            border-radius: 10px;
-            padding: 1rem;
-            font-family: monospace;
-            font-size: 0.95rem;
-            max-height: 200px;
-            overflow-y: auto;
-            margin-top: 1rem;
-            white-space: pre-wrap;
-        }
-
-        .nav { margin-bottom: 2rem; }
-        .nav a { color: #00d4ff; text-decoration: none; font-size: 1rem; }
-        .nav a:hover { text-decoration: underline; }
-
-        .view { display: none; }
-        .view.active { display: block; }
-
-        .mode-badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            margin-left: 1rem;
-        }
-        .mode-badge.scanning { background: #1b4332; color: #4caf50; }
-        .mode-badge.freeform { background: #4a1500; color: #ffb380; }
-
-        .refresh-spinner {
-            display: inline-block;
-            width: 14px; height: 14px;
-            border: 2px solid #555;
-            border-top-color: #00d4ff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 8px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+        h1 { font-size: 1.4rem; letter-spacing: 2px; color: var(--accent); }
+        h2 { font-size: 1rem; color: var(--warning); margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 1px; }
+        a.back { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        /* Cards */
+        .worker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; margin-bottom: 30px; }
+        .card { background: var(--card-bg); border: 2px solid var(--border); border-radius: 12px; padding: 18px; transition: border-color 0.2s; }
+        .card.selected { border-color: var(--accent); }
+        .card.group-1 { border-color: #00d4ff; box-shadow: 0 0 8px rgba(0,212,255,0.2); }
+        .card.group-2 { border-color: #4caf50; box-shadow: 0 0 8px rgba(76,175,80,0.2); }
+        .card.group-3 { border-color: #ff9800; box-shadow: 0 0 8px rgba(255,152,0,0.2); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+        .card-title { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
+        .card-role { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; }
+        .control-group { margin-bottom: 12px; }
+        .control-label { display: block; font-size: 0.72rem; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        select { width: 100%; background: #0f0f1a; color: white; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.9rem; }
+        select:focus { outline: none; border-color: var(--accent); }
+        /* Pill toggle */
+        .pill-toggle { display: flex; gap: 4px; }
+        .pill { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; cursor: pointer; background: #0f0f1a; border: 1px solid var(--border); color: var(--text-dim); transition: all 0.15s; }
+        .pill.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        .pill.active.cuda { background: #76b900; border-color: #76b900; }
+        .pill.active.vulkan { background: var(--accent); }
+        .pill.active.cpu { background: var(--warning); border-color: var(--warning); color: var(--bg); }
+        /* Toggle switch */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .switch { position: relative; display: inline-block; width: 42px; height: 22px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background: #333; border-radius: 22px; transition: 0.3s; }
+        .slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        input:checked + .slider { background: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        /* Buttons */
+        .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+        button { padding: 7px 14px; border: none; border-radius: 7px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: opacity 0.15s; }
+        button:hover { opacity: 0.85; }
+        .btn-start { background: var(--success); color: white; }
+        .btn-stop  { background: var(--danger);  color: white; }
+        .btn-apply { width: 100%; background: var(--accent); color: var(--bg); margin-top: 10px; padding: 9px; }
+        .btn-secondary { background: #2d2d44; color: var(--text); }
+        /* Memory pool */
+        .pool-section { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 20px; }
+        .pool-controls { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+        .pool-controls input { flex: 1; background: #0f0f1a; border: 1px solid var(--border); color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; }
+        .pool-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; min-height: 28px; }
+        .pool-tag { background: var(--accent); color: var(--bg); padding: 3px 12px; border-radius: 14px; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+        .pool-tag span { cursor: pointer; font-size: 1rem; line-height: 1; }
+        /* Corrector panel */
+        .corrector-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 20px; }
+        .collapsible-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+        .collapsible-content { margin-top: 14px; }
+        .function-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .function-row:last-child { border-bottom: none; }
+        .function-desc { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+        /* GPU bars */
+        .gpu-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+        .gpu-bar { background: #0f0f1a; border-radius: 4px; height: 8px; margin-top: 6px; overflow: hidden; }
+        .gpu-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 1s; }
+        /* Node grid */
+        .node-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .node-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        .node-card.online { border-color: var(--success); }
+        .node-card.offline { opacity: 0.5; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .dot-green { background: var(--success); box-shadow: 0 0 5px var(--success); }
+        .dot-red { background: var(--danger); }
+        /* Log */
+        .log-box { background: #0a0a14; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.82rem; height: 140px; overflow-y: auto; color: #aaa; }
+        /* Status */
+        .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .badge-online { background: rgba(76,175,80,0.2); color: var(--success); border: 1px solid var(--success); }
+        .badge-offline { background: rgba(255,75,43,0.2); color: var(--danger); border: 1px solid var(--danger); }
     </style>
 </head>
 <body>
-    <div class="nav">
-        <a href="/">&#8592; Back to Chat</a>
+<div class="container">
+<header>
+    <h1>CESAROPS <span style="font-weight:100;font-size:0.8rem;color:var(--text-dim)">CLUSTER CONTROL</span></h1>
+    <div style="display:flex;gap:12px;align-items:center">
+        <span id="global-status" class="status-badge badge-online">ONLINE</span>
+        <a class="back" href="/">← Forge Chat</a>
     </div>
+</header>
 
-    <!-- ============ MAIN VIEW ============ -->
-    <div id="view-main" class="view active">
-        <h1>Cluster Control Panel <span class="mode-badge scanning" id="mode-badge">SCANNING</span></h1>
-
-        <!-- PRESET BUTTON -->
-        <div class="card" style="text-align:center; padding:2rem;">
-            <button class="btn-preset active" id="btn-preset" onclick="togglePreset()">
-                CESAROPS
-            </button>
-            <p style="margin-top:0.8rem; color:#888; font-size:0.9rem;" id="preset-status">
-                Locked in for SAR scanning. All resources allocated.
-            </p>
-            <button class="btn-configure" onclick="showView('view-configure')" style="margin-top:1rem;">
-                Configure
-            </button>
-        </div>
-
-        <!-- PRESET SUMMARY (greyed out, read-only in scanning mode) -->
-        <div class="preset-summary locked" id="preset-display">
-            <div class="item"><span class="item-label">P100 Group</span><span class="item-value" id="ps-p100">Unified 32GB &#8212; SAR Pipeline</span></div>
-            <div class="item"><span class="item-label">P100 #1</span><span class="item-value" id="ps-gpu0">Qwen3.6 35B (coder)</span></div>
-            <div class="item"><span class="item-label">P100 #2</span><span class="item-value" id="ps-gpu1">KV Cache / Overflow</span></div>
-            <div class="item"><span class="item-label">Cesarops2 (1070)</span><span class="item-value" id="ps-1070">14B Corrector</span></div>
-            <div class="item"><span class="item-label">Cesarops3 (1060)</span><span class="item-value" id="ps-1060">R1 7B Thinker</span></div>
-            <div class="item"><span class="item-label">Nautik9 Laptop</span><span class="item-value" id="ps-laptop">Idle / Available</span></div>
-            <div class="item"><span class="item-label">T440 CPU</span><span class="item-value" id="ps-cpu">Bootstrap 1.5B + Nautivecs</span></div>
-        </div>
-
-        <!-- FREEFORM WORKER CARDS (visible only in freeform mode) -->
-        <div id="freeform-workers" style="display:none;">
-            <h2>Active Roles</h2>
-
-            <!-- Loading Tracker -->
-            <div id="loading-tracker" style="display:none;" class="card" aria-live="polite">
-                <div style="display:flex; align-items:center; gap:1rem;">
-                    <span class="refresh-spinner"></span>
-                    <span id="loading-msg" style="color:#ff9800;">Loading model...</span>
-                </div>
-                <div class="gpu-bar" style="margin-top:0.8rem;">
-                    <div class="gpu-bar-fill" id="loading-bar" style="width:0%; transition:width 1s;"></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title" style="color:#00d4ff;">Coder</span>
-                    <span style="color:#666; font-size:0.85rem;">P100 #1 + #2</span>
-                </div>
-                <div class="row">
-                    <label>Model:</label>
-                    <select id="ff-coder-model" class="ff-model-dropdown" aria-label="Coder model"></select>
-                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
-                    <input type="checkbox" id="ff-coder-agent" checked style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-coder-safe" style="width:20px; height:20px;">
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title" style="color:#4caf50;">Thinker</span>
-                    <span style="color:#666; font-size:0.85rem;">Cesarops3 (1060)</span>
-                </div>
-                <div class="row">
-                    <label>Model:</label>
-                    <select id="ff-thinker-model" class="ff-model-dropdown" aria-label="Thinker model"></select>
-                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
-                    <input type="checkbox" id="ff-thinker-agent" style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-thinker-safe" checked style="width:20px; height:20px;">
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title" style="color:#ff9800;">Corrector</span>
-                    <span style="color:#666; font-size:0.85rem;">Cesarops2 (1070)</span>
-                </div>
-                <div class="row">
-                    <label>Model:</label>
-                    <select id="ff-corrector-model" class="ff-model-dropdown" aria-label="Corrector model"></select>
-                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
-                    <input type="checkbox" id="ff-corrector-agent" style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-corrector-safe" checked style="width:20px; height:20px;">
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title" style="color:#d4a5ff;">Polisher</span>
-                    <span style="color:#666; font-size:0.85rem;">Nautik9 Laptop (optional)</span>
-                </div>
-                <div class="row">
-                    <label>Model:</label>
-                    <select id="ff-polisher-model" class="ff-model-dropdown" aria-label="Polisher model">
-                        <option value="">-- Disabled --</option>
-                    </select>
-                    <label style="min-width:auto; margin-left:1rem;">Agent:</label>
-                    <input type="checkbox" id="ff-polisher-agent" style="width:20px; height:20px;"> <label style="min-width:auto; margin-left:1rem;">Safe:</label> <input type="checkbox" id="ff-polisher-safe" checked style="width:20px; height:20px;">
-                </div>
-            </div>
-
-            <div class="row" style="margin-top:1.5rem;">
-                <button class="btn-apply" onclick="applyFreeform()">Apply Changes</button>
-            </div>
-        </div>
-
-        <!-- LIVE NETWORK DISCOVERY -->
-        <h2>Network Nodes <span class="refresh-spinner" id="discovery-spinner"></span></h2>
-        <div class="node-grid" id="node-grid"></div>
-
-        <!-- GPU STATUS -->
-        <h2>Local GPUs</h2>
-        <div id="gpu-status"></div>
-
-        <!-- QUICK LINKS -->
-        <h2>Command Center</h2>
-        <div class="card" style="background:#0f3460">
-            <div class="row" style="flex-wrap:wrap; gap:0.5rem">
-                <a href="/" style="padding:0.6rem 1.2rem; background:#1b4332; color:#4caf50; border-radius:8px; text-decoration:none; font-weight:bold">Forge Chat</a>
-                <a href="http://100.102.158.111:5678" target="_blank" style="padding:0.6rem 1.2rem; background:#2d1b4e; color:#d4a5ff; border-radius:8px; text-decoration:none; font-weight:bold">n8n Router</a>
-                <button onclick="toggleCorrectorConnection()" id="btn-corrector-toggle" style="padding:0.6rem 1.2rem; background:#4a1500; color:#f44336; border-radius:8px; font-weight:bold; border:none; cursor:pointer;">Corrector: OFF</button>
-                <a href="http://localhost:5001/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">Qwen3.6 (P100s)</a>
-                <a href="http://100.105.77.74:5002/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">R1 (1060)</a>
-                <a href="http://localhost:5557/lcpp/" target="_blank" style="padding:0.6rem 1.2rem; background:#16213e; color:#00d4ff; border-radius:8px; text-decoration:none; font-weight:bold">Thinker (CPU)</a>
-            </div>
-        </div>
-
-        <!-- AGENT NICKNAMES -->
-        <h2>Agent Fleet</h2>
-        <div class="card" style="background:#0a0a1a; border-color:#333;">
-            <table style="width:100%; font-size:0.9rem; border-collapse:collapse;">
-                <tr style="color:#666; border-bottom:1px solid #222;"><th style="text-align:left; padding:0.4rem;">Name</th><th style="text-align:left;">Hardware</th><th style="text-align:left;">Role</th><th style="text-align:left;">Endpoint</th></tr>
-                <tr style="color:#00d4ff;"><td style="padding:0.3rem; font-weight:bold;">moe</td><td>P100 #0+#1</td><td>Main Coder</td><td style="font-family:monospace; color:#666;">:5001</td></tr>
-                <tr style="color:#ff9800;"><td style="padding:0.3rem; font-weight:bold;">marvin</td><td>GTX 1070</td><td>Corrector</td><td style="font-family:monospace; color:#666;">:5555</td></tr>
-                <tr style="color:#4caf50;"><td style="padding:0.3rem; font-weight:bold;">scout</td><td>GTX 1060</td><td>Thinker</td><td style="font-family:monospace; color:#666;">:5570</td></tr>
-                <tr style="color:#d4a5ff;"><td style="padding:0.3rem; font-weight:bold;">picasso</td><td>P1000</td><td>Vision</td><td style="font-family:monospace; color:#666;">:5571</td></tr>
-                <tr style="color:#888;"><td style="padding:0.3rem; font-weight:bold;">nautik</td><td>Laptop</td><td>Available</td><td style="font-family:monospace; color:#666;">:5002</td></tr>
-            </table>
-        </div>
-
-        <!-- LOG -->
-        <h2>Activity Log</h2>
-        <div class="log-box" id="log">Waiting for actions...</div>
+<!-- ── Memory Pool ─────────────────────────────────────────────────────── -->
+<h2>Memory Pools</h2>
+<div class="pool-section">
+    <div style="font-size:0.85rem;color:var(--text-dim)">
+        Select cards below (checkbox) then create a pool. Pooled workers share KV cache and context.
     </div>
-
-    <!-- ============ CONFIGURE VIEW (submenu) ============ -->
-    <div id="view-configure" class="view">
-        <h1>Configure</h1>
-        <button class="btn-back" onclick="showView('view-main')" style="margin-bottom:1.5rem;">&#8592; Back to Main</button>
-
-        <!-- P100 GROUPING -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">P100 Allocation Mode</span>
-            </div>
-            <div class="row">
-                <label>Mode:</label>
-                <select id="cfg-p100-mode" aria-label="P100 allocation mode">
-                    <option value="unified">Unified 32GB (single model spans both)</option>
-                    <option value="split">Split (independent 16GB each)</option>
-                </select>
-            </div>
-            <p style="color:#666; font-size:0.85rem; margin-top:0.5rem;">
-                Unified: one large model uses both P100s. Split: GPU0 runs one task, GPU1 reserved for KV cache or a second model.
-            </p>
-        </div>
-
-        <!-- GPU0 Assignment -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">P100 #1 (GPU 0)</span>
-            </div>
-            <div class="row">
-                <label>Role:</label>
-                <select id="cfg-gpu0-role" aria-label="GPU 0 role">
-                    <option value="coder">Coder (generation)</option>
-                    <option value="thinker">Thinker (reasoning)</option>
-                    <option value="sar-pipeline">SAR Pipeline</option>
-                    <option value="kv-cache">KV Cache Only</option>
-                    <option value="idle">Idle</option>
-                </select>
-            </div>
-            <div class="row">
-                <label>Model:</label>
-                <select id="cfg-gpu0-model" class="cfg-model-dropdown" aria-label="GPU 0 model">
-                    <option value="">Loading...</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- GPU1 Assignment -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">P100 #2 (GPU 1)</span>
-            </div>
-            <div class="row">
-                <label>Role:</label>
-                <select id="cfg-gpu1-role" aria-label="GPU 1 role">
-                    <option value="kv-cache">KV Cache / Overflow</option>
-                    <option value="coder">Coder (generation)</option>
-                    <option value="thinker">Thinker (reasoning)</option>
-                    <option value="sar-pipeline">SAR Pipeline</option>
-                    <option value="idle">Idle</option>
-                </select>
-            </div>
-            <div class="row">
-                <label>Model:</label>
-                <select id="cfg-gpu1-model" class="cfg-model-dropdown" aria-label="GPU 1 model">
-                    <option value="">-- Same as GPU0 (unified) --</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Remote Nodes -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Remote Nodes</span>
-            </div>
-            <div class="row">
-                <label>Cesarops2 (1070):</label>
-                <select id="cfg-1070-role" aria-label="1070 role">
-                    <option value="corrector">Corrector (14B)</option>
-                    <option value="thinker">Thinker</option>
-                    <option value="idle">Idle</option>
-                </select>
-            </div>
-            <div class="row">
-                <label>Cesarops3 (1060):</label>
-                <select id="cfg-1060-role" aria-label="1060 role">
-                    <option value="thinker">Thinker (R1 7B)</option>
-                    <option value="scout">Scout (general)</option>
-                    <option value="idle">Idle</option>
-                </select>
-            </div>
-            <div class="row">
-                <label>Nautik9 Laptop:</label>
-                <select id="cfg-laptop-role" aria-label="Laptop role">
-                    <option value="idle">Idle / Available</option>
-                    <option value="thinker">Thinker</option>
-                    <option value="scout">Scout</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- SAVE & LAUNCH -->
-        <div class="row" style="margin-top:2rem; gap:1rem;">
-            <button class="btn-apply" onclick="savePresetConfig()">Save</button>
-            <button class="btn-start" onclick="launchPreset()">Launch</button>
-            <button class="btn-back" onclick="showView('view-main')">Cancel</button>
-        </div>
+    <div class="pool-list" id="pool-list"></div>
+    <div class="pool-controls">
+        <input type="text" id="new-pool-name" placeholder="Pool name (e.g. sar-team)" aria-label="New pool name">
+        <button class="btn-secondary" onclick="createMemoryPool()">Group Selected</button>
     </div>
+</div>
 
-    <script>
-        let presetActive = true;
-        let discoveryInterval = null;
-        let monitorInterval = null;
+<!-- ── Worker Cards ───────────────────────────────────────────────────── -->
+<h2>Workers</h2>
+<div class="worker-grid" id="worker-grid"></div>
 
-        // ---- VIEW SWITCHING ----
-        function showView(id) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if (id === 'view-configure') loadConfigureView();
-        }
+<!-- ── Corrector Engine Config ───────────────────────────────────────── -->
+<h2>Corrector Engine</h2>
+<div class="corrector-panel">
+    <div class="collapsible-header" onclick="toggleCorrector()" aria-expanded="false" id="corr-header">
+        <div style="font-weight:bold;color:var(--accent)">CORRECTOR FUNCTIONS</div>
+        <div id="corr-arrow" style="color:var(--text-dim)">▼ expand</div>
+    </div>
+    <div class="collapsible-content" id="corr-content" style="display:none">
+        <div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:10px">
+            Controls what the corrector does when the main model produces bad output.
+            Cascade order: marvin-14b → picasso-tiny (P1000) → laptop-tiny (M2200)
+        </div>
+        <div id="corr-functions"></div>
+    </div>
+</div>
 
-        // ---- PRESET TOGGLE ----
-        function togglePreset() {
-            if (presetActive) {
-                // Deactivate preset -> freeform mode
-                presetActive = false;
-                document.getElementById('btn-preset').classList.remove('active');
-                document.getElementById('btn-preset').textContent = 'CESAROPS';
-                document.getElementById('preset-status').textContent = 'Freeform mode. Swap models, test, code.';
-                document.getElementById('mode-badge').textContent = 'FREEFORM';
-                document.getElementById('mode-badge').className = 'mode-badge freeform';
-                document.getElementById('preset-display').classList.remove('locked');
-                document.getElementById('preset-display').style.display = 'none';
-                document.getElementById('freeform-workers').style.display = 'block';
-                loadFreeformModels();
-                log('CESAROPS deactivated. Freeform mode.');
-                fetch('/cluster/preset/deactivate', { method: 'POST' });
-            } else {
-                // Activate preset -> scanning mode
-                presetActive = true;
-                document.getElementById('btn-preset').classList.add('active');
-                document.getElementById('btn-preset').textContent = 'CESAROPS';
-                document.getElementById('preset-status').textContent = 'Locked in for SAR scanning. All resources allocated.';
-                document.getElementById('mode-badge').textContent = 'SCANNING';
-                document.getElementById('mode-badge').className = 'mode-badge scanning';
-                document.getElementById('preset-display').classList.add('locked');
-                document.getElementById('preset-display').style.display = '';
-                document.getElementById('freeform-workers').style.display = 'none';
-                log('CESAROPS activated. Locking resources for SAR scanning.');
-                fetch('/cluster/preset/activate', { method: 'POST' });
-            }
-        }
+<!-- ── GPU Status ─────────────────────────────────────────────────────── -->
+<h2>Local GPUs</h2>
+<div id="gpu-status"></div>
 
-        // ---- FREEFORM MODEL LOADING ----
-        async function loadFreeformModels() {
-            try {
-                const resp = await fetch('/cluster/models');
-                const models = await resp.json();
-                document.querySelectorAll('.ff-model-dropdown').forEach(sel => {
-                    const current = sel.value;
-                    const hasDisabled = sel.id === 'ff-polisher-model';
-                    sel.innerHTML = (hasDisabled ? '<option value="">-- Disabled --</option>' : '') +
-                        models.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m.split('/').pop()}</option>`).join('');
-                });
-            } catch(e) {
-                log('Failed to load models: ' + e.message);
-            }
-        }
+<!-- ── Network Nodes ─────────────────────────────────────────────────── -->
+<h2>Network Nodes <span id="disc-spinner" style="display:none;color:var(--text-dim)">⟳</span></h2>
+<div class="node-grid" id="node-grid"></div>
 
-        async function applyFreeform() {
-            // Ensure models are loaded first
-            if (document.getElementById('ff-coder-model').options.length <= 1) {
-                await loadFreeformModels();
-            }
+<!-- ── Activity Log ──────────────────────────────────────────────────── -->
+<h2>Activity Log</h2>
+<div class="log-box" id="log">Ready.</div>
 
-            const tracker = document.getElementById('loading-tracker');
-            const bar = document.getElementById('loading-bar');
-            const msg = document.getElementById('loading-msg');
+</div><!-- /container -->
 
-            tracker.style.display = 'block';
-            msg.textContent = 'Applying configuration...';
-            bar.style.width = '10%';
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let workers = [];
+let pools = [];
+let engines = { available: [], per_node: {} };
+let selectedIds = new Set();
+let correctorOpen = false;
 
-            const config = {
-                coder_model: document.getElementById('ff-coder-model').value,
-                coder_agent: document.getElementById('ff-coder-agent').checked,
-                coder_safe: document.getElementById('ff-coder-safe').checked,
-                thinker_model: document.getElementById('ff-thinker-model').value,
-                thinker_agent: document.getElementById('ff-thinker-agent').checked,
-                thinker_safe: document.getElementById('ff-thinker-safe').checked,
-                corrector_model: document.getElementById('ff-corrector-model').value,
-                corrector_agent: document.getElementById('ff-corrector-agent').checked,
-                corrector_safe: document.getElementById('ff-corrector-safe').checked,
-                polisher_model: document.getElementById('ff-polisher-model').value,
-                polisher_agent: document.getElementById('ff-polisher-agent').checked,
-                polisher_safe: document.getElementById('ff-polisher-safe').checked,
-            };
+const CORRECTOR_FUNCTIONS = [
+    { id: 'json_fixer',    label: 'JSON Fixer',    desc: 'Fixes malformed tool call JSON from main model' },
+    { id: 'loop_detector', label: 'Loop Detector', desc: 'Judges whether repeated tool calls are justified' },
+    { id: 'translator',    label: 'Translator',    desc: 'Translates between model output formats' },
+    { id: 'think_harder',  label: 'Think Harder',  desc: 'Corrector invokes nautivecs+web search before fixing' },
+    { id: 'auto_remember', label: 'Auto-Remember', desc: 'Saves successful fixes to nautivecs vector DB' },
+];
 
-            bar.style.width = '30%';
-            msg.textContent = 'Sending to cluster...';
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+    await Promise.all([fetchEngines(), fetchConfig()]);
+    render();
+    refreshGpus();
+    refreshNodes();
+    setInterval(refreshGpus, 15000);
+    setInterval(refreshNodes, 30000);
+}
 
-            try {
-                const resp = await fetch('/cluster/freeform/apply', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(config)
-                });
-                const result = await resp.json();
+async function fetchEngines() {
+    try {
+        const r = await fetch('/cluster/engines');
+        engines = await r.json();
+    } catch(e) {
+        engines = { available: ['koboldcpp', 'cesarops-inference'], per_node: {} };
+    }
+}
 
-                bar.style.width = '70%';
-                msg.textContent = 'Loading models...';
+async function fetchConfig() {
+    try {
+        const r = await fetch('/cluster/config');
+        const d = await r.json();
+        workers = d.workers || defaultWorkers();
+        pools   = d.pools   || [];
+    } catch(e) {
+        workers = defaultWorkers();
+        pools = [];
+    }
+}
 
-                // Poll for readiness
-                let attempts = 0;
-                const pollInterval = setInterval(async () => {
-                    attempts++;
-                    const pct = Math.min(70 + attempts * 3, 95);
-                    bar.style.width = pct + '%';
-                    msg.textContent = `Loading models... (${attempts}s)`;
+function defaultWorkers() {
+    return [
+        { name:'Coder',     role:'code',      node_ip:'127.0.0.1',       port:5001, engine:'koboldcpp', backend:'vulkan', inject_vectors:true,  memory_pool:'', model:'', corrector_functions:{json_fixer:true,loop_detector:true,translator:true,think_harder:false,auto_remember:true} },
+        { name:'Thinker',   role:'think',     node_ip:'100.105.77.74',   port:5100, engine:'koboldcpp', backend:'vulkan', inject_vectors:true,  memory_pool:'', model:'' },
+        { name:'Corrector', role:'correct',   node_ip:'100.102.158.111', port:5555, engine:'koboldcpp', backend:'cuda',   inject_vectors:false, memory_pool:'', model:'', corrector_functions:{json_fixer:true,loop_detector:true,translator:true,think_harder:false,auto_remember:true} },
+        { name:'Validator', role:'validate',  node_ip:'100.102.158.111', port:5571, engine:'koboldcpp', backend:'cuda',   inject_vectors:false, memory_pool:'', model:'' },
+        { name:'Bootstrap', role:'bootstrap', node_ip:'127.0.0.1',       port:5002, engine:'cesarops-inference', backend:'cpu', inject_vectors:false, memory_pool:'', model:'' },
+    ];
+}
 
-                    if (attempts > 30) {
-                        clearInterval(pollInterval);
-                        bar.style.width = '100%';
-                        msg.textContent = 'Applied (timeout waiting for full load)';
-                        setTimeout(() => { tracker.style.display = 'none'; }, 3000);
-                    }
+// ── API helpers ────────────────────────────────────────────────────────────
+async function api(url, body) {
+    try {
+        const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        return r.json();
+    } catch(e) { log('API error: ' + e.message); return {}; }
+}
 
-                    // Check if workers are responding
-                    try {
-                        const health = await fetch('/health');
-                        if (health.ok) {
-                            clearInterval(pollInterval);
-                            bar.style.width = '100%';
-                            msg.textContent = 'All models loaded.';
-                            log(result.message || 'Freeform config applied.');
-                            setTimeout(() => { tracker.style.display = 'none'; }, 2000);
-                        }
-                    } catch(e) {}
-                }, 1000);
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+    renderPools();
+    renderWorkers();
+    renderCorrectorFunctions();
+}
 
-            } catch(e) {
-                bar.style.width = '100%';
-                msg.textContent = 'Error: ' + e.message;
-                log('Apply failed: ' + e.message);
-                setTimeout(() => { tracker.style.display = 'none'; }, 4000);
-            }
-        }
+function renderPools() {
+    document.getElementById('pool-list').innerHTML = pools.map(p =>
+        `<div class="pool-tag">${p.name}
+            <span onclick="deletePool('${p.name}')" title="Remove pool">×</span>
+         </div>`
+    ).join('') || '<span style="color:var(--text-dim);font-size:0.82rem">No pools yet</span>';
+}
 
-        // ---- DISCOVERY ----
-        async function refreshDiscovery() {
-            const spinner = document.getElementById('discovery-spinner');
-            spinner.style.display = 'inline-block';
-            try {
-                const resp = await fetch('/cluster/discover');
-                const nodes = await resp.json();
-                renderNodes(nodes);
-            } catch(e) {
-                log('Discovery failed: ' + e.message);
-            }
-            setTimeout(() => { spinner.style.display = 'none'; }, 500);
-        }
+function renderWorkers() {
+    document.getElementById('worker-grid').innerHTML = workers.map(w => {
+        const sel = selectedIds.has(w.name);
+        const poolIdx = pools.findIndex(p => p.name === w.memory_pool);
+        const poolClass = poolIdx >= 0 ? `group-${(poolIdx % 3) + 1}` : '';
+        const nodeEngines = engines.per_node?.[w.node_ip] || engines.available || ['koboldcpp'];
+        const isLocal = w.node_ip === '127.0.0.1';
+        const isBootstrap = w.role === 'bootstrap';
 
-        function renderNodes(nodes) {
-            const grid = document.getElementById('node-grid');
-            grid.innerHTML = nodes.map(n => {
-                const cls = n.online ? 'online' : 'offline';
-                const dot = n.online ? 'dot-green' : 'dot-off';
-                const services = (n.ports || []).map(p =>
-                    `<span style="color:${p.online ? '#4caf50' : '#555'}">:${p.port} ${p.online ? '&#10003;' : '&#10007;'}</span>`
-                ).join(' ');
-                const gpu = n.gpu || '';
-                return `
-                <div class="node-card ${cls}">
-                    <div class="node-name"><span class="status-dot ${dot}"></span>${n.name}</div>
-                    <div class="node-ip">${n.ip}</div>
-                    ${gpu ? `<div class="node-gpu">${gpu}</div>` : ''}
-                    <div class="node-services">${services}</div>
-                </div>`;
-            }).join('');
-        }
+        return `<div class="card ${sel ? 'selected' : ''} ${poolClass}" id="card-${w.name}">
+  <div class="card-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" ${sel ? 'checked' : ''} aria-label="Select ${w.name} for pool"
+             onchange="toggleSelect('${w.name}', this.checked)" style="width:16px;height:16px">
+      <div>
+        <div class="card-title">${w.name}</div>
+        <div class="card-role">${w.role} · ${w.node_ip}:${w.port}</div>
+      </div>
+    </div>
+    <span id="status-${w.name}" class="status-badge badge-offline">?</span>
+  </div>
 
-        // ---- GPU MONITOR ----
-        async function refreshGpuStatus() {
-            try {
-                const resp = await fetch('/monitor');
-                const data = await resp.json();
-                renderGpus(data.gpus || []);
-            } catch(e) {}
-        }
+  <div class="control-group">
+    <label class="control-label" for="engine-${w.name}">Inference Engine</label>
+    <select id="engine-${w.name}" aria-label="${w.name} engine"
+            onchange="updateField('${w.name}','engine',this.value)">
+      ${nodeEngines.map(e => `<option value="${e}" ${w.engine===e?'selected':''}>${e}</option>`).join('')}
+      ${isBootstrap ? `<option value="cpu-only" ${w.engine==='cpu-only'?'selected':''}>cpu-only</option>` : ''}
+    </select>
+  </div>
 
-        function renderGpus(gpus) {
-            const container = document.getElementById('gpu-status');
-            container.innerHTML = gpus.map((g, i) => {
-                const pct = g.memory_total_mb > 0 ? Math.round((g.memory_used_mb / g.memory_total_mb) * 100) : 0;
-                return `
-                <div class="gpu-group">
-                    <div class="gpu-group-header">
-                        <span class="gpu-group-title">GPU ${g.index}: ${g.name}</span>
-                        <span style="color:#888">${g.temperature_c}C | ${g.utilization_pct}% util | ${g.power_draw_w}W</span>
-                    </div>
-                    <div style="color:#aaa; font-size:0.9rem;">VRAM: ${g.memory_used_mb}MB / ${g.memory_total_mb}MB (${pct}%)</div>
-                    <div class="gpu-bar"><div class="gpu-bar-fill" style="width:${pct}%"></div></div>
-                </div>`;
-            }).join('');
-        }
+  <div class="control-group">
+    <label class="control-label">Backend</label>
+    <div class="pill-toggle" role="group" aria-label="${w.name} backend">
+      <div class="pill cuda ${w.backend==='cuda'?'active':''}"
+           onclick="setBackend('${w.name}','cuda')" role="button" aria-pressed="${w.backend==='cuda'}">CUDA</div>
+      <div class="pill vulkan ${w.backend==='vulkan'?'active':''}"
+           onclick="setBackend('${w.name}','vulkan')" role="button" aria-pressed="${w.backend==='vulkan'}">VULKAN</div>
+      ${isLocal ? `<div class="pill cpu ${w.backend==='cpu'?'active':''}"
+           onclick="setBackend('${w.name}','cpu')" role="button" aria-pressed="${w.backend==='cpu'}">CPU</div>` : ''}
+    </div>
+  </div>
 
-        // ---- CONFIGURE VIEW ----
-        async function loadConfigureView() {
-            try {
-                const resp = await fetch('/cluster/models');
-                const models = await resp.json();
-                document.querySelectorAll('.cfg-model-dropdown').forEach(sel => {
-                    const current = sel.dataset.current || '';
-                    sel.innerHTML = '<option value="">-- None --</option>' +
-                        models.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m.split('/').pop()}</option>`).join('');
-                });
-            } catch(e) {
-                log('Failed to load models: ' + e.message);
-            }
+  <div class="control-group">
+    <div class="toggle-row">
+      <div>
+        <div class="control-label" style="margin:0">Vector Injection</div>
+        <div style="font-size:0.75rem;color:var(--text-dim)">Inject nautivecs context into prompts</div>
+      </div>
+      <label class="switch" aria-label="Vector injection for ${w.name}">
+        <input type="checkbox" ${w.inject_vectors?'checked':''} onchange="setInjection('${w.name}',this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
 
-            // Load current preset config
-            try {
-                const resp = await fetch('/cluster/preset/config');
-                const preset = await resp.json();
-                if (preset.p100_mode) document.getElementById('cfg-p100-mode').value = preset.p100_mode;
-                if (preset.gpu0_role) document.getElementById('cfg-gpu0-role').value = preset.gpu0_role;
-                if (preset.gpu1_role) document.getElementById('cfg-gpu1-role').value = preset.gpu1_role;
-                if (preset.node_1070) document.getElementById('cfg-1070-role').value = preset.node_1070;
-                if (preset.node_1060) document.getElementById('cfg-1060-role').value = preset.node_1060;
-                if (preset.node_laptop) document.getElementById('cfg-laptop-role').value = preset.node_laptop;
-            } catch(e) {}
-        }
+  ${w.memory_pool ? `<div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:8px">Pool: <strong style="color:var(--accent)">${w.memory_pool}</strong></div>` : ''}
 
-        async function savePresetConfig() {
-            const preset = {
-                p100_mode: document.getElementById('cfg-p100-mode').value,
-                gpu0_role: document.getElementById('cfg-gpu0-role').value,
-                gpu0_model: document.getElementById('cfg-gpu0-model').value,
-                gpu1_role: document.getElementById('cfg-gpu1-role').value,
-                gpu1_model: document.getElementById('cfg-gpu1-model').value,
-                node_1070: document.getElementById('cfg-1070-role').value,
-                node_1060: document.getElementById('cfg-1060-role').value,
-                node_laptop: document.getElementById('cfg-laptop-role').value,
-            };
+  <div class="btn-row">
+    <button class="btn-start" onclick="startWorker('${w.name}')" aria-label="Start ${w.name}">START</button>
+    <button class="btn-stop"  onclick="stopWorker('${w.name}')"  aria-label="Stop ${w.name}">STOP</button>
+  </div>
+  <button class="btn-apply" onclick="applyWorker('${w.name}')" aria-label="Apply ${w.name} settings">APPLY CHANGES</button>
+</div>`;
+    }).join('');
 
-            try {
-                const resp = await fetch('/cluster/preset/config', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(preset)
-                });
-                const result = await resp.json();
-                log(result.message || 'CESAROPS config saved.');
-                updatePresetDisplay(preset);
-            } catch(e) {
-                log('Failed to save: ' + e.message);
-            }
-        }
+    // Ping each worker
+    workers.forEach(w => pingWorker(w));
+}
 
-        async function launchPreset() {
-            log('Stopping all workers...');
-            await fetch('/cluster/stop-all', { method: 'POST' });
+function renderCorrectorFunctions() {
+    const corrector = workers.find(w => w.role === 'correct');
+    const funcs = corrector?.corrector_functions || {};
+    document.getElementById('corr-functions').innerHTML = CORRECTOR_FUNCTIONS.map(f => `
+        <div class="function-row">
+            <div>
+                <div style="font-size:0.9rem">${f.label}</div>
+                <div class="function-desc">${f.desc}</div>
+            </div>
+            <label class="switch" aria-label="${f.label}">
+                <input type="checkbox" ${funcs[f.id]!==false?'checked':''}
+                       onchange="setCorrectorFunc('${f.id}',this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>`).join('');
+}
 
-            log('Launching CESAROPS preset...');
-            try {
-                const resp = await fetch('/cluster/preset/launch', { method: 'POST' });
-                const result = await resp.json();
-                log(result.message || 'Preset launched.');
-                // Switch back to main view in scanning mode
-                presetActive = true;
-                document.getElementById('btn-preset').classList.add('active');
-                document.getElementById('preset-status').textContent = 'Locked in for SAR scanning. All resources allocated.';
-                document.getElementById('mode-badge').textContent = 'SCANNING';
-                document.getElementById('mode-badge').className = 'mode-badge scanning';
-                document.getElementById('preset-display').classList.add('locked');
-                document.getElementById('preset-display').style.display = '';
-                document.getElementById('freeform-workers').style.display = 'none';
-                showView('view-main');
-            } catch(e) {
-                log('Launch failed: ' + e.message);
-            }
-        }
+// ── Worker actions ─────────────────────────────────────────────────────────
+function updateField(name, field, val) {
+    const w = workers.find(x => x.name === name);
+    if (w) w[field] = val;
+}
 
-        function updatePresetDisplay(preset) {
-            const modeLabel = preset.p100_mode === 'unified' ? 'Unified 32GB' : 'Split 16GB + 16GB';
-            document.getElementById('ps-p100').textContent = modeLabel + ' \u2014 ' + (preset.gpu0_role || 'SAR Pipeline');
-            document.getElementById('ps-gpu0').textContent = preset.gpu0_role || 'Coder';
-            document.getElementById('ps-gpu1').textContent = preset.gpu1_role || 'KV Cache';
-            document.getElementById('ps-1070').textContent = preset.node_1070 || 'Corrector';
-            document.getElementById('ps-1060').textContent = preset.node_1060 || 'Thinker';
-            document.getElementById('ps-laptop').textContent = preset.node_laptop || 'Idle';
-        }
+async function setBackend(name, backend) {
+    updateField(name, 'backend', backend);
+    await api(`/cluster/worker/${encodeURIComponent(name)}/set_backend`, { backend });
+    render();
+    log(`${name}: backend → ${backend}`);
+}
 
-        // ---- LOG ----
-        function log(msg) {
-            const el = document.getElementById('log');
-            const time = new Date().toLocaleTimeString();
-            el.textContent = `[${time}] ${msg}\n` + el.textContent;
-        }
+async function setInjection(name, enabled) {
+    updateField(name, 'inject_vectors', enabled);
+    await api(`/cluster/worker/${encodeURIComponent(name)}/set_injection`, { enabled });
+    log(`${name}: vector injection → ${enabled ? 'ON' : 'OFF'}`);
+}
 
-        // ---- CORRECTOR TOGGLE ----
-        let correctorConnected = false; // starts disconnected per current config
+async function applyWorker(name) {
+    const w = workers.find(x => x.name === name);
+    const result = await api(`/cluster/worker/${encodeURIComponent(name)}/apply`, w);
+    log(`${name}: applied — ${result.message || 'ok'}`);
+}
 
-        async function toggleCorrectorConnection() {
-            correctorConnected = !correctorConnected;
-            const btn = document.getElementById('btn-corrector-toggle');
-            if (correctorConnected) {
-                btn.textContent = 'Corrector: ON';
-                btn.style.color = '#4caf50';
-                btn.style.background = '#1b4332';
-                log('Corrector reconnected.');
-                await fetch('/cluster/corrector/connect', { method: 'POST' });
-            } else {
-                btn.textContent = 'Corrector: OFF';
-                btn.style.color = '#f44336';
-                btn.style.background = '#4a1500';
-                log('Corrector disconnected.');
-                await fetch('/cluster/corrector/disconnect', { method: 'POST' });
-            }
-        }
+async function startWorker(name) {
+    const result = await api(`/cluster/worker/${encodeURIComponent(name)}/start`, {});
+    log(`${name}: start — ${result.message || 'ok'}`);
+    setTimeout(() => pingWorker(workers.find(w => w.name === name)), 3000);
+}
 
-        // ---- INIT ----
-        refreshDiscovery();
-        refreshGpuStatus();
-        discoveryInterval = setInterval(refreshDiscovery, 30000);
-        monitorInterval = setInterval(refreshGpuStatus, 10000);
-    </script>
+async function stopWorker(name) {
+    const result = await api(`/cluster/worker/${encodeURIComponent(name)}/stop`, {});
+    log(`${name}: stop — ${result.message || 'ok'}`);
+    document.getElementById(`status-${name}`)?.classList.replace('badge-online', 'badge-offline');
+}
+
+async function setCorrectorFunc(func, enabled) {
+    await api('/cluster/corrector/set_function', { function: func, enabled });
+    const corrector = workers.find(w => w.role === 'correct');
+    if (corrector) {
+        if (!corrector.corrector_functions) corrector.corrector_functions = {};
+        corrector.corrector_functions[func] = enabled;
+    }
+    log(`Corrector: ${func} → ${enabled ? 'ON' : 'OFF'}`);
+}
+
+// ── Memory pools ───────────────────────────────────────────────────────────
+function toggleSelect(name, checked) {
+    if (checked) selectedIds.add(name); else selectedIds.delete(name);
+    render();
+}
+
+async function createMemoryPool() {
+    const name = document.getElementById('new-pool-name').value.trim();
+    if (!name) { log('Enter a pool name first'); return; }
+    const members = Array.from(selectedIds);
+    if (members.length < 2) { log('Select at least 2 workers to pool'); return; }
+    await api('/cluster/memory_pool/create', { name, members });
+    pools.push({ name, members });
+    members.forEach(m => updateField(m, 'memory_pool', name));
+    selectedIds.clear();
+    document.getElementById('new-pool-name').value = '';
+    render();
+    log(`Pool "${name}" created: [${members.join(', ')}]`);
+}
+
+async function deletePool(name) {
+    pools = pools.filter(p => p.name !== name);
+    workers.forEach(w => { if (w.memory_pool === name) w.memory_pool = ''; });
+    render();
+    log(`Pool "${name}" removed`);
+}
+
+// ── Corrector panel toggle ─────────────────────────────────────────────────
+function toggleCorrector() {
+    correctorOpen = !correctorOpen;
+    document.getElementById('corr-content').style.display = correctorOpen ? 'block' : 'none';
+    document.getElementById('corr-arrow').textContent = correctorOpen ? '▲ collapse' : '▼ expand';
+    document.getElementById('corr-header').setAttribute('aria-expanded', correctorOpen);
+}
+
+// ── GPU monitor ────────────────────────────────────────────────────────────
+async function refreshGpus() {
+    try {
+        const r = await fetch('/monitor');
+        const d = await r.json();
+        const gpus = d.gpus || [];
+        document.getElementById('gpu-status').innerHTML = gpus.length ? gpus.map(g => {
+            const pct = g.memory_total_mb > 0 ? Math.round(g.memory_used_mb / g.memory_total_mb * 100) : 0;
+            return `<div class="gpu-card">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <strong>GPU ${g.index}: ${g.name}</strong>
+                    <span style="color:var(--text-dim);font-size:0.82rem">${g.temperature_c}°C · ${g.utilization_pct}% · ${g.power_draw_w}W</span>
+                </div>
+                <div style="font-size:0.82rem;color:var(--text-dim);margin-top:4px">VRAM: ${g.memory_used_mb}MB / ${g.memory_total_mb}MB (${pct}%)</div>
+                <div class="gpu-bar"><div class="gpu-bar-fill" style="width:${pct}%"></div></div>
+            </div>`;
+        }).join('') : '<div style="color:var(--text-dim);font-size:0.85rem">No GPU data</div>';
+    } catch(e) {}
+}
+
+// ── Node discovery ─────────────────────────────────────────────────────────
+async function refreshNodes() {
+    document.getElementById('disc-spinner').style.display = 'inline';
+    try {
+        const r = await fetch('/cluster/discover');
+        const nodes = await r.json();
+        document.getElementById('node-grid').innerHTML = nodes.map(n => `
+            <div class="node-card ${n.online ? 'online' : 'offline'}">
+                <div style="display:flex;align-items:center;margin-bottom:4px">
+                    <span class="dot ${n.online ? 'dot-green' : 'dot-red'}"></span>
+                    <strong style="font-size:0.9rem">${n.name}</strong>
+                </div>
+                <div style="font-size:0.78rem;color:var(--text-dim)">${n.ip}</div>
+                ${n.gpu ? `<div style="font-size:0.78rem;color:var(--accent);margin-top:3px">${n.gpu}</div>` : ''}
+                <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+                    ${(n.ports||[]).map(p => `<span style="font-size:0.72rem;color:${p.online?'var(--success)':'#555'}">:${p.port}${p.online?'✓':'✗'}</span>`).join('')}
+                </div>
+            </div>`).join('');
+    } catch(e) {}
+    document.getElementById('disc-spinner').style.display = 'none';
+}
+
+// ── Worker ping ────────────────────────────────────────────────────────────
+async function pingWorker(w) {
+    if (!w) return;
+    const el = document.getElementById(`status-${w.name}`);
+    if (!el) return;
+    try {
+        const url = `http://${w.node_ip}:${w.port}/v1/models`;
+        const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+        if (r.ok) {
+            el.textContent = 'ONLINE';
+            el.className = 'status-badge badge-online';
+        } else throw new Error();
+    } catch(e) {
+        el.textContent = 'OFFLINE';
+        el.className = 'status-badge badge-offline';
+    }
+}
+
+// ── Log ────────────────────────────────────────────────────────────────────
+function log(msg) {
+    const el = document.getElementById('log');
+    const t = new Date().toLocaleTimeString();
+    el.textContent = `[${t}] ${msg}\n` + el.textContent;
+}
+
+window.onload = init;
+</script>
 </body>
 </html>

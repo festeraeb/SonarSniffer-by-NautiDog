@@ -44,6 +44,10 @@ model = "/codebase/models/Qwen2.5-Coder-7B-Instruct-abliterated-Q8_0.gguf"
 port = 5010
 template = "qwen2.5"
 enabled = true
+engine = "koboldcpp"
+backend = "vulkan"
+inject_vectors = true
+memory_pool = ""
 
 [[worker]]
 name = "Coder"
@@ -53,6 +57,10 @@ model = "/codebase/models/Qwen2.5-Coder-14B-Instruct-abliterated-Q6_K.gguf"
 port = 5011
 template = "qwen2.5"
 enabled = false
+engine = "koboldcpp"
+backend = "vulkan"
+inject_vectors = true
+memory_pool = ""
 
 [[worker]]
 name = "Scout"
@@ -63,6 +71,10 @@ port = 5570
 template = "qwen2.5"
 enabled = false
 host = "100.105.77.74"
+engine = "koboldcpp"
+backend = "vulkan"
+inject_vectors = true
+memory_pool = ""
 
 [models_dir]
 path = "/codebase/models"
@@ -134,6 +146,10 @@ role = "Speed+Accuracy Validator — TinyLlama 1.1B Q4_K_M reference canary"
 model = "TinyLlama-1.1B-Chat-v1.0-Q4_K_M"
 validator = true
 validator_api = "http://localhost:9100/validate"
+engine = "koboldcpp"
+backend = "cuda"
+inject_vectors = false
+corrector_functions = { json_fixer = true, loop_detector = true, translator = true, think_harder = false, auto_remember = true }
 
 [routing]
 default_mode = "auto"

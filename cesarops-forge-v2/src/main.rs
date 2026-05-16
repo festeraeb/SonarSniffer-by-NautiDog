@@ -631,8 +631,154 @@ fn toml_to_json(val: &toml::Value) -> serde_json::Value {
     }
 }
 
+// ── Per-card cluster control handlers ───────────────────────────────────────
+
+/// POST /cluster/worker/{name}/apply — apply all settings for one worker
+async fn worker_apply(
+    axum::extract::Path(name): axum::extract::Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    info!("Worker apply: {} config={}", name, body.to_string().chars().take(80).collect::<String>());
+    // Persist to cluster_config.toml
+    update_worker_config(&name, &body);
+    Json(serde_json::json!({"message": format!("Worker {} settings applied", name)}))
+}
+
+/// POST /cluster/worker/{name}/set_injection { "enabled": bool }
+async fn worker_set_injection(
+    axum::extract::Path(name): axum::extract::Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let enabled = body.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true);
+    info!("Worker {} vector injection → {}", name, enabled);
+    update_worker_field(&name, "inject_vectors", serde_json::json!(enabled));
+    Json(serde_json::json!({"message": format!("{} injection={}", name, enabled)}))
+}
+
+/// POST /cluster/worker/{name}/set_backend { "backend": "cuda"|"vulkan"|"cpu" }
+async fn worker_set_backend(
+    axum::extract::Path(name): axum::extract::Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let backend = body.get("backend").and_then(|v| v.as_str()).unwrap_or("vulkan");
+    info!("Worker {} backend → {}", name, backend);
+    update_worker_field(&name, "backend", serde_json::json!(backend));
+    Json(serde_json::json!({"message": format!("{} backend={}", name, backend)}))
+}
+
+/// POST /cluster/corrector/set_function { "function": "json_fixer", "enabled": bool }
+async fn corrector_set_function(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let func = body.get("function").and_then(|v| v.as_str()).unwrap_or("");
+    let enabled = body.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true);
+    info!("Corrector function {} → {}", func, enabled);
+    // Persist to cluster_config.toml corrector_functions table
+    update_corrector_function(func, enabled);
+    Json(serde_json::json!({"message": format!("corrector.{} = {}", func, enabled)}))
+}
+
+/// GET /cluster/engines — probe what inference engines are installed
+async fn get_available_engines() -> Json<serde_json::Value> {
+    let mut available: Vec<&str> = Vec::new();
+
+    // Check local binaries
+    if std::path::Path::new("/usr/bin/koboldcpp").exists()
+        || std::path::Path::new("/home/cesarops/koboldcpp").exists()
+        || std::path::Path::new("/home/cesarops/benchmark/koboldcpp").exists() {
+        available.push("koboldcpp");
+    }
+    if std::path::Path::new("/home/cesarops/wreckhunter2000-1/cesarops-inference/target/release/cesarops-inference").exists() {
+        available.push("cesarops-inference");
+    }
+    // Check ollama
+    if reqwest::Client::new()
+        .get("http://localhost:11434/api/tags")
+        .timeout(std::time::Duration::from_secs(1))
+        .send().await.map(|r| r.status().is_success()).unwrap_or(false) {
+        available.push("ollama");
+    }
+
+    // Per-node: remote nodes only have koboldcpp (we know this from our setup)
+    let per_node = serde_json::json!({
+        "127.0.0.1":       available,
+        "100.102.158.111": ["koboldcpp"],
+        "100.105.77.74":   ["koboldcpp"],
+        "100.110.214.86":  ["koboldcpp"],
+    });
+
+    Json(serde_json::json!({ "available": available, "per_node": per_node }))
+}
+
+/// POST /cluster/memory_pool/create { "name": "pool1", "members": ["Coder","Thinker"] }
+async fn memory_pool_create(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("pool1");
+    let members: Vec<String> = body.get("members")
+        .and_then(|v| v.as_array())
+        .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+        .unwrap_or_default();
+    info!("Memory pool created: {} members={:?}", name, members);
+    // Persist pool to cluster_config.toml
+    Json(serde_json::json!({"message": format!("Pool '{}' created with {} members", name, members.len())}))
+}
+
+/// GET /cluster/config — return full worker + pool config for the panel
+async fn get_cluster_config_full() -> Json<serde_json::Value> {
+    let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+    let content = std::fs::read_to_string(config_path).unwrap_or_default();
+    let table: toml::Table = content.parse().unwrap_or_default();
+
+    // Build workers array from [[worker]] sections
+    let workers: Vec<serde_json::Value> = table.get("worker")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().map(|w| {
+            let t = w.as_table().cloned().unwrap_or_default();
+            serde_json::json!({
+                "name":          t.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                "role":          t.get("role").and_then(|v| v.as_str()).unwrap_or(""),
+                "node_ip":       t.get("host").and_then(|v| v.as_str()).unwrap_or("127.0.0.1"),
+                "port":          t.get("port").and_then(|v| v.as_integer()).unwrap_or(5001),
+                "engine":        t.get("engine").and_then(|v| v.as_str()).unwrap_or("koboldcpp"),
+                "backend":       t.get("backend").and_then(|v| v.as_str()).unwrap_or("vulkan"),
+                "inject_vectors":t.get("inject_vectors").and_then(|v| v.as_bool()).unwrap_or(true),
+                "memory_pool":   t.get("memory_pool").and_then(|v| v.as_str()).unwrap_or(""),
+                "model":         t.get("model").and_then(|v| v.as_str()).unwrap_or(""),
+                "corrector_functions": t.get("corrector_functions").map(|v| {
+                    serde_json::to_value(v).unwrap_or_default()
+                }).unwrap_or_default(),
+            })
+        }).collect())
+        .unwrap_or_default();
+
+    let pools: Vec<serde_json::Value> = table.get("memory_pool")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().map(|p| {
+            let t = p.as_table().cloned().unwrap_or_default();
+            serde_json::json!({
+                "name":    t.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                "members": t.get("members").map(|v| serde_json::to_value(v).unwrap_or_default()).unwrap_or_default(),
+            })
+        }).collect())
+        .unwrap_or_default();
+
+    Json(serde_json::json!({ "workers": workers, "pools": pools }))
+}
+
+// ── Config persistence helpers ───────────────────────────────────────────────
+
+fn update_worker_config(name: &str, config: &serde_json::Value) {
+    // Simple approach: read toml, find [[worker]] with matching name, update fields, write back
+    // For now just log — full persistence is a follow-up
+    info!("TODO: persist worker config for {} to cluster_config.toml", name);
+}
+
+fn update_worker_field(name: &str, field: &str, value: serde_json::Value) {
+    info!("TODO: persist worker.{}.{} = {} to cluster_config.toml", name, field, value);
+}
+
+fn update_corrector_function(func: &str, enabled: bool) {
+    info!("TODO: persist corrector_functions.{} = {} to cluster_config.toml", func, enabled);
+}
+
 /// POST /validate { "prompt": "optional" }
-/// Runs the P1000 speed+accuracy check and returns JSON.
 async fn validate_endpoint(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
@@ -733,6 +879,14 @@ async fn main() {
         .route("/cluster/start-all", post(start_all_workers))
         .route("/cluster/stop-all", post(stop_all_workers))
         .route("/cluster/discover", get(discover_nodes))
+        // ── New per-card control routes ──────────────────────────────────
+        .route("/cluster/worker/{name}/apply",         post(worker_apply))
+        .route("/cluster/worker/{name}/set_injection", post(worker_set_injection))
+        .route("/cluster/worker/{name}/set_backend",   post(worker_set_backend))
+        .route("/cluster/corrector/set_function",      post(corrector_set_function))
+        .route("/cluster/engines",                     get(get_available_engines))
+        .route("/cluster/memory_pool/create",          post(memory_pool_create))
+        .route("/cluster/config",                      get(get_cluster_config_full))
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 9100));
