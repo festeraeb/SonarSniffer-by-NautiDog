@@ -10,6 +10,7 @@ mod loop_engine;
 mod agent_dispatch;
 mod validator;
 mod corrector_preset;
+mod model_scorecard;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};
