@@ -498,7 +498,11 @@ fn dequant_q4_k(data: &[u8], n_elements: usize) -> Vec<f32> {
 }
 
 /// Q6_K: block_size=256, layout: ql[128] + qh[64] + scales[16] + d[2] = 210 bytes
-/// Reconstruction: weight = d * scale[sub] * (((qh << 4) | ql) - 32)
+///
+/// Mirrors llama.cpp's `dequantize_row_q6_K` in `ggml-quants.c`. The 256
+/// elements are processed as two 128-element halves. Within each half, an
+/// inner loop l=0..32 produces 4 outputs at positions l, l+32, l+64, l+96
+/// from interleaved ql/qh nibbles and signed sub-block scales.
 fn dequant_q6_k(data: &[u8], n_elements: usize) -> Vec<f32> {
     let block_size = 256;
     let block_bytes = 210;
@@ -506,38 +510,52 @@ fn dequant_q6_k(data: &[u8], n_elements: usize) -> Vec<f32> {
     let mut out = vec![0.0f32; n_elements];
 
     for b in 0..n_blocks {
-        let offset = b * block_bytes;
-        if offset + block_bytes > data.len() { break; }
+        let block_off = b * block_bytes;
+        if block_off + block_bytes > data.len() { break; }
+        let out_base_block = b * block_size;
+        if out_base_block >= n_elements { break; }
 
         // Layout: ql[128 bytes] + qh[64 bytes] + scales[16 bytes] + d[2 bytes]
-        let ql = &data[offset..offset + 128];
-        let qh = &data[offset + 128..offset + 192];
-        let scales = &data[offset + 192..offset + 208];
-        let d_bits = u16::from_le_bytes([data[offset + 208], data[offset + 209]]);
+        let ql_all = &data[block_off..block_off + 128];
+        let qh_all = &data[block_off + 128..block_off + 192];
+        let scales = &data[block_off + 192..block_off + 208];
+        let d_bits = u16::from_le_bytes([data[block_off + 208], data[block_off + 209]]);
         let d = f16_to_f32(d_bits);
 
-        for idx in 0..256 {
-            let elem_idx = b * block_size + idx;
-            if elem_idx >= n_elements { break; }
+        // Two 128-element halves
+        for half in 0..2usize {
+            let ql_off = half * 64;       // each half consumes 64 ql bytes
+            let qh_off = half * 32;       // each half consumes 32 qh bytes
+            let sc_off = half * 8;        // each half uses 8 of 16 scale entries
+            let out_base = out_base_block + half * 128;
 
-            // Lower 4 bits from ql (packed 2 per byte)
-            let ql_byte = ql[idx / 2];
-            let ql_val = if idx % 2 == 0 { ql_byte & 0x0F } else { (ql_byte >> 4) & 0x0F };
+            for l in 0..32usize {
+                let is = l / 16; // 0 for l<16, 1 for l>=16
 
-            // Upper 2 bits from qh (packed 4 per byte)
-            let qh_byte = qh[idx / 4];
-            let qh_shift = (idx % 4) * 2;
-            let qh_val = (qh_byte >> qh_shift) & 0x03;
+                let ql_a = ql_all[ql_off + l] as i32;
+                let ql_b = ql_all[ql_off + l + 32] as i32;
+                let qh_byte = qh_all[qh_off + l] as i32;
 
-            // Reconstruct 6-bit signed value centered at 32
-            let q6 = ((qh_val as i32) << 4) | (ql_val as i32);
-            let quantized = q6 - 32;
+                let q1 = ((ql_a & 0xF) | (((qh_byte >> 0) & 3) << 4)) - 32;
+                let q2 = ((ql_b & 0xF) | (((qh_byte >> 2) & 3) << 4)) - 32;
+                let q3 = ((ql_a >> 4)  | (((qh_byte >> 4) & 3) << 4)) - 32;
+                let q4 = ((ql_b >> 4)  | (((qh_byte >> 6) & 3) << 4)) - 32;
 
-            // Sub-block scale (16 sub-blocks of 16 elements)
-            let sub_idx = idx / 16;
-            let scale = (scales[sub_idx] as i8) as i32; // Treat as signed
+                let sc0 = (scales[sc_off + is]     as i8) as f32;
+                let sc1 = (scales[sc_off + is + 2] as i8) as f32;
+                let sc2 = (scales[sc_off + is + 4] as i8) as f32;
+                let sc3 = (scales[sc_off + is + 6] as i8) as f32;
 
-            out[elem_idx] = d * (scale as f32) * (quantized as f32);
+                let i0 = out_base + l;
+                let i1 = i0 + 32;
+                let i2 = i0 + 64;
+                let i3 = i0 + 96;
+
+                if i0 < n_elements { out[i0] = d * sc0 * q1 as f32; }
+                if i1 < n_elements { out[i1] = d * sc1 * q2 as f32; }
+                if i2 < n_elements { out[i2] = d * sc2 * q3 as f32; }
+                if i3 < n_elements { out[i3] = d * sc3 * q4 as f32; }
+            }
         }
     }
     out

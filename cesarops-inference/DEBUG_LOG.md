@@ -122,3 +122,59 @@
 - `shaders/matvec.wgsl` — matrix-vector multiply
 - `shaders/rmsnorm.wgsl` — RMSNorm with vec4 loads
 - `shaders/swiglu.wgsl` — fused SwiGLU activation
+
+
+---
+
+## 2026-05-16 — ROOT CAUSE FOUND AND FIXED: Q6_K block-structured indexing
+
+### Symptom
+After fixing every other suspected issue (RoPE head indexing, attention clamps,
+vocab size, GPU sync hazards, bias staging, fused matvec_bias), the engine
+still produced garbled tokens. Koboldcpp with the SAME GGUF produced coherent
+output ("2+2 equals", ".").
+
+### Root cause
+`dequant_q6_k` (CPU + GPU shader + probe) used naive sequential indexing:
+- `ql_byte = ql[idx/2]`, low/high nibble by `idx%2`
+- `qh_byte = qh[idx/4]`, 2-bit slice by `idx%4`
+- `scale = scales[idx/16]`
+
+llama.cpp's `dequantize_row_q6_K` (`ggml-quants.c`) processes each 256-element
+super-block as **two 128-element halves**. Inside each half, an inner loop
+`l = 0..32` produces **4 outputs at relative positions `l, l+32, l+64, l+96`**
+from interleaved ql/qh nibbles and 4 *interleaved* sub-block scale entries
+(`is, is+2, is+4, is+6`). Magnitudes were close (global scale `d` correct) but
+values were permuted to wrong positions, so logits were noise.
+
+The Python "reference" probe used the same wrong indexing, producing circular
+validation. Bytes themselves were never the issue — the byte-to-element
+mapping was.
+
+### Fixes applied
+1. **`src/tensor_loader_safe.rs::dequant_q6_k`** — rewritten to follow
+   llama.cpp's two-halves / inner-32 pattern with interleaved scales.
+2. **`shaders/dequant_q6k.wgsl`** — same block-structured decode in WGSL.
+   Per-element: derive `(half, slot, l)` from `local_idx`, read the right
+   ql/qh bytes, pick the right qh shift and scale offset for the slot.
+3. **`src/dequant_probe.rs`** — replaced uniform-byte synthetic block with a
+   *discriminating* pattern (distinct ql, qh, and scale bytes per position)
+   and a CPU reference function that mirrors llama.cpp exactly. A wrong
+   indexing strategy would now visibly fail at specific positions.
+
+### Verification
+- Build: `cargo build --release` — clean.
+- `Dequant probe PASSED — GPU matches llama.cpp CPU reference (max_err=0.000000)`.
+- `generate "Hello" --max-tokens 5` →
+  `Hello! How can I` (token IDs `[9707, 0, 2585, 646, 358]`).
+- `generate "What is 2+2?" --max-tokens 15` →
+  `2+2 equals 4.` (token IDs `[17, 10, 17, 16819, 220, 19, 13]`).
+
+Coherent multi-token output achieved. Engine reaches parity with koboldcpp on
+the prompts we used as ground truth.
+
+### Lesson
+Cross-validate against an *independent* reference implementation (llama.cpp's
+own decode loop, byte-for-byte), not against your own Python port that may
+share the same bug. A probe with all-equal bytes can hide an indexing bug
+because every output ends up identical regardless of mapping.

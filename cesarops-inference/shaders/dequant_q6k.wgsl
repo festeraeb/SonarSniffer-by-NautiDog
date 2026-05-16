@@ -1,16 +1,15 @@
-// WGSL Q6_K Dequantization — Flat Buffer Access (no struct alignment issues)
+// WGSL Q6_K Dequantization — block-structured indexing matching llama.cpp.
 //
 // Q6_K super-block: 210 bytes = 256 elements
 // Byte layout (GGUF native order):
-//   [0..127]   ql: 128 bytes — lower 4 bits per element (2 per byte)
-//   [128..191] qh: 64 bytes — upper 2 bits per element (4 per byte)
+//   [0..127]   ql: 128 bytes — lower 4 bits per element (interleaved)
+//   [128..191] qh: 64 bytes — upper 2 bits per element (interleaved)
 //   [192..207] scales: 16 bytes — 16 signed i8 sub-block scales
-//   [208..209] d: 2 bytes — f16 global scale
+//   [208..209] d: 2 bytes — f16 super-block scale
 //
-// We read the raw buffer as array<u32> and manually extract bytes.
-// Block size in u32 words: ceil(210/4) = 53 words (with 2 bytes padding at end)
-// Actually: 210 bytes = 52 full u32s + 2 remaining bytes. We'll use 53 u32s per block
-// and mask the last partial word.
+// llama.cpp processes each block as two 128-element halves. Within each half
+// l = 0..32 produces 4 outputs at relative positions l, l+32, l+64, l+96 from
+// interleaved ql/qh nibbles + four interleaved sub-block scales.
 
 struct Params {
     total_blocks: u32,
@@ -43,6 +42,10 @@ fn read_byte(block_byte_offset: u32, local_byte: u32) -> u32 {
     return (raw_data[word_idx] >> (byte_in_word * 8u)) & 0xFFu;
 }
 
+fn signed_byte(b: u32) -> i32 {
+    return i32(b) - select(0, 256, b >= 128u);
+}
+
 @compute @workgroup_size(256, 1, 1)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let global_elem = gid.x;
@@ -51,39 +54,56 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     if (block_idx >= params.total_blocks) { return; }
 
-    // Byte offset of this block in the raw buffer
     let block_byte_offset = block_idx * 210u;
 
-    // Read global scale d (bytes 208-209, f16)
+    // Global f16 scale (bytes 208-209)
     let d_lo = read_byte(block_byte_offset, 208u);
     let d_hi = read_byte(block_byte_offset, 209u);
     let d = fp16_to_f32(d_lo | (d_hi << 8u));
 
-    // Read sub-block scale (bytes 192-207, 16 signed i8 values)
-    let sub_idx = local_idx / 16u;
-    let scale_byte = read_byte(block_byte_offset, 192u + sub_idx);
-    // Interpret as signed i8: if >= 128, subtract 256
-    let scale_signed = i32(scale_byte) - select(0, 256, scale_byte >= 128u);
+    // Block-structured decode: figure out which (half, l, slot) this element is.
+    // Within a half (128 elems): slot = local/32 (0..3), l = local%32.
+    let half = local_idx / 128u;             // 0 or 1
+    let in_half = local_idx % 128u;          // 0..127
+    let slot = in_half / 32u;                // 0,1,2,3
+    let l = in_half % 32u;                   // 0..31
 
-    // Read lower 4 bits from ql region (bytes 0-127, 2 nibbles per byte)
-    let ql_byte_idx = local_idx / 2u;
-    let ql_byte = read_byte(block_byte_offset, ql_byte_idx);
-    var ql_val: u32;
-    if (local_idx % 2u == 0u) {
-        ql_val = ql_byte & 0x0Fu;
+    let ql_off = half * 64u;
+    let qh_off = 128u + half * 32u;
+    let sc_off = 192u + half * 8u;
+
+    // Each `l` reads ql[ql_off + l], ql[ql_off + l + 32], qh[qh_off + l]
+    let ql_a = read_byte(block_byte_offset, ql_off + l);
+    let ql_b = read_byte(block_byte_offset, ql_off + l + 32u);
+    let qh_b = read_byte(block_byte_offset, qh_off + l);
+
+    // 4 candidate quants
+    // q1: ql_a low  | qh bits 0..1, output position l       (slot 0)
+    // q2: ql_b low  | qh bits 2..3, output position l+32    (slot 1)
+    // q3: ql_a high | qh bits 4..5, output position l+64    (slot 2)
+    // q4: ql_b high | qh bits 6..7, output position l+96    (slot 3)
+    var q_low: u32;
+    var qh_shift: u32;
+    if (slot == 0u) {
+        q_low = ql_a & 0xFu;
+        qh_shift = 0u;
+    } else if (slot == 1u) {
+        q_low = ql_b & 0xFu;
+        qh_shift = 2u;
+    } else if (slot == 2u) {
+        q_low = (ql_a >> 4u) & 0xFu;
+        qh_shift = 4u;
     } else {
-        ql_val = (ql_byte >> 4u) & 0x0Fu;
+        q_low = (ql_b >> 4u) & 0xFu;
+        qh_shift = 6u;
     }
+    let qh_bits = (qh_b >> qh_shift) & 0x3u;
+    let q6 = i32(q_low | (qh_bits << 4u)) - 32;
 
-    // Read upper 2 bits from qh region (bytes 128-191, 4 crumbs per byte)
-    let qh_byte_idx = local_idx / 4u;
-    let qh_byte = read_byte(block_byte_offset, 128u + qh_byte_idx);
-    let qh_shift = (local_idx % 4u) * 2u;
-    let qh_val = (qh_byte >> qh_shift) & 0x03u;
+    // Sub-block scale: is = l/16; per-slot offsets are 0,2,4,6 within the half.
+    let is = l / 16u;
+    let scale_byte = read_byte(block_byte_offset, sc_off + is + slot * 2u);
+    let scale_signed = signed_byte(scale_byte);
 
-    // Reconstruct 6-bit signed value: (qh << 4) | ql, centered at 32
-    let q6 = i32(ql_val | (qh_val << 4u)) - 32;
-
-    // Final dequantized weight
     output_f32[global_elem] = d * f32(scale_signed) * f32(q6);
 }

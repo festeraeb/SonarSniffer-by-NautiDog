@@ -1,11 +1,13 @@
-//! Dynamic dequantization probe — validates shader bit-layout against known values.
+//! Dynamic dequantization probe — validates shader bit-layout against a
+//! llama.cpp-faithful CPU reference using a *discriminating* synthetic block.
 //!
-//! Creates a synthetic Q6_K block with predictable values, runs it through the
-//! GPU dequant shader, reads back the results, and verifies correctness.
-//! If the output doesn't match expected values, reports the exact discrepancy
-//! so we can fix the shader.
+//! The previous probe filled ql/qh with all-equal bytes, which made every
+//! output element identical regardless of indexing strategy. That allowed an
+//! incorrect block-structure decode to silently pass. This version fills ql,
+//! qh, and the sub-block scales with position-dependent values so each of the
+//! 256 outputs is unique. We then compare GPU output against a CPU reference
+//! that mirrors `dequantize_row_q6_K` from llama.cpp's `ggml-quants.c`.
 
-use bytemuck::{Pod, Zeroable};
 use crate::shader_ops::DequantQ6KPipeline;
 use tracing::{info, warn, error};
 
@@ -18,68 +20,108 @@ pub struct ProbeResult {
     pub max_error: f32,
 }
 
+fn f16_to_f32(bits: u16) -> f32 {
+    half::f16::from_bits(bits).to_f32()
+}
+
+/// CPU reference matching llama.cpp's `dequantize_row_q6_K`.
+fn cpu_dequant_q6_k(block: &[u8]) -> Vec<f32> {
+    let mut out = vec![0.0f32; 256];
+    let ql = &block[0..128];
+    let qh = &block[128..192];
+    let scales = &block[192..208];
+    let d = f16_to_f32(u16::from_le_bytes([block[208], block[209]]));
+
+    for half in 0..2usize {
+        let ql_off = half * 64;
+        let qh_off = half * 32;
+        let sc_off = half * 8;
+        let out_base = half * 128;
+
+        for l in 0..32usize {
+            let is = l / 16;
+            let ql_a = ql[ql_off + l] as i32;
+            let ql_b = ql[ql_off + l + 32] as i32;
+            let qh_byte = qh[qh_off + l] as i32;
+
+            let q1 = ((ql_a & 0xF) | (((qh_byte >> 0) & 3) << 4)) - 32;
+            let q2 = ((ql_b & 0xF) | (((qh_byte >> 2) & 3) << 4)) - 32;
+            let q3 = ((ql_a >> 4)  | (((qh_byte >> 4) & 3) << 4)) - 32;
+            let q4 = ((ql_b >> 4)  | (((qh_byte >> 6) & 3) << 4)) - 32;
+
+            let sc0 = (scales[sc_off + is]     as i8) as f32;
+            let sc1 = (scales[sc_off + is + 2] as i8) as f32;
+            let sc2 = (scales[sc_off + is + 4] as i8) as f32;
+            let sc3 = (scales[sc_off + is + 6] as i8) as f32;
+
+            out[out_base + l]      = d * sc0 * q1 as f32;
+            out[out_base + l + 32] = d * sc1 * q2 as f32;
+            out[out_base + l + 64] = d * sc2 * q3 as f32;
+            out[out_base + l + 96] = d * sc3 * q4 as f32;
+        }
+    }
+    out
+}
+
 /// Run the Q6_K dequant probe to validate shader correctness.
 ///
-/// Creates a synthetic block where:
-/// - d (global scale) = 1.0 (f16: 0x3C00)
-/// - scales[0] = 32 + 1 = 33 (so signed scale = 33 - 32 = 1, but we store raw i8)
-///   Actually: scales are i8 stored as u8. We'll use scale = 1 (stored as 1)
-///   Wait — in our shader, scale = i32(byte) - 32. So to get scale=1, store 33.
-///   Hmm, let me re-check. In the shader: `let scale_signed = i32(scale_byte) - select(0, 256, scale_byte >= 128u)`
-///   That's treating it as unsigned with manual sign extension. So byte 33 → i32(33) = 33.
-///   But in the GGUF spec, Q6_K scales are plain i8 (signed). So byte 0xFF = -1, byte 0x01 = 1.
-///   Our shader does: i32(byte) - select(0, 256, byte >= 128). So 0xFF → 255 - 256 = -1. Correct.
-///   And 0x01 → 1 - 0 = 1. Correct.
-///
-/// For the probe:
-/// - d = 1.0 (f16 bits: 0x3C00)
-/// - scales[0] = 1 (raw byte 0x01, shader interprets as 1)
-/// - ql nibbles all = 5 (so ql bytes = 0x55)
-/// - qh crumbs all = 1 (so qh bytes = 0x55 → bits 01 01 01 01)
-///
-/// Expected reconstruction:
-///   q6 = (qh << 4) | ql = (1 << 4) | 5 = 21
-///   quantized = 21 - 32 = -11
-///   weight = d * scale * quantized = 1.0 * 1 * (-11) = -11.0
+/// Builds a synthetic block where every ql byte, qh byte, and scale byte has
+/// a distinct value so a wrong indexing strategy will produce visibly wrong
+/// outputs at specific positions.
 pub fn run_dequant_probe(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     dequant_pipeline: &DequantQ6KPipeline,
 ) -> ProbeResult {
-    info!("Running Q6_K dequant probe...");
+    info!("Running Q6_K dequant probe (discriminating pattern)...");
 
-    // Build a synthetic 210-byte Q6_K block
-    let mut probe_bytes = vec![0u8; 212]; // 210 + 2 padding to align to 4 bytes
+    // 210-byte block, padded to 4-byte alignment.
+    let mut probe_bytes = vec![0u8; 212];
 
-    // ql region (bytes 0-127): all nibbles = 5 → byte = 0x55
+    // ql[0..128]: byte i = (i & 0x7F) so high bit ignored — gives distinct nibbles per position.
+    // Use a mix that exercises both low and high nibbles.
     for i in 0..128 {
-        probe_bytes[i] = 0x55;
+        // Pick something where low nibble != high nibble != neighbors
+        let low = (i as u8) & 0x0F;
+        let high = ((i as u8).wrapping_mul(3) & 0x0F) ^ 0x05;
+        probe_bytes[i] = (high << 4) | low;
     }
 
-    // qh region (bytes 128-191): all crumbs = 1 → byte = 0b01010101 = 0x55
-    for i in 128..192 {
-        probe_bytes[i] = 0x55;
+    // qh[128..192]: distinct per byte; each byte holds 4 crumbs (2 bits) for 4 outputs.
+    for i in 0..64 {
+        // 4 distinct 2-bit values packed
+        let c0 = ((i + 0) as u8) & 0x03;
+        let c1 = ((i + 1) as u8) & 0x03;
+        let c2 = ((i + 2) as u8) & 0x03;
+        let c3 = ((i + 3) as u8) & 0x03;
+        probe_bytes[128 + i] = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
     }
 
-    // scales region (bytes 192-207): all = 1
-    for i in 192..208 {
-        probe_bytes[i] = 1;
+    // scales[192..208]: 16 distinct signed values spanning negative & positive.
+    let scale_pattern: [i8; 16] = [
+        1, -2, 3, -4, 5, -6, 7, -8,
+        9, -10, 11, -12, 13, -14, 15, -16,
+    ];
+    for i in 0..16 {
+        probe_bytes[192 + i] = scale_pattern[i] as u8;
     }
 
-    // d region (bytes 208-209): f16 = 1.0 = 0x3C00
-    probe_bytes[208] = 0x00; // low byte
-    probe_bytes[209] = 0x3C; // high byte
+    // d = 1.0 (f16 = 0x3C00)
+    probe_bytes[208] = 0x00;
+    probe_bytes[209] = 0x3C;
 
-    // Upload to GPU as raw u32 array
+    // Compute CPU reference
+    let expected = cpu_dequant_q6_k(&probe_bytes[..210]);
+
+    // Upload to GPU
     let input_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("probe_input"),
-        size: 212, // Padded to 4-byte alignment
+        size: 212,
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
     queue.write_buffer(&input_buf, 0, &probe_bytes);
 
-    // Output buffer: 256 f32 elements
     let output_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("probe_output"),
         size: 256 * 4,
@@ -87,13 +129,11 @@ pub fn run_dequant_probe(
         mapped_at_creation: false,
     });
 
-    // Dispatch dequant
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("probe_encoder"),
     });
     dequant_pipeline.dispatch(device, queue, &mut encoder, &input_buf, &output_buf, 256);
 
-    // Readback
     let staging = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("probe_staging"),
         size: 256 * 4,
@@ -103,7 +143,6 @@ pub fn run_dequant_probe(
     encoder.copy_buffer_to_buffer(&output_buf, 0, &staging, 0, 256 * 4);
     queue.submit(std::iter::once(encoder.finish()));
 
-    // Map and read
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
@@ -117,38 +156,34 @@ pub fn run_dequant_probe(
     drop(data);
     staging.unmap();
 
-    // Expected: all elements should be d * scale * (q6 - 32)
-    // d = 1.0, scale = 1 (raw byte 1, shader does i32(1) - select(0,256,1>=128) = 1)
-    // ql = 5, qh = 1, q6 = (1<<4)|5 = 21, quantized = 21 - 32 = -11
-    // weight = 1.0 * 1 * (-11) = -11.0
-    let expected_val = -11.0f32;
-    let expected: Vec<f32> = vec![expected_val; 256];
-
-    let max_error = actual.iter().zip(expected.iter())
-        .map(|(a, e)| (a - e).abs())
-        .fold(0.0f32, f32::max);
+    // Verify: every position must match
+    let mut max_error = 0.0f32;
+    let mut first_mismatch: Option<usize> = None;
+    for i in 0..256 {
+        let e = (actual[i] - expected[i]).abs();
+        if e > max_error { max_error = e; }
+        if e > 0.001 && first_mismatch.is_none() {
+            first_mismatch = Some(i);
+        }
+    }
 
     let passed = max_error < 0.01;
 
     if passed {
-        info!("✓ Dequant probe PASSED — all 256 elements match expected value ({:.1})", expected_val);
+        info!("✓ Dequant probe PASSED — GPU matches llama.cpp CPU reference (max_err={:.6})", max_error);
     } else {
         error!("✗ Dequant probe FAILED — max error: {:.4}", max_error);
-        info!("  Expected[0..4]: {:?}", &expected[0..4]);
-        info!("  Actual[0..4]:   {:?}", &actual[0..4]);
-        info!("  Actual[0..16]:  {:?}", &actual[0..16]);
-
-        // Diagnostic: check if values suggest byte-swap
-        if actual[0].abs() > 1000.0 || actual[0].is_nan() {
-            warn!("  Values suggest byte-endianness mismatch in shader");
-        } else if (actual[0] - expected_val).abs() < 100.0 {
-            warn!("  Values are in reasonable range but wrong — likely bit-shift offset error");
-            // Try to reverse-engineer what the shader actually computed
-            if actual[0] != 0.0 {
-                let ratio = actual[0] / expected_val;
-                info!("  Ratio actual/expected = {:.4} (scale factor off by this amount)", ratio);
-            }
+        if let Some(idx) = first_mismatch {
+            info!("  First mismatch at index {}: expected={} actual={}",
+                idx, expected[idx], actual[idx]);
         }
+        info!("  Expected[0..8]: {:?}", &expected[0..8]);
+        info!("  Actual[0..8]:   {:?}", &actual[0..8]);
+        info!("  Expected[32..40]: {:?}", &expected[32..40]);
+        info!("  Actual[32..40]:   {:?}", &actual[32..40]);
+        info!("  Expected[128..136]: {:?}", &expected[128..136]);
+        info!("  Actual[128..136]:   {:?}", &actual[128..136]);
+        warn!("  This means GPU shader and CPU dequant produce different bytes-to-element mappings.");
     }
 
     ProbeResult { passed, expected, actual, max_error }
