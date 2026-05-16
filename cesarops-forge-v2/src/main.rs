@@ -9,6 +9,7 @@ mod prompts;
 mod loop_engine;
 mod agent_dispatch;
 mod validator;
+mod corrector_preset;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};

@@ -177,3 +177,140 @@ scout = "http://100.110.214.86:5002"
 bootstrap = "http://127.0.0.1:5002"
 r1-cpu = "http://127.0.0.1:5557"
 mcp-local = "http://127.0.0.1:8090"
+
+
+# ── Corrector Presets ────────────────────────────────────────────────────────
+# Per-model behavior profiles. Selected automatically based on model name match,
+# or manually via [[worker]] corrector_preset = "name" override.
+#
+# Escalation ladder (consistent across all presets):
+#   Round 1 (suggest) — ASK: "I see you're thinking a lot. Have you tried tool X?"
+#   Round 2 (demand)  — REQUIRE ACK: "You must answer: did X help or do you have a next action?"
+#   Round 3 (reboot)  — HARD RESET: keep only original task, inject lesson to nautivecs
+#
+# Tunables per preset:
+#   think_tolerance     — how many rounds of pure thinking before flagging (R1/Qwen3 think a lot)
+#   loop_threshold      — same-tool repetition count before escalation starts
+#   suggest_after       — round at which corrector suggests think_harder/wso_search
+#   demand_ack_after    — round at which corrector demands explicit acknowledgment
+#   reboot_after        — round at which we hard-reset the conversation
+#   wso_auto            — let n8n auto-fire WSO web search if model stalls
+#   vector_inject       — pull nautivecs context into corrector prompts
+#   correction_strength — "light" | "medium" | "heavy" (controls how aggressive the fixer is)
+
+[corrector_preset.qwen3_thinking]
+# For Qwen3.6, R1 — these models reason a lot natively, give them rope
+think_tolerance     = 10
+loop_threshold      = 6
+suggest_after       = 6
+demand_ack_after    = 8
+reboot_after        = 12
+wso_auto            = true
+vector_inject       = true
+correction_strength = "light"
+description         = "Reasoning-heavy models. Patient, suggests web search early, demands ack only after extensive thinking."
+
+[corrector_preset.qwen_coder]
+# Qwen2.5-Coder family — terse, direct. Flag loops fast.
+think_tolerance     = 4
+loop_threshold      = 3
+suggest_after       = 3
+demand_ack_after    = 5
+reboot_after        = 7
+wso_auto            = true
+vector_inject       = true
+correction_strength = "medium"
+description         = "Direct coders. Less tolerance for thinking spirals, fast loop detection."
+
+[corrector_preset.gemma]
+# Gemma 4 — produces plausible but buggy WGSL. Heavy translator, light loop detector.
+think_tolerance     = 5
+loop_threshold      = 4
+suggest_after       = 3
+demand_ack_after    = 5
+reboot_after        = 8
+wso_auto            = true
+vector_inject       = true
+correction_strength = "heavy"
+description         = "Plausible-but-buggy outputs. Heavy WGSL translation, vector inject critical."
+
+[corrector_preset.deepseek_coder]
+# DeepSeek-Coder family — tight code, sometimes hallucinates imports
+think_tolerance     = 5
+loop_threshold      = 3
+suggest_after       = 4
+demand_ack_after    = 6
+reboot_after        = 8
+wso_auto            = true
+vector_inject       = true
+correction_strength = "medium"
+
+[corrector_preset.phi]
+# Phi-3 mini — small, drifts fast. All corrections on, low thresholds.
+think_tolerance     = 3
+loop_threshold      = 2
+suggest_after       = 2
+demand_ack_after    = 3
+reboot_after        = 5
+wso_auto            = true
+vector_inject       = true
+correction_strength = "heavy"
+
+[corrector_preset.tiny_canary]
+# TinyLlama — only used as validator/corrector itself. Don't apply correction logic.
+think_tolerance     = 0
+loop_threshold      = 0
+suggest_after       = 0
+demand_ack_after    = 0
+reboot_after        = 0
+wso_auto            = false
+vector_inject       = false
+correction_strength = "none"
+description         = "Validator/corrector role only. No correction applied to its outputs."
+
+[corrector_preset.fortytwo_rust]
+# Fortytwo_Strand-Rust-Coder-14B — Rust-specialized
+think_tolerance     = 4
+loop_threshold      = 3
+suggest_after       = 3
+demand_ack_after    = 5
+reboot_after        = 7
+wso_auto            = true
+vector_inject       = true
+correction_strength = "medium"
+description         = "Rust specialist. Trust output, but verify with cargo build."
+
+# ── Auto-detection rules ─────────────────────────────────────────────────────
+# Model name → preset mapping. First match wins.
+[[corrector_preset_match]]
+pattern = "qwen3.6|qwen3-|deepseek-r1"
+preset  = "qwen3_thinking"
+
+[[corrector_preset_match]]
+pattern = "qwen2.5-coder|qwen2.5-Coder"
+preset  = "qwen_coder"
+
+[[corrector_preset_match]]
+pattern = "gemma"
+preset  = "gemma"
+
+[[corrector_preset_match]]
+pattern = "deepseek-coder"
+preset  = "deepseek_coder"
+
+[[corrector_preset_match]]
+pattern = "phi-3|phi3"
+preset  = "phi"
+
+[[corrector_preset_match]]
+pattern = "tinyllama|TinyLlama"
+preset  = "tiny_canary"
+
+[[corrector_preset_match]]
+pattern = "fortytwo|Fortytwo|rust-coder"
+preset  = "fortytwo_rust"
+
+# Default if no pattern matches
+[[corrector_preset_match]]
+pattern = ".*"
+preset  = "qwen_coder"
