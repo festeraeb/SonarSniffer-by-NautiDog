@@ -44,6 +44,15 @@ pub struct LayerPipelines {
     pub matvec_vec4_pc_bgl: Option<wgpu::BindGroupLayout>,
     pub matvec_bias: wgpu::ComputePipeline,
     pub matvec_bias_bgl: wgpu::BindGroupLayout,
+    /// vec4 + push-constant fused matvec+bias. Preferred when K%4==0 AND
+    /// PUSH_CONSTANTS available.
+    pub matvec_bias_vec4_pc: Option<wgpu::ComputePipeline>,
+    pub matvec_bias_vec4_pc_bgl: Option<wgpu::BindGroupLayout>,
+    /// Push-constant attention QK^T. Same algorithm as the uniform-buffer
+    /// attention pipeline; saves one binding entry + one buffer write per
+    /// head per pos.
+    pub attention_pc: Option<wgpu::ComputePipeline>,
+    pub attention_pc_bgl: Option<wgpu::BindGroupLayout>,
 }
 
 /// Uniform params for RoPE dispatch.
@@ -601,6 +610,40 @@ fn dispatch_matvec_bias(
     #[derive(Clone, Copy, Pod, Zeroable)]
     struct MatvecParams { n_out: u32, k_in: u32, _pad0: u32, _pad1: u32 }
 
+    // Fast path: vec4 + push-constant fused matvec+bias when K%4==0 AND
+    // PUSH_CONSTANTS available. Drops the params uniform buffer + write,
+    // and uses 128-bit vec4 loads.
+    if k % 4 == 0 {
+        if let (Some(pipe), Some(bgl)) = (
+            pipelines.matvec_bias_vec4_pc.as_ref(),
+            pipelines.matvec_bias_vec4_pc_bgl.as_ref(),
+        ) {
+            #[repr(C)]
+            #[derive(Clone, Copy, Pod, Zeroable)]
+            struct V4P { n_out: u32, k_in: u32, k_vec4: u32, _pad: u32 }
+            let v4p = V4P { n_out: n, k_in: k, k_vec4: k / 4, _pad: 0 };
+
+            let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("matvec_bias_vec4_pc_bg"),
+                layout: bgl,
+                entries: &[
+                    wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: weights.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 2, resource: output.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 3, resource: bias.as_entire_binding() },
+                ],
+            });
+
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(pipe);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.set_push_constants(0, bytemuck::cast_slice(&[v4p]));
+            pass.dispatch_workgroups((n + 255) / 256, 1, 1);
+            return;
+        }
+    }
+
+    // Fallback uniform-buffer path.
     let params = MatvecParams { n_out: n, k_in: k, _pad0: 0, _pad1: 0 };
     let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("matvec_bias_params"),

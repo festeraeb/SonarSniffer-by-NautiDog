@@ -1,0 +1,31 @@
+You are a WGSL shader expert. Produce ONE complete WGSL shader file matvec_bias_vec4_pc.wgsl that fuses matrix-vector multiply, vec4 loads, push-constant params, AND bias add.
+
+REFERENCE: an existing already-shipped shader in this same engine, matvec_vec4_pc.wgsl, uses these declarations:
+
+struct Params { N: u32, K: u32, K_vec4: u32, _pad: u32 }
+@group(0) @binding(0) var<storage, read>       input:   array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read>       weights: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read_write> output:  array<f32>;
+var<push_constant> params: Params;
+
+The existing matvec_bias.wgsl computes: output[n] = sum_k(W[n*K + k] * input[k]) + bias[n] where bias is array<f32> length N.
+
+YOUR TASK — produce matvec_bias_vec4_pc.wgsl with these declarations:
+
+struct Params { N: u32, K: u32, K_vec4: u32, _pad: u32 }
+@group(0) @binding(0) var<storage, read>       input:   array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read>       weights: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read_write> output:  array<f32>;
+@group(0) @binding(3) var<storage, read>       bias:    array<f32>;
+var<push_constant> params: Params;
+
+@compute @workgroup_size(256, 1, 1)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    // Each thread computes one output row n; early-return if n >= params.N.
+    // vec4<f32> accumulator. 4-iteration outer unroll over K_vec4.
+    // After the loop, output[n] = acc.x + acc.y + acc.z + acc.w + bias[n]
+}
+
+Constraint: K must be a multiple of 4 (always true for transformer hidden dims).
+
+Return ONLY the .wgsl file. NO markdown fences. NO commentary. NO <think> blocks.

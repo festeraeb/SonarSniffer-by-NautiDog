@@ -259,6 +259,77 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
     let matvec_bias = create_pipeline(device, "matvec_bias",
         include_str!("../shaders/matvec_bias.wgsl"), &matvec_bias_bgl, None);
 
+    // ── vec4 + push-constant matvec+bias (preferred when K%4==0) ────────────
+    let (matvec_bias_vec4_pc, matvec_bias_vec4_pc_bgl) = if device.features().contains(wgpu::Features::PUSH_CONSTANTS) {
+        let bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("matvec_bias_vec4_pc_bgl"),
+            entries: &[
+                bgl_storage(0, true),
+                bgl_storage(1, true),
+                bgl_storage(2, false),
+                bgl_storage(3, true), // bias
+            ],
+        });
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("matvec_bias_vec4_pc"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/matvec_bias_vec4_pc.wgsl").into()),
+        });
+        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("matvec_bias_vec4_pc_layout"),
+            bind_group_layouts: &[&bgl],
+            push_constant_ranges: &[wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::COMPUTE,
+                range: 0..16,
+            }],
+        });
+        let pipe = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("matvec_bias_vec4_pc"),
+            layout: Some(&pl),
+            module: &shader,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        (Some(pipe), Some(bgl))
+    } else {
+        (None, None)
+    };
+
+    // ── Push-constant attention (QK^T) ──────────────────────────────────────
+    let (attention_pc, attention_pc_bgl) = if device.features().contains(wgpu::Features::PUSH_CONSTANTS) {
+        let bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("attention_pc_bgl"),
+            entries: &[
+                bgl_storage(0, true),  // query [head_dim]
+                bgl_storage(1, true),  // key_cache
+                bgl_storage(2, false), // scores [kv_len]
+            ],
+        });
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("attention_pc"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/attention_pc.wgsl").into()),
+        });
+        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("attention_pc_layout"),
+            bind_group_layouts: &[&bgl],
+            push_constant_ranges: &[wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::COMPUTE,
+                range: 0..32, // 8 u32-equivalents (Params is 32 bytes)
+            }],
+        });
+        let pipe = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("attention_pc"),
+            layout: Some(&pl),
+            module: &shader,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        (Some(pipe), Some(bgl))
+    } else {
+        (None, None)
+    };
+
     LayerPipelines {
         rmsnorm,
         chunked_matmul,
@@ -285,5 +356,9 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         matvec_vec4_pc_bgl,
         matvec_bias,
         matvec_bias_bgl,
+        matvec_bias_vec4_pc,
+        matvec_bias_vec4_pc_bgl,
+        attention_pc,
+        attention_pc_bgl,
     }
 }
