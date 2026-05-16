@@ -77,17 +77,51 @@ backend = "vulkan"
 inject_vectors = true
 memory_pool = ""
 
+# cesarops2 GTX 1070 — DISABLED for today
+# DeepSeek-Coder-V2-Lite (the only ~7B model on this box) uses MLA attention
+# whose KV cache won't fit 8GB at any reasonable context length.
+# Phi-3-mini Q4 (2.3GB) is on cesarops3 — could be copied over later.
+[[worker]]
+name = "Marvin"
+role = "code"
+gpu = 0
+model = "/mnt/storage/models/DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf"
+port = 5200
+template = "deepseek-coder"
+host = "10.0.0.129"
+enabled = false
+engine = "koboldcpp"
+backend = "cuda"
+inject_vectors = true
+memory_pool = ""
+
+# cesarops2 P1000 — TinyLlama validator (already running)
+[[worker]]
+name = "Picasso"
+role = "validate"
+gpu = 1
+model = "/mnt/storage/models/TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf"
+port = 5571
+template = "tinyllama"
+host = "10.0.0.129"
+enabled = true
+engine = "koboldcpp"
+backend = "cuda"
+inject_vectors = false
+memory_pool = ""
+
+# cesarops3 P106-100 — DeepSeek-R1-7B (just switched CPU→CUDA)
 [[worker]]
 name = "Scout"
-role = "general"
-gpu = 2
-model = ""
-port = 5570
-template = "qwen2.5"
-enabled = false
-host = "100.105.77.74"
+role = "think"
+gpu = 0
+model = "/home/cesarops/DeepSeek-R1-7B-Q4_K_M.gguf"
+port = 5100
+template = "deepseek-r1"
+host = "10.0.0.41"
+enabled = true
 engine = "koboldcpp"
-backend = "vulkan"
+backend = "cuda"
 inject_vectors = true
 memory_pool = ""
 
@@ -107,14 +141,14 @@ name = "Cesarops2 (1070 + P1000)"
 ip = "10.0.0.129"
 gpu = "GTX 1070 8GB + Quadro P1000 4GB"
 ports = [5200, 5571]
-notes = "LAN. 5200=FortyTwo-Rust on 1070, 5571=P1000 draft/validator. Always-on."
+notes = "LAN. 5200=DeepSeek-Coder-V2-Lite on 1070, 5571=TinyLlama validator on P1000. Always-on."
 
 [[known_nodes]]
-name = "Cesarops3 (1060)"
+name = "Cesarops3 (P106-100)"
 ip = "10.0.0.41"
-gpu = "GTX 1060 6GB"
-ports = [5570]
-notes = "LAN. Always-on."
+gpu = "P106-100 6GB (Pascal mining card, no display)"
+ports = [5100]
+notes = "LAN. 5100=DeepSeek-R1-7B (CUDA). Always-on."
 
 [[known_nodes]]
 name = "Nautik9 ThinkPad (M2200)"
