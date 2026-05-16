@@ -189,7 +189,8 @@ async fn think_harder(args: &Value, state: &AppState) -> String {
     }
 }
 
-/// Append a lesson to research_log/lessons_learned.md and (optionally) nautivecs.
+/// Append a lesson to research_log/lessons_learned.md AND push to nautivecs vector DB.
+/// This makes the lesson retrievable via think_harder on future prompts.
 async fn remember(args: &Value, state: &AppState) -> String {
     let content = match args.get("content").and_then(|v| v.as_str()) {
         Some(c) => c,
@@ -209,22 +210,45 @@ async fn remember(args: &Value, state: &AppState) -> String {
 
     let entry = format!("\n## [{}] {}\n{}\n", tags, chrono_now(), content);
 
-    match tokio::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-        .await
-    {
-        Ok(_file) => {
-            // Use write since OpenOptions append with tokio is simpler this way
-            let existing = tokio::fs::read_to_string(&log_path).await.unwrap_or_default();
-            let new_content = format!("{}{}", existing, entry);
-            match tokio::fs::write(&log_path, new_content).await {
-                Ok(_) => format!("Remembered (tags: {}): {}...", tags, &content[..content.len().min(80)]),
-                Err(e) => format!("Error writing memory: {}", e),
-            }
-        }
-        Err(e) => format!("Error opening log: {}", e),
+    // Write to markdown log
+    let log_result = {
+        let existing = tokio::fs::read_to_string(&log_path).await.unwrap_or_default();
+        let new_content = format!("{}{}", existing, entry);
+        tokio::fs::write(&log_path, new_content).await
+    };
+
+    // Push to nautivecs so think_harder can retrieve it
+    // nautivecs /add endpoint: POST { "text": "...", "tags": "...", "source": "..." }
+    let nautivecs_base = state.config.nautivecs_url
+        .trim_end_matches("/query")
+        .trim_end_matches("/search");
+    let add_url = format!("{}/add", nautivecs_base);
+
+    let client = reqwest::Client::new();
+    let nautivecs_result = client
+        .post(&add_url)
+        .json(&serde_json::json!({
+            "text": format!("[{}] {}", tags, content),
+            "tags": tags,
+            "source": "lessons_learned",
+            "file_path": "research_log/lessons_learned.md",
+        }))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await;
+
+    let nautivecs_status = match nautivecs_result {
+        Ok(r) if r.status().is_success() => " + indexed in nautivecs".to_string(),
+        Ok(r) => format!(" (nautivecs returned {})", r.status()),
+        Err(e) => format!(" (nautivecs unavailable: {})", e),
+    };
+
+    match log_result {
+        Ok(_) => format!(
+            "Remembered (tags: {}){}: {}...",
+            tags, nautivecs_status, &content[..content.len().min(80)]
+        ),
+        Err(e) => format!("Error writing memory: {}", e),
     }
 }
 
