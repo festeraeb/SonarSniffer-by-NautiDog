@@ -77,7 +77,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let rope = create_pipeline(device, "rope",
-        include_str!("../shaders/rope.wgsl"), &rope_bgl);
+        include_str!("../shaders/rope.wgsl"), &rope_bgl, None);
 
     // ── Attention (QK^T + causal mask) ──────────────────────────────────────
     let attention_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -90,7 +90,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let attention = create_pipeline(device, "attention",
-        include_str!("../shaders/attention.wgsl"), &attention_bgl);
+        include_str!("../shaders/attention.wgsl"), &attention_bgl, None);
 
     // ── Softmax ─────────────────────────────────────────────────────────────
     let softmax_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -102,7 +102,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let softmax = create_pipeline(device, "softmax",
-        include_str!("../shaders/softmax.wgsl"), &softmax_bgl);
+        include_str!("../shaders/softmax.wgsl"), &softmax_bgl, None);
 
     // ── SwiGLU ──────────────────────────────────────────────────────────────
     let swiglu_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -115,7 +115,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let swiglu = create_pipeline(device, "swiglu",
-        include_str!("../shaders/swiglu.wgsl"), &swiglu_bgl);
+        include_str!("../shaders/swiglu.wgsl"), &swiglu_bgl, None);
 
     // ── Elementwise Add (residual connections) ──────────────────────────────
     let add_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -128,7 +128,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let add = create_pipeline(device, "add",
-        include_str!("../shaders/add.wgsl"), &add_bgl);
+        include_str!("../shaders/add.wgsl"), &add_bgl, None);
 
     // ── Attention-Value weighted sum ────────────────────────────────────────
     let av_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -141,7 +141,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let av = create_pipeline(device, "attn_value",
-        include_str!("../shaders/attn_value.wgsl"), &av_bgl);
+        include_str!("../shaders/attn_value.wgsl"), &av_bgl, None);
 
     // ── Q6_K GPU Dequantization ───────────────────────────────────────────
     let dequant_q6k = crate::shader_ops::DequantQ6KPipeline::new(device);
@@ -156,7 +156,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let transpose = create_pipeline(device, "transpose",
-        include_str!("../shaders/transpose.wgsl"), &transpose_bgl);
+        include_str!("../shaders/transpose.wgsl"), &transpose_bgl, None);
 
     // ── Matrix-Vector Multiply (GGUF native layout, no transpose) ───────
     let matvec_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -169,7 +169,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let matvec = create_pipeline(device, "matvec",
-        include_str!("../shaders/matvec.wgsl"), &matvec_bgl);
+        include_str!("../shaders/matvec.wgsl"), &matvec_bgl, None);
 
     // ── Fused Matrix-Vector + Bias (eliminates copy hazard on P100) ─────
     let matvec_bias_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -183,7 +183,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         ],
     });
     let matvec_bias = create_pipeline(device, "matvec_bias",
-        include_str!("../shaders/matvec_bias.wgsl"), &matvec_bias_bgl);
+        include_str!("../shaders/matvec_bias.wgsl"), &matvec_bias_bgl, None);
 
     LayerPipelines {
         rmsnorm,

@@ -10,12 +10,20 @@ const MAX_TOOL_ROUNDS: u32 = u32::MAX;
 
 // ── Corrector endpoint cascade ───────────────────────────────────────────────
 // Try each in order until one responds. This lets the P1000 TinyLlama act as
-// a fallback corrector when Marvin (14B on 1070) is offline.
+// a fallback corrector when Marvin (FortyTwo Rust 14B on 1070) is offline.
+//
+// LAN IPs — only the M2200 (mobile) uses Tailscale.
 const CORRECTOR_CASCADE: &[(&str, &str)] = &[
-    ("marvin-14b",   "http://100.102.158.111:5555"),  // 14B on GTX 1070 — primary
-    ("picasso-tiny", "http://100.102.158.111:5571"),  // TinyLlama on P1000 — fallback
-    ("laptop-tiny",  "http://100.110.214.86:5571"),   // M2200 on ThinkPad — tertiary
+    ("marvin-rust14b", "http://10.0.0.129:5200"),     // FortyTwo Rust 14B on GTX 1070 (cesarops2 LAN) — primary
+    ("picasso-tiny",   "http://10.0.0.129:5571"),     // TinyLlama on P1000 (cesarops2 LAN) — fallback
+    ("laptop-tiny",    "http://100.110.214.86:5571"), // M2200 on ThinkPad — Tailscale tertiary (mobile)
 ];
+
+// ── Auto-WSO trigger ─────────────────────────────────────────────────────────
+// After this many consecutive failures, the loop engine fires a think_harder
+// (WSO + nautivecs) for the most recent task automatically, even if the model
+// hasn't asked for one. Result is injected into the next prompt as context.
+const AUTO_WSO_AFTER_FAILURES: u32 = 3;
 
 // ── "Close enough" thresholds ────────────────────────────────────────────────
 // If a code block is this close to compilable, finish it ourselves.
@@ -77,6 +85,7 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
     let mut diagnosis_info: Option<String> = None;
     let (max_diagnosis, _gen_timeout, _thinker_timeout, _max_tokens, start_temp, skip_corrector) = read_tuning();
     let mut temperature = start_temp;
+    let mut last_auto_wso_at: u32 = 0; // failure_count when last auto-WSO fired
 
     for round in 1..=MAX_TOOL_ROUNDS {
         // Check interrupt flag
@@ -88,6 +97,35 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
                 tool_actions,
                 diagnosis: diagnosis_info,
             };
+        }
+
+        // ── Auto-WSO when stuck ──────────────────────────────────────────────
+        // Fire think_harder automatically if we've hit AUTO_WSO_AFTER_FAILURES
+        // consecutive failures since the last auto-fire. The model gets the
+        // search results in its next prompt without having to ask.
+        if failure_count >= AUTO_WSO_AFTER_FAILURES && failure_count > last_auto_wso_at {
+            let last_user = {
+                let conv = state.conversation.lock().await;
+                conv.iter().rev()
+                    .find(|m| m.role == "user")
+                    .map(|m| m.content.clone())
+                    .unwrap_or_default()
+            };
+            if !last_user.is_empty() {
+                let query = if last_user.len() > 200 { &last_user[..200] } else { &last_user[..] };
+                info!("Auto-WSO triggered after {} failures: '{}'", failure_count, query);
+                let args = serde_json::json!({"query": query});
+                let wso_result = tools::execute("think_harder", &args, state).await;
+                let mut conv = state.conversation.lock().await;
+                conv.push(Message {
+                    role: "user".to_string(),
+                    content: format!(
+                        "[AUTO-WSO — you appear stuck after {} failures. Here's relevant context from the knowledge base + web. Use it.]\n{}",
+                        failure_count, wso_result
+                    ),
+                });
+                last_auto_wso_at = failure_count;
+            }
         }
 
         // Check for steering messages injected between rounds
@@ -104,6 +142,7 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
                 }
             }
         }
+
 
         // Build prompt from conversation state
         let prompt = build_prompt(state, &thinker_context, failure_count).await;
@@ -336,6 +375,7 @@ pub async fn run(state: &AppState, user_message: &str) -> SendResponse {
                     memory::auto_remember_success(&diag_result, &ft, "qwen3.6-35b", state).await;
                 }
                 failure_count = 0; // Reset on success
+                last_auto_wso_at = 0; // re-arm auto-WSO for next failure burst
             }
 
             continue;

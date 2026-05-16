@@ -139,6 +139,49 @@
 <h2>Network Nodes <span id="disc-spinner" style="display:none;color:var(--text-dim)">⟳</span></h2>
 <div class="node-grid" id="node-grid"></div>
 
+<!-- ── Polisher / Forge Status ───────────────────────────────────────── -->
+<h2>Polisher Status <span style="font-size:0.7rem;color:var(--text-dim);font-weight:normal">— orchestrator + tool wiring</span></h2>
+<div class="card" id="polisher-card" style="margin-bottom:18px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+    <div>
+      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Tool Wiring</div>
+      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
+        <div>✓ Corrector cascade <span style="color:var(--text-dim)">(Marvin → Picasso → Nautik)</span></div>
+        <div>✓ think_harder = nautivecs + WSO web</div>
+        <div>✓ Vector injection per worker</div>
+        <div>✓ Auto-WSO after <b id="ps-auto-wso">3</b> consecutive failures</div>
+        <div>✓ Translator + JSON fixer + loop detector</div>
+        <div>✓ Hot-swap on 5 consecutive scorecard failures</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Today's Big Hitters</div>
+      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
+        <div>P100 #0 → <b>Gemma-4-26B-MoE</b> IQ4_XS</div>
+        <div>P100 #1 → <b>Qwen3.6-35B-A3B</b> Q4_K_M</div>
+        <div style="color:var(--text-dim)">All routed through forge tools</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Specialists (today)</div>
+      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
+        <div>1070 → FortyTwo Rust 14B (corrector)</div>
+        <div>P1000 → TinyLlama (draft / validator)</div>
+        <div>1060 → routed via forge</div>
+        <div>M2200 → cesarops-inference (regression)</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Knowledge</div>
+      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
+        <div>nautivecs: <b id="ps-vec-count">12,600+</b> chunks indexed</div>
+        <div>scorecard: <code>~/.cache/cesarops/model_scorecard.json</code></div>
+        <div>polisher writes lessons via remember()</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Activity Log ──────────────────────────────────────────────────── -->
 <h2>Activity Log</h2>
 <div class="log-box" id="log">Ready.</div>

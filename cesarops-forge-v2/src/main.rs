@@ -17,7 +17,7 @@ use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router}
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -402,12 +402,29 @@ async fn list_available_models() -> Json<serde_json::Value> {
     Json(serde_json::json!(models))
 }
 
-async fn start_worker(axum::extract::Path(idx): axum::extract::Path<usize>) -> Json<serde_json::Value> {
+/// Resolve a worker path param to its index in the worker array.
+/// Accepts either a numeric index ("0", "1") or a worker name ("GemmaBig").
+fn resolve_worker_idx(workers: &[toml::Value], path: &str) -> Option<usize> {
+    if let Ok(n) = path.parse::<usize>() {
+        if n < workers.len() { return Some(n); }
+    }
+    workers.iter().position(|w| {
+        w.get("name").and_then(|v| v.as_str()) == Some(path)
+    })
+}
+
+async fn start_worker(axum::extract::Path(path): axum::extract::Path<String>) -> Json<serde_json::Value> {
     // Read config, get worker details, spawn cesarops-inference process
     let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
     let content = std::fs::read_to_string(config_path).unwrap_or_default();
     let table: toml::Table = content.parse().unwrap_or_default();
-    
+
+    let workers_arr = table.get("worker").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+    let idx = match resolve_worker_idx(&workers_arr, &path) {
+        Some(i) => i,
+        None => return Json(serde_json::json!({"error": format!("Worker not found: {}", path)})),
+    };
+
     if let Some(workers) = table.get("worker").and_then(|v| v.as_array()) {
         if let Some(worker) = workers.get(idx) {
             let model = worker.get("model").and_then(|v| v.as_str()).unwrap_or("");
@@ -457,11 +474,17 @@ async fn start_worker(axum::extract::Path(idx): axum::extract::Path<usize>) -> J
     }
 }
 
-async fn stop_worker(axum::extract::Path(idx): axum::extract::Path<usize>) -> Json<serde_json::Value> {
+async fn stop_worker(axum::extract::Path(path): axum::extract::Path<String>) -> Json<serde_json::Value> {
     let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
     let content = std::fs::read_to_string(config_path).unwrap_or_default();
     let table: toml::Table = content.parse().unwrap_or_default();
-    
+
+    let workers_arr = table.get("worker").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+    let idx = match resolve_worker_idx(&workers_arr, &path) {
+        Some(i) => i,
+        None => return Json(serde_json::json!({"error": format!("Worker not found: {}", path)})),
+    };
+
     if let Some(workers) = table.get("worker").and_then(|v| v.as_array()) {
         if let Some(worker) = workers.get(idx) {
             let port = worker.get("port").and_then(|v| v.as_integer()).unwrap_or(5010);
@@ -516,9 +539,13 @@ async fn discover_nodes() -> Json<serde_json::Value> {
             let empty_ports = vec![];
             let ports = node.get("ports").and_then(|v| v.as_array()).unwrap_or(&empty_ports);
 
-            // Check if Tailscale sees this peer as online
-            let ts_online = if ip == "127.0.0.1" {
-                true // local is always online
+            // Check if node is reachable: localhost is always; LAN (10.x/192.168.x/172.16.x)
+            // is "reachable" optimistically (the per-port HTTP probe will confirm); only
+            // Tailscale peers (100.x) require Tailscale to report them up.
+            let ts_online = if ip == "127.0.0.1" || ip == "localhost" {
+                true
+            } else if ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") {
+                true // LAN — assume reachable, port probes decide
             } else {
                 tailscale_peers.iter().any(|p| p.0 == ip && p.1)
             };
@@ -526,19 +553,23 @@ async fn discover_nodes() -> Json<serde_json::Value> {
             let mut port_status = Vec::new();
             for port_val in ports {
                 let port = port_val.as_integer().unwrap_or(0);
-                let url = format!("http://{}:{}/health", ip, port);
+                // Probe order: /api/extra/version (koboldcpp) → /v1/models (OpenAI-compat) → /health (cesarops services)
+                let probe_paths = ["/api/extra/version", "/v1/models", "/health"];
                 let online = if ts_online {
-                    match client.get(&url).send().await {
-                        Ok(resp) => {
+                    let mut found: Option<serde_json::Value> = None;
+                    for path in probe_paths {
+                        let url = format!("http://{}:{}{}", ip, port, path);
+                        if let Ok(resp) = client.get(&url).send().await {
                             if resp.status().is_success() {
-                                let body: serde_json::Value = resp.json().await.unwrap_or_default();
-                                Some(body)
-                            } else {
-                                None
+                                let body: serde_json::Value = resp.json().await.unwrap_or_else(|_| {
+                                    serde_json::json!({"service": "responding", "probe": path})
+                                });
+                                found = Some(body);
+                                break;
                             }
                         }
-                        Err(_) => None,
                     }
+                    found
                 } else {
                     None
                 };
@@ -767,18 +798,149 @@ async fn get_cluster_config_full() -> Json<serde_json::Value> {
 
 // ── Config persistence helpers ───────────────────────────────────────────────
 
+// ── Config persistence helpers ───────────────────────────────────────────────
+//
+// Round-trip via toml_edit so we preserve comments, ordering, and inline-table
+// formatting in cluster_config.toml. The cluster panel's APPLY / per-card
+// toggles persist real config changes, not just log lines.
+
+const CFG_PATH: &str = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+
+fn json_to_toml_edit(v: &serde_json::Value) -> toml_edit::Item {
+    use toml_edit::{Item, Value, Array, InlineTable, Formatted};
+    match v {
+        serde_json::Value::Null => Item::Value(Value::String(Formatted::new(String::new()))),
+        serde_json::Value::Bool(b) => Item::Value(Value::Boolean(Formatted::new(*b))),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Item::Value(Value::Integer(Formatted::new(i)))
+            } else {
+                Item::Value(Value::Float(Formatted::new(n.as_f64().unwrap_or(0.0))))
+            }
+        }
+        serde_json::Value::String(s) => Item::Value(Value::String(Formatted::new(s.clone()))),
+        serde_json::Value::Array(arr) => {
+            let mut a = Array::new();
+            for item in arr {
+                if let Item::Value(val) = json_to_toml_edit(item) {
+                    a.push(val);
+                }
+            }
+            Item::Value(Value::Array(a))
+        }
+        serde_json::Value::Object(obj) => {
+            let mut t = InlineTable::new();
+            for (k, val) in obj {
+                if let Item::Value(v) = json_to_toml_edit(val) {
+                    t.insert(k, v);
+                }
+            }
+            Item::Value(Value::InlineTable(t))
+        }
+    }
+}
+
+fn find_worker_idx(doc: &toml_edit::DocumentMut, name: &str) -> Option<usize> {
+    let workers = doc.get("worker")?.as_array_of_tables()?;
+    workers.iter().position(|t| {
+        t.get("name").and_then(|v| v.as_str()) == Some(name)
+    })
+}
+
 fn update_worker_config(name: &str, config: &serde_json::Value) {
-    // Simple approach: read toml, find [[worker]] with matching name, update fields, write back
-    // For now just log — full persistence is a follow-up
-    info!("TODO: persist worker config for {} to cluster_config.toml", name);
+    let content = match std::fs::read_to_string(CFG_PATH) {
+        Ok(s) => s,
+        Err(e) => { warn!("update_worker_config read: {}", e); return; }
+    };
+    let mut doc: toml_edit::DocumentMut = match content.parse() {
+        Ok(d) => d,
+        Err(e) => { warn!("update_worker_config parse: {}", e); return; }
+    };
+    let idx = match find_worker_idx(&doc, name) {
+        Some(i) => i,
+        None => { warn!("update_worker_config: '{}' not found", name); return; }
+    };
+    if let Some(workers) = doc.get_mut("worker").and_then(|v| v.as_array_of_tables_mut()) {
+        if let Some(table) = workers.get_mut(idx) {
+            if let Some(obj) = config.as_object() {
+                for (k, v) in obj {
+                    if k == "corrector_functions" || v.is_string() || v.is_boolean() || v.is_number() {
+                        table.insert(k, json_to_toml_edit(v));
+                    }
+                }
+            }
+        }
+    }
+    if let Err(e) = std::fs::write(CFG_PATH, doc.to_string()) {
+        warn!("update_worker_config write: {}", e);
+    } else {
+        info!("Worker '{}' persisted to cluster_config.toml", name);
+    }
 }
 
 fn update_worker_field(name: &str, field: &str, value: serde_json::Value) {
-    info!("TODO: persist worker.{}.{} = {} to cluster_config.toml", name, field, value);
+    let content = match std::fs::read_to_string(CFG_PATH) {
+        Ok(s) => s,
+        Err(e) => { warn!("update_worker_field read: {}", e); return; }
+    };
+    let mut doc: toml_edit::DocumentMut = match content.parse() {
+        Ok(d) => d,
+        Err(e) => { warn!("update_worker_field parse: {}", e); return; }
+    };
+    let idx = match find_worker_idx(&doc, name) {
+        Some(i) => i,
+        None => { warn!("update_worker_field: '{}' not found", name); return; }
+    };
+    if let Some(workers) = doc.get_mut("worker").and_then(|v| v.as_array_of_tables_mut()) {
+        if let Some(table) = workers.get_mut(idx) {
+            table.insert(field, json_to_toml_edit(&value));
+        }
+    }
+    if let Err(e) = std::fs::write(CFG_PATH, doc.to_string()) {
+        warn!("update_worker_field write: {}", e);
+    } else {
+        info!("Worker '{}' field '{}' persisted", name, field);
+    }
 }
 
 fn update_corrector_function(func: &str, enabled: bool) {
-    info!("TODO: persist corrector_functions.{} = {} to cluster_config.toml", func, enabled);
+    let content = match std::fs::read_to_string(CFG_PATH) {
+        Ok(s) => s,
+        Err(e) => { warn!("update_corrector_function read: {}", e); return; }
+    };
+    let mut doc: toml_edit::DocumentMut = match content.parse() {
+        Ok(d) => d,
+        Err(e) => { warn!("update_corrector_function parse: {}", e); return; }
+    };
+    let mut written = false;
+    if let Some(workers) = doc.get_mut("worker").and_then(|v| v.as_array_of_tables_mut()) {
+        for w in workers.iter_mut() {
+            let is_corrector = w.get("role").and_then(|v| v.as_str()) == Some("correct");
+            if !is_corrector { continue; }
+            let entry = w.entry("corrector_functions").or_insert_with(|| {
+                toml_edit::Item::Value(toml_edit::Value::InlineTable(toml_edit::InlineTable::new()))
+            });
+            if let toml_edit::Item::Value(toml_edit::Value::InlineTable(t)) = entry {
+                t.insert(func, toml_edit::Value::Boolean(toml_edit::Formatted::new(enabled)));
+                written = true;
+            }
+        }
+    }
+    if !written {
+        let entry = doc.entry("corrector_functions").or_insert_with(|| {
+            toml_edit::Item::Table(toml_edit::Table::new())
+        });
+        if let toml_edit::Item::Table(t) = entry {
+            t.insert(func, toml_edit::Item::Value(
+                toml_edit::Value::Boolean(toml_edit::Formatted::new(enabled))
+            ));
+        }
+    }
+    if let Err(e) = std::fs::write(CFG_PATH, doc.to_string()) {
+        warn!("update_corrector_function write: {}", e);
+    } else {
+        info!("corrector_functions.{} = {} persisted", func, enabled);
+    }
 }
 
 /// POST /validate { "prompt": "optional" }
@@ -889,7 +1051,7 @@ async fn main() {
         .route("/cluster/corrector/set_function",      post(corrector_set_function))
         .route("/cluster/engines",                     get(get_available_engines))
         .route("/cluster/memory_pool/create",          post(memory_pool_create))
-        .route("/cluster/config",                      get(get_cluster_config_full))
+        .route("/cluster/config/full",                 get(get_cluster_config_full))
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 9100));
