@@ -53,6 +53,12 @@ pub struct LayerPipelines {
     /// head per pos.
     pub attention_pc: Option<wgpu::ComputePipeline>,
     pub attention_pc_bgl: Option<wgpu::BindGroupLayout>,
+    /// Fused Q6_K dequant + matvec. Compile-staged: requires raw Q6_K bytes
+    /// on GPU (tensor_loader_safe currently pre-dequants — wiring deferred
+    /// until the loader keeps the packed bytes around). Pipeline is built
+    /// when PUSH_CONSTANTS is available; dispatch site lands in a follow-up.
+    pub matvec_q6k_fused: Option<wgpu::ComputePipeline>,
+    pub matvec_q6k_fused_bgl: Option<wgpu::BindGroupLayout>,
 }
 
 /// Uniform params for RoPE dispatch.

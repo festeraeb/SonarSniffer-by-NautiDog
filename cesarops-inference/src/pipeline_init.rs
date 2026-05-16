@@ -330,6 +330,47 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         (None, None)
     };
 
+    // ── Fused Q6_K dequant + matvec ────────────────────────────────────────
+    // Compile-staged: pipeline + bgl built and ready, but the dispatch site
+    // requires raw Q6_K bytes on the GPU rather than pre-dequanted f32.
+    // tensor_loader_safe currently pre-dequants Q6_K into f32 buffers, so
+    // this kernel can't be invoked until the loader keeps the packed bytes
+    // alongside (or instead of) the dequanted form. Tracked as engine #2
+    // dispatch wiring.
+    let (matvec_q6k_fused, matvec_q6k_fused_bgl) = if device.features().contains(wgpu::Features::PUSH_CONSTANTS) {
+        let bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("matvec_q6k_fused_bgl"),
+            entries: &[
+                bgl_storage(0, true),  // input vector [K]
+                bgl_storage(1, true),  // q6k packed bytes
+                bgl_storage(2, false), // output vector [N]
+            ],
+        });
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("matvec_q6k_fused"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/matvec_q6k_fused.wgsl").into()),
+        });
+        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("matvec_q6k_fused_layout"),
+            bind_group_layouts: &[&bgl],
+            push_constant_ranges: &[wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::COMPUTE,
+                range: 0..16, // Params is 4 u32 = 16 bytes
+            }],
+        });
+        let pipe = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("matvec_q6k_fused"),
+            layout: Some(&pl),
+            module: &shader,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        (Some(pipe), Some(bgl))
+    } else {
+        (None, None)
+    };
+
     LayerPipelines {
         rmsnorm,
         chunked_matmul,
@@ -360,5 +401,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         matvec_bias_vec4_pc_bgl,
         attention_pc,
         attention_pc_bgl,
+        matvec_q6k_fused,
+        matvec_q6k_fused_bgl,
     }
 }
