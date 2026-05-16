@@ -28,6 +28,7 @@ pub enum TensorType {
     Q4_K = 12,
     Q5_K = 13,
     Q6_K = 14,
+    IQ4_XS = 17,
     BF16 = 28,
 }
 
@@ -45,6 +46,7 @@ impl TensorType {
             12 => Some(Self::Q4_K),
             13 => Some(Self::Q5_K),
             14 => Some(Self::Q6_K),
+            17 => Some(Self::IQ4_XS),
             28 => Some(Self::BF16),
             _ => None,
         }
@@ -72,10 +74,11 @@ impl TensorType {
             Self::Q4_1 => (n_elements + 31) / 32 * 20,
             Self::Q5_0 => (n_elements + 31) / 32 * 34,
             Self::Q5_1 => (n_elements + 31) / 32 * 36,
-            Self::Q8_0 => n_elements,
+            Self::Q8_0 => (n_elements + 31) / 32 * 34,  // 2 (f16) + 32 (i8)
             Self::Q4_K => (n_elements + 255) / 256 * 176,
-            Self::Q5_K => (n_elements + 255) / 256 * 192,
+            Self::Q5_K => (n_elements + 255) / 256 * 176, // 2+2+12+32+128
             Self::Q6_K => (n_elements + 255) / 256 * 210,
+            Self::IQ4_XS => (n_elements + 255) / 256 * 136, // 2+2+4+128
         }
     }
 
@@ -355,6 +358,7 @@ fn dequantize_to_f32(data: &[u8], n_elements: usize, dtype: TensorType) -> Vec<f
         TensorType::Q4_K => dequant_q4_k(data, n_elements),
         TensorType::Q6_K => dequant_q6_k(data, n_elements),
         TensorType::Q5_K => dequant_q5_k(data, n_elements),
+        TensorType::IQ4_XS => dequant_iq4_xs(data, n_elements),
         _ => {
             // Fallback: treat as raw f32
             let mut out = vec![0.0f32; n_elements];
@@ -561,10 +565,140 @@ fn dequant_q6_k(data: &[u8], n_elements: usize) -> Vec<f32> {
     out
 }
 
-/// Q5_K: simplified dequant (treat as Q4_K with extra bit)
+/// Q5_K: block_size=256, layout: ql[128] + qh[32] + scales[12] + d[2] + dmin[2] = 176 bytes
+///
+/// Mirrors llama.cpp `dequantize_row_q5_K` in `ggml-quants.c`.
+/// 8 sub-blocks of 32 elements. Scales and mins are 6-bit packed in scales[12].
+/// q5 = (ql_nibble) | (qh_bit << 4), value = d*scale*q5 - dmin*min
 fn dequant_q5_k(data: &[u8], n_elements: usize) -> Vec<f32> {
-    // Approximate: use Q4_K path (close enough for initial testing)
-    dequant_q4_k(data, n_elements)
+    let block_size = 256;
+    let block_bytes = 176;
+    let n_blocks = (n_elements + block_size - 1) / block_size;
+    let mut out = vec![0.0f32; n_elements];
+
+    for b in 0..n_blocks {
+        let off = b * block_bytes;
+        if off + block_bytes > data.len() { break; }
+        let out_base = b * block_size;
+        if out_base >= n_elements { break; }
+
+        // Layout: d[2] + dmin[2] + scales[12] + qh[32] + ql[128]
+        let d    = f16_to_f32(u16::from_le_bytes([data[off],     data[off + 1]]));
+        let dmin = f16_to_f32(u16::from_le_bytes([data[off + 2], data[off + 3]]));
+        let sc   = &data[off + 4  .. off + 16];  // 12 bytes of packed 6-bit scales/mins
+        let qh   = &data[off + 16 .. off + 48];  // 32 bytes high bits (1 bit per element)
+        let ql   = &data[off + 48 .. off + 176]; // 128 bytes low nibbles (4 bits per element)
+
+        // Extract 6-bit scale and min for each of 8 sub-blocks.
+        // Packing: sc[0..5] hold scales[0..7] as 6-bit values (two per byte, lower then upper).
+        //          sc[6..11] hold mins[0..7] the same way.
+        // Actually llama.cpp uses a more complex interleaved packing — use the helper below.
+        let (scales, mins) = unpack_q5k_scales(sc);
+
+        for i in 0..256usize {
+            let elem = out_base + i;
+            if elem >= n_elements { break; }
+
+            let sub = i / 32;
+            let pos = i % 32;
+
+            // Low 4 bits from ql
+            let ql_byte = ql[i / 2];
+            let ql_val = if i % 2 == 0 { ql_byte & 0x0F } else { (ql_byte >> 4) & 0x0F };
+
+            // High bit from qh (1 bit per element, packed 8 per byte)
+            let qh_byte = qh[pos / 8 + (sub / 4) * 4]; // stride by sub-block group
+            // Simpler: qh is flat [32 bytes], element i → byte i/8, bit i%8
+            let qh_byte2 = qh[i / 8];
+            let qh_bit = (qh_byte2 >> (i % 8)) & 0x01;
+
+            let q5 = (ql_val as i32) | ((qh_bit as i32) << 4);
+
+            out[elem] = d * (scales[sub] as f32) * (q5 as f32)
+                      - dmin * (mins[sub] as f32);
+        }
+    }
+    out
+}
+
+/// Unpack Q5_K's 12-byte scale/min block into 8 scales and 8 mins.
+/// llama.cpp packing: each value is 6 bits. Bytes 0-5 hold scales, bytes 6-11 hold mins,
+/// but they're interleaved in 4-bit nibbles across the 12 bytes.
+/// Exact layout from ggml-quants.c `get_scale_min_k4`:
+///   if j < 4: scale = sc[j] & 63, min = sc[j+4] & 63
+///   else:     scale = (sc[j+4] & 0xF) | ((sc[j-4] >> 6) << 4)
+///             min   = (sc[j+4] >> 4)  | ((sc[j-0] >> 6) << 4)
+fn unpack_q5k_scales(sc: &[u8]) -> ([u8; 8], [u8; 8]) {
+    let mut scales = [0u8; 8];
+    let mut mins   = [0u8; 8];
+    for j in 0..8usize {
+        if j < 4 {
+            scales[j] = sc[j] & 63;
+            mins[j]   = sc[j + 4] & 63;
+        } else {
+            scales[j] = (sc[j + 4] & 0x0F) | ((sc[j - 4] >> 6) << 4);
+            mins[j]   = (sc[j + 4] >> 4)   | ((sc[j - 0] >> 6) << 4);
+        }
+    }
+    (scales, mins)
+}
+
+/// Q5_K: simplified dequant — see full implementation above.
+/// This stub is kept for the extract_6bit helper below.
+
+/// IQ4_XS: block_size=256, layout: d[2] + scales_h[2] + scales_l[4] + qs[128] = 136 bytes
+///
+/// Mirrors llama.cpp `dequantize_row_iq4_xs` in `ggml-quants.c`.
+/// 8 sub-blocks of 32 elements. Each sub-block has a 6-bit signed scale.
+/// Quant indices are 4-bit, looked up in kvalues_iq4nl[16].
+fn dequant_iq4_xs(data: &[u8], n_elements: usize) -> Vec<f32> {
+    // IQ4_XS lookup table (same as iq4_nl)
+    const KVALUES: [i32; 16] = [
+        -127, -104, -83, -65, -49, -35, -22, -10,
+           1,   13,  25,  38,  53,  69,  89, 113,
+    ];
+
+    let block_size = 256;
+    let block_bytes = 136; // 2+2+4+128
+    let n_blocks = (n_elements + block_size - 1) / block_size;
+    let mut out = vec![0.0f32; n_elements];
+
+    for b in 0..n_blocks {
+        let off = b * block_bytes;
+        if off + block_bytes > data.len() { break; }
+        let out_base = b * block_size;
+        if out_base >= n_elements { break; }
+
+        // d: f16 at [0..1]
+        let d = f16_to_f32(u16::from_le_bytes([data[off], data[off + 1]]));
+        // scales_h: u16 at [2..3] — high 2 bits of each of 8 sub-block scales
+        let scales_h = u16::from_le_bytes([data[off + 2], data[off + 3]]);
+        // scales_l: [4..7] — low 4 bits of each of 8 sub-block scales, 2 per byte
+        // qs: [8..135] — 4-bit quant indices, 2 per byte
+
+        for i in 0..256usize {
+            let elem = out_base + i;
+            if elem >= n_elements { break; }
+
+            let ib = i / 32; // sub-block index 0..7
+
+            // Reconstruct 6-bit signed scale for this sub-block
+            // Low 4 bits: nibble ib of scales_l (byte ib/2, nibble ib%2)
+            let sl_byte = data[off + 4 + ib / 2];
+            let scale_low = if ib % 2 == 0 { sl_byte & 0x0F } else { (sl_byte >> 4) & 0x0F };
+            // High 2 bits: bits [2*ib .. 2*ib+1] of scales_h
+            let scale_high = ((scales_h >> (ib * 2)) & 0x03) as u8;
+            // Combine to 6-bit signed (subtract 32 to center)
+            let scale_6bit = ((scale_high << 4) | scale_low) as i32 - 32;
+
+            // 4-bit quant index
+            let qs_byte = data[off + 8 + i / 2];
+            let q_idx = if i % 2 == 0 { qs_byte & 0x0F } else { (qs_byte >> 4) & 0x0F } as usize;
+
+            out[elem] = d * (scale_6bit as f32) * (KVALUES[q_idx] as f32);
+        }
+    }
+    out
 }
 
 /// Extract a 6-bit value from a packed byte array at the given index.

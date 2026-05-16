@@ -280,17 +280,19 @@ fn get_u32_meta(metadata: &HashMap<String, GgufValue>, key: &str) -> Option<u32>
 fn compute_tensor_size(shape: &[usize], quant_type: u32) -> usize {
     let n_elements: usize = shape.iter().product();
     match quant_type {
-        0 => n_elements * 4,   // F32
-        1 => n_elements * 2,   // F16
-        2 => (n_elements * 4 + 31) / 32 * 18,  // Q4_0 (block size 32, 18 bytes per block)
-        3 => (n_elements * 4 + 31) / 32 * 20,  // Q4_1
-        6 => (n_elements + 31) / 32 * 34,      // Q5_0
-        7 => (n_elements + 31) / 32 * 36,      // Q5_1
-        8 => n_elements,                        // Q8_0
-        12 => (n_elements + 255) / 256 * 176,   // Q4_K_M (approx)
-        14 => (n_elements + 255) / 256 * 210,   // Q6_K (approx)
-        28 => n_elements * 2,                   // BF16
-        30 => n_elements * 2,                   // F16 (alt)
-        _ => n_elements * 2, // Default to 2 bytes per element
+        0  => n_elements * 4,                          // F32
+        1  => n_elements * 2,                          // F16
+        2  => (n_elements + 31) / 32 * 18,             // Q4_0
+        3  => (n_elements + 31) / 32 * 20,             // Q4_1
+        6  => (n_elements + 31) / 32 * 34,             // Q5_0
+        7  => (n_elements + 31) / 32 * 36,             // Q5_1
+        8  => (n_elements + 31) / 32 * 34,             // Q8_0: 2(f16) + 32(i8)
+        12 => (n_elements + 255) / 256 * 176,          // Q4_K
+        13 => (n_elements + 255) / 256 * 176,          // Q5_K: 2+2+12+32+128
+        14 => (n_elements + 255) / 256 * 210,          // Q6_K
+        17 => (n_elements + 255) / 256 * 136,          // IQ4_XS: 2+2+4+128
+        28 => n_elements * 2,                          // BF16
+        30 => n_elements * 2,                          // F16 alt
+        _  => n_elements * 2,                          // Unknown: conservative 2 bytes
     }
 }
