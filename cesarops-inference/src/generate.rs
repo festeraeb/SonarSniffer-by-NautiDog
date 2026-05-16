@@ -229,7 +229,7 @@ fn execute_single_token(
         execute_layer(
             device, queue, &mut encoder, pipelines, config,
             layer_weights, &mut kv_caches[layer_idx],
-            hidden_state, &scratch, pos,
+            hidden_state, pos,
         );
         queue.submit(std::iter::once(encoder.finish()));
 

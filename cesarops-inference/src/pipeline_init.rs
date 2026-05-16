@@ -170,6 +170,20 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
     let matvec = create_pipeline(device, "matvec",
         include_str!("../shaders/matvec.wgsl"), &matvec_bgl);
 
+    // ── Fused Matrix-Vector + Bias (eliminates copy hazard on P100) ─────
+    let matvec_bias_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("matvec_bias_bgl"),
+        entries: &[
+            bgl_storage(0, true),  // input vector [K]
+            bgl_storage(1, true),  // weights [N × K] row-major
+            bgl_storage(2, false), // output vector [N]
+            bgl_uniform(3),        // params {N, K}
+            bgl_storage(4, true),  // bias [N]
+        ],
+    });
+    let matvec_bias = create_pipeline(device, "matvec_bias",
+        include_str!("../shaders/matvec_bias.wgsl"), &matvec_bias_bgl);
+
     LayerPipelines {
         rmsnorm,
         chunked_matmul,
@@ -190,5 +204,7 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         transpose_bgl,
         matvec,
         matvec_bgl,
+        matvec_bias,
+        matvec_bias_bgl,
     }
 }

@@ -33,6 +33,8 @@ pub struct LayerPipelines {
     pub transpose_bgl: wgpu::BindGroupLayout,
     pub matvec: wgpu::ComputePipeline,
     pub matvec_bgl: wgpu::BindGroupLayout,
+    pub matvec_bias: wgpu::ComputePipeline,
+    pub matvec_bias_bgl: wgpu::BindGroupLayout,
 }
 
 /// Uniform params for RoPE dispatch.
@@ -151,7 +153,6 @@ pub fn execute_layer(
     let q_buf = create_temp_buffer(device, "q", hidden_bytes);
     let k_buf = create_temp_buffer(device, "k", kv_dim_bytes);
     let v_buf = create_temp_buffer(device, "v", kv_dim_bytes);
-    let bias_tmp = create_temp_buffer(device, "bias_tmp", hidden_bytes);
     let attn_output = create_temp_buffer(device, "attn_out", hidden_bytes);
     let attn_projected = create_temp_buffer(device, "attn_proj", hidden_bytes);
     let residual_tmp = create_temp_buffer(device, "res_tmp", hidden_bytes);
@@ -168,25 +169,27 @@ pub fn execute_layer(
         config.hidden_dim, 1, config.rms_norm_eps,
     );
 
-    // ── 2. QKV Projections + Biases + RoPE ──────────────────────────────────
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &normed, &weights.q_proj, &q_buf, 1, config.hidden_dim, config.hidden_dim);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &normed, &weights.k_proj, &k_buf, 1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-    dispatch_tiled_matmul(device, queue, encoder, pipelines,
-        &normed, &weights.v_proj, &v_buf, 1, config.hidden_dim, config.n_kv_heads * config.head_dim);
-
+    // ── 2. QKV Projections (fused with bias to eliminate P100 copy hazard) ──
     if let Some(ref qb) = weights.q_bias {
-        dispatch_add(device, queue, encoder, pipelines, &q_buf, qb, &bias_tmp, config.hidden_dim);
-        encoder.copy_buffer_to_buffer(&bias_tmp, 0, &q_buf, 0, hidden_bytes);
+        dispatch_matvec_bias(device, queue, encoder, pipelines,
+            &normed, &weights.q_proj, qb, &q_buf, config.hidden_dim, config.hidden_dim);
+    } else {
+        dispatch_tiled_matmul(device, queue, encoder, pipelines,
+            &normed, &weights.q_proj, &q_buf, 1, config.hidden_dim, config.hidden_dim);
     }
     if let Some(ref kb) = weights.k_bias {
-        dispatch_add(device, queue, encoder, pipelines, &k_buf, kb, &bias_tmp, config.n_kv_heads * config.head_dim);
-        encoder.copy_buffer_to_buffer(&bias_tmp, 0, &k_buf, 0, kv_dim_bytes);
+        dispatch_matvec_bias(device, queue, encoder, pipelines,
+            &normed, &weights.k_proj, kb, &k_buf, config.hidden_dim, config.n_kv_heads * config.head_dim);
+    } else {
+        dispatch_tiled_matmul(device, queue, encoder, pipelines,
+            &normed, &weights.k_proj, &k_buf, 1, config.hidden_dim, config.n_kv_heads * config.head_dim);
     }
     if let Some(ref vb) = weights.v_bias {
-        dispatch_add(device, queue, encoder, pipelines, &v_buf, vb, &bias_tmp, config.n_kv_heads * config.head_dim);
-        encoder.copy_buffer_to_buffer(&bias_tmp, 0, &v_buf, 0, kv_dim_bytes);
+        dispatch_matvec_bias(device, queue, encoder, pipelines,
+            &normed, &weights.v_proj, vb, &v_buf, config.hidden_dim, config.n_kv_heads * config.head_dim);
+    } else {
+        dispatch_tiled_matmul(device, queue, encoder, pipelines,
+            &normed, &weights.v_proj, &v_buf, 1, config.hidden_dim, config.n_kv_heads * config.head_dim);
     }
 
     dispatch_rope(device, queue, encoder, pipelines, &q_buf, config.head_dim, pos, config.n_heads);
@@ -222,6 +225,14 @@ pub fn execute_layer(
     dispatch_add(device, queue, encoder, pipelines,
         hidden_state, &attn_projected, &residual_tmp, config.hidden_dim);
     encoder.copy_buffer_to_buffer(&residual_tmp, 0, hidden_state, 0, hidden_bytes);
+
+    // SUBMIT: ensure attention residual visible before FFN reads hidden_state
+    queue.submit(std::iter::once(
+        std::mem::replace(encoder, device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor { label: Some("layer_ffn") }
+        )).finish()
+    ));
+
 
     // ── 6. FFN Block ────────────────────────────────────────────────────────
     pipelines.rmsnorm.dispatch(
@@ -488,6 +499,50 @@ fn dispatch_tiled_matmul(
 
     let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
     pass.set_pipeline(&pipelines.matvec);
+    pass.set_bind_group(0, Some(&bg), &[]);
+    pass.dispatch_workgroups((n + 255) / 256, 1, 1);
+}
+
+/// Fused matvec + bias: output[n] = sum_k(W[n*K+k] * input[k]) + bias[n]
+/// Eliminates staging buffer + copy hazard on P100 Vulkan.
+fn dispatch_matvec_bias(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    pipelines: &LayerPipelines,
+    input: &wgpu::Buffer,
+    weights: &wgpu::Buffer,
+    bias: &wgpu::Buffer,
+    output: &wgpu::Buffer,
+    k: u32, n: u32,
+) {
+    #[repr(C)]
+    #[derive(Clone, Copy, Pod, Zeroable)]
+    struct MatvecParams { n_out: u32, k_in: u32, _pad0: u32, _pad1: u32 }
+
+    let params = MatvecParams { n_out: n, k_in: k, _pad0: 0, _pad1: 0 };
+    let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("matvec_bias_params"),
+        size: 16,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    queue.write_buffer(&params_buf, 0, bytemuck::cast_slice(&[params]));
+
+    let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("matvec_bias_bg"),
+        layout: &pipelines.matvec_bias_bgl,
+        entries: &[
+            wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
+            wgpu::BindGroupEntry { binding: 1, resource: weights.as_entire_binding() },
+            wgpu::BindGroupEntry { binding: 2, resource: output.as_entire_binding() },
+            wgpu::BindGroupEntry { binding: 3, resource: params_buf.as_entire_binding() },
+            wgpu::BindGroupEntry { binding: 4, resource: bias.as_entire_binding() },
+        ],
+    });
+
+    let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+    pass.set_pipeline(&pipelines.matvec_bias);
     pass.set_bind_group(0, Some(&bg), &[]);
     pass.dispatch_workgroups((n + 255) / 256, 1, 1);
 }
