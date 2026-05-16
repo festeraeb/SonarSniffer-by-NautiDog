@@ -49,3 +49,4 @@ pub mod magnetic_eraser;
 pub mod model_arch;
 pub mod scratch_buffers;
 pub mod arch_detect;
+pub mod pipeline_cache;

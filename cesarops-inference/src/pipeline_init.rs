@@ -38,6 +38,7 @@ fn create_pipeline(
     label: &str,
     source: &str,
     bgl: &wgpu::BindGroupLayout,
+    cache: Option<&wgpu::PipelineCache>,
 ) -> wgpu::ComputePipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some(label),
@@ -54,7 +55,7 @@ fn create_pipeline(
         module: &shader,
         entry_point: Some("main"),
         compilation_options: Default::default(),
-        cache: None,
+        cache,
     })
 }
 
