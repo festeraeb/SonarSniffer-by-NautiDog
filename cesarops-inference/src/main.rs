@@ -379,6 +379,12 @@ async fn run_generate_mode(
                         [region.shape[0], 1]
                     };
                     let dtype = TensorType::from_gguf(region.quant_type).unwrap_or(TensorType::F16);
+                    // Debug: check attn_norm loading
+                    if name.contains("blk.0.attn_norm") {
+                        let first4: &[f32] = bytemuck::cast_slice(&bytes[..16]);
+                        info!("  LOADING blk.0.attn_norm: shape={:?} qt={} dtype={:?} first4={:?}",
+                            shape, region.quant_type, dtype, first4);
+                    }
                     let _ = registry.load_tensor_safe(name, shape, dtype, bytes);
                 }
             }

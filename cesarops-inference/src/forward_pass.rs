@@ -239,6 +239,9 @@ pub fn execute_layer(
 
     // Dump Q and V BEFORE attention to check projections
     {
+        // Check what's actually IN the attn_norm buffer on GPU
+        let norm_weight_diag = readback_f32(device, queue, &weights.attn_norm, 4);
+        tracing::info!("  ATTN_NORM_WEIGHT[0:4]={:?} (should be [0.6411, 0.5396, 0.6201, 0.8032])", norm_weight_diag);
         let normed_diag = readback_f32(device, queue, &normed, 4);
         tracing::info!("  NORMED[0:4]={:?} (ref: [-0.0391, 0.0987, 0.4161, -0.8329])", normed_diag);
         let q_diag = readback_f32(device, queue, &q_buf, 4);
