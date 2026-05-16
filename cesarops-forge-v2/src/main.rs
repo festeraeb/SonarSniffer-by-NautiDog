@@ -11,6 +11,7 @@ mod agent_dispatch;
 mod validator;
 mod corrector_preset;
 mod model_scorecard;
+mod fleet_registry;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};
