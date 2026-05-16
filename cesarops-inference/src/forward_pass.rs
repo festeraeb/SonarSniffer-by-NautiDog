@@ -239,6 +239,9 @@ pub fn execute_layer(
 
     // Dump Q and V BEFORE attention to check projections
     {
+        // Check hidden_state at start of execute_layer
+        let hs_start = readback_f32(device, queue, hidden_state, 4);
+        tracing::info!("  HIDDEN_STATE_START[0:4]={:?} (should be embedding: [-0.00105, 0.00316, 0.01158, -0.01790])", hs_start);
         // Check what's actually IN the attn_norm buffer on GPU
         let norm_weight_diag = readback_f32(device, queue, &weights.attn_norm, 4);
         tracing::info!("  ATTN_NORM_WEIGHT[0:4]={:?} (should be [0.6411, 0.5396, 0.6201, 0.8032])", norm_weight_diag);
