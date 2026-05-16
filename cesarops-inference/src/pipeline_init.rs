@@ -210,6 +210,41 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         (None, None)
     };
 
+    // ── vec4 + push-constant matvec (preferred when K%4==0) ─────────────────
+    let (matvec_vec4_pc, matvec_vec4_pc_bgl) = if device.features().contains(wgpu::Features::PUSH_CONSTANTS) {
+        let bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("matvec_vec4_pc_bgl"),
+            entries: &[
+                bgl_storage(0, true),
+                bgl_storage(1, true),
+                bgl_storage(2, false),
+            ],
+        });
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("matvec_vec4_pc"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/matvec_vec4_pc.wgsl").into()),
+        });
+        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("matvec_vec4_pc_layout"),
+            bind_group_layouts: &[&bgl],
+            push_constant_ranges: &[wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::COMPUTE,
+                range: 0..16,
+            }],
+        });
+        let pipe = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("matvec_vec4_pc"),
+            layout: Some(&pl),
+            module: &shader,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        (Some(pipe), Some(bgl))
+    } else {
+        (None, None)
+    };
+
     // ── Fused Matrix-Vector + Bias (eliminates copy hazard on P100) ─────
     let matvec_bias_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("matvec_bias_bgl"),
@@ -246,6 +281,8 @@ pub fn init_layer_pipelines(device: &wgpu::Device) -> LayerPipelines {
         matvec_bgl,
         matvec_pc,
         matvec_pc_bgl,
+        matvec_vec4_pc,
+        matvec_vec4_pc_bgl,
         matvec_bias,
         matvec_bias_bgl,
     }

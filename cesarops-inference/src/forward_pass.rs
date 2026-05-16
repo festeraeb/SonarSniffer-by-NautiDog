@@ -38,6 +38,10 @@ pub struct LayerPipelines {
     /// it instead of the uniform-buffer matvec for lower per-call overhead.
     pub matvec_pc: Option<wgpu::ComputePipeline>,
     pub matvec_pc_bgl: Option<wgpu::BindGroupLayout>,
+    /// vec4 + push-constant matvec — preferred when K % 4 == 0 AND
+    /// PUSH_CONSTANTS is enabled. 4× memory bandwidth on Pascal HBM2/GDDR5.
+    pub matvec_vec4_pc: Option<wgpu::ComputePipeline>,
+    pub matvec_vec4_pc_bgl: Option<wgpu::BindGroupLayout>,
     pub matvec_bias: wgpu::ComputePipeline,
     pub matvec_bias_bgl: wgpu::BindGroupLayout,
 }
@@ -500,8 +504,38 @@ fn dispatch_tiled_matmul(
 
     let params = MatvecParams { n_out: n, k_in: k, _pad0: 0, _pad1: 0 };
 
-    // Fast path: push constants when supported (saves a buffer write +
-    // one bind-group entry per call). Falls back to uniform-buffer matvec.
+    // Best path: vec4 + push constants when K is a multiple of 4 AND
+    // PUSH_CONSTANTS is supported. 4× memory bandwidth, no buffer write.
+    if k % 4 == 0 {
+        if let (Some(pipe), Some(bgl)) = (
+            pipelines.matvec_vec4_pc.as_ref(),
+            pipelines.matvec_vec4_pc_bgl.as_ref(),
+        ) {
+            #[repr(C)]
+            #[derive(Clone, Copy, Pod, Zeroable)]
+            struct Vec4Params { n_out: u32, k_in: u32, k_vec4: u32, _pad: u32 }
+            let v4p = Vec4Params { n_out: n, k_in: k, k_vec4: k / 4, _pad: 0 };
+
+            let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("matvec_vec4_pc_bg"),
+                layout: bgl,
+                entries: &[
+                    wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: weights.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 2, resource: output.as_entire_binding() },
+                ],
+            });
+
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(pipe);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.set_push_constants(0, bytemuck::cast_slice(&[v4p]));
+            pass.dispatch_workgroups((n + 255) / 256, 1, 1);
+            return;
+        }
+    }
+
+    // Next: scalar push-constant matvec when supported (any K).
     if let (Some(pipe), Some(bgl)) = (
         pipelines.matvec_pc.as_ref(),
         pipelines.matvec_pc_bgl.as_ref(),
