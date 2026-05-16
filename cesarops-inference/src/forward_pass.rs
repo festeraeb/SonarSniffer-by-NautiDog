@@ -140,26 +140,26 @@ pub fn execute_layer(
     weights: &LayerWeights,
     kv_cache: &mut KVCache,
     hidden_state: &wgpu::Buffer,
-    scratch: &crate::scratch_buffers::ScratchBuffers,
     pos: u32,
 ) {
     let hidden_bytes = (config.hidden_dim * 4) as u64;
     let kv_dim_bytes = (config.n_kv_heads * config.head_dim * 4) as u64;
+    let intermediate_bytes = (config.intermediate_dim * 4) as u64;
 
-    // Use pre-allocated scratch buffers
-    let normed = &scratch.normed;
-    let q_buf = &scratch.q_buf;
-    let k_buf = &scratch.k_buf;
-    let v_buf = &scratch.v_buf;
-    let bias_tmp = &scratch.bias_tmp;
-    let attn_output = &scratch.attn_output;
-    let attn_projected = &scratch.attn_projected;
-    let residual_tmp = &scratch.residual_attn;
-    let ffn_normed = &scratch.ffn_normed;
-    let gate_out = &scratch.gate_out;
-    let up_out = &scratch.up_out;
-    let ffn_activated = &scratch.ffn_activated;
-    let ffn_out = &scratch.ffn_out;
+    // Scratch buffers — all live until end of function scope
+    let normed = create_temp_buffer(device, "normed", hidden_bytes);
+    let q_buf = create_temp_buffer(device, "q", hidden_bytes);
+    let k_buf = create_temp_buffer(device, "k", kv_dim_bytes);
+    let v_buf = create_temp_buffer(device, "v", kv_dim_bytes);
+    let bias_tmp = create_temp_buffer(device, "bias_tmp", hidden_bytes);
+    let attn_output = create_temp_buffer(device, "attn_out", hidden_bytes);
+    let attn_projected = create_temp_buffer(device, "attn_proj", hidden_bytes);
+    let residual_tmp = create_temp_buffer(device, "res_tmp", hidden_bytes);
+    let ffn_normed = create_temp_buffer(device, "ffn_normed", hidden_bytes);
+    let gate_out = create_temp_buffer(device, "gate", intermediate_bytes);
+    let up_out = create_temp_buffer(device, "up", intermediate_bytes);
+    let ffn_activated = create_temp_buffer(device, "ffn_act", intermediate_bytes);
+    let ffn_out = create_temp_buffer(device, "ffn_out", hidden_bytes);
 
     // ── 1. Attention RMSNorm ────────────────────────────────────────────────
     pipelines.rmsnorm.dispatch(
@@ -198,9 +198,7 @@ pub fn execute_layer(
     encoder.copy_buffer_to_buffer(&v_buf, 0, &kv_cache.value_cache, k_offset, kv_dim_bytes);
     kv_cache.current_len = pos + 1;
 
-    // MUST submit before attention because dispatch_multihead_attention_split
-    // uses its own separate encoders+submits internally. Without this submit,
-    // the KV copy above hasn't been sent to GPU yet when attention reads the cache.
+    // ── SUBMIT: ensure KV cache visible before attention reads ───────────────
     queue.submit(std::iter::once(
         std::mem::replace(encoder, device.create_command_encoder(
             &wgpu::CommandEncoderDescriptor { label: Some("layer_post_kv") }
