@@ -200,6 +200,10 @@ fn create_uniform<T: Pod>(device: &wgpu::Device, queue: &wgpu::Queue, data: &T) 
 
 /// Dispatch multi-head attention with separate submits per head.
 /// Avoids buffer reuse sync issues on P100 Vulkan.
+///
+/// When `attn_pc_pipeline` and `attn_pc_bgl` are both `Some`, the QK^T stage
+/// uses the push-constant attention pipeline (3-binding layout, params via
+/// push constant). Softmax + AV always go through the uniform-buffer path.
 pub fn dispatch_multihead_attention_split(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -217,6 +221,8 @@ pub fn dispatch_multihead_attention_split(
     n_kv_heads: u32,
     head_dim: u32,
     cur_pos: u32,
+    attn_pc_pipeline: Option<&wgpu::ComputePipeline>,
+    attn_pc_bgl: Option<&wgpu::BindGroupLayout>,
 ) {
     let kv_len = cur_pos + 1;
     let scale = 1.0 / (head_dim as f32).sqrt();
@@ -243,12 +249,37 @@ pub fn dispatch_multihead_attention_split(
             mapped_at_creation: false,
         });
 
-        // QK^T
         let qk_params = AttnQKParams {
             kv_len, head_dim, cur_pos, scale, kv_stride, kv_head_offset, _pad0: 0, _pad1: 0,
         };
-        let qk_params_buf = create_uniform(device, queue, &qk_params);
-        {
+
+        // QK^T — push-constant fast path when available, else uniform-buffer.
+        if let (Some(pc_pipe), Some(pc_bgl)) = (attn_pc_pipeline, attn_pc_bgl) {
+            let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+            let qk_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("attn_pc_qk_bg"),
+                layout: pc_bgl,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: q_buf, offset: q_offset,
+                            size: wgpu::BufferSize::new((head_dim * 4) as u64),
+                        }),
+                    },
+                    wgpu::BindGroupEntry { binding: 1, resource: kv_cache_k.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 2, resource: scores_buf.as_entire_binding() },
+                ],
+            });
+            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(pc_pipe);
+            pass.set_bind_group(0, Some(&qk_bg), &[]);
+            pass.set_push_constants(0, bytemuck::cast_slice(&[qk_params]));
+            pass.dispatch_workgroups((kv_len + 255) / 256, 1, 1);
+            drop(pass);
+            queue.submit(std::iter::once(enc.finish()));
+        } else {
+            let qk_params_buf = create_uniform(device, queue, &qk_params);
             let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
             let qk_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("attn_qk_bg"),
@@ -274,7 +305,7 @@ pub fn dispatch_multihead_attention_split(
             queue.submit(std::iter::once(enc.finish()));
         }
 
-        // Softmax
+        // Softmax (uniform-buffer path)
         let softmax_params = crate::forward_pass::SoftmaxParams {
             seq_len: kv_len, _pad0: 0, _pad1: 0, _pad2: 0,
         };
@@ -298,7 +329,7 @@ pub fn dispatch_multihead_attention_split(
             queue.submit(std::iter::once(enc.finish()));
         }
 
-        // AV weighted sum
+        // AV weighted sum (uniform-buffer path)
         let av_params = AVParams { kv_len, head_dim, kv_stride, kv_head_offset };
         let av_params_buf = create_uniform(device, queue, &av_params);
         {
@@ -331,7 +362,6 @@ pub fn dispatch_multihead_attention_split(
         if h == 0 && kv_len == 2 {
             let scores_vals = readback_attn_f32(device, queue, &scores_buf, kv_len as usize);
             let probs_vals = readback_attn_f32(device, queue, &probs_buf, kv_len as usize);
-            // Also read back the output for this head
             let out_vals = readback_attn_f32_offset(device, queue, output_buf, out_offset, 4);
             tracing::info!("  [ATTN SCORES] head=0 kv_len=2: scores={:?} probs={:?} out[0:4]={:?}", scores_vals, probs_vals, out_vals);
         }

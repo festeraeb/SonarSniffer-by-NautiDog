@@ -279,6 +279,8 @@ pub fn execute_layer(
         &pipelines.av,        &pipelines.av_bgl,
         &q_buf, &kv_cache.key_cache, &kv_cache.value_cache, &attn_output,
         config.n_heads, config.n_kv_heads, config.head_dim, pos,
+        pipelines.attention_pc.as_ref(),
+        pipelines.attention_pc_bgl.as_ref(),
     );
 
     // ── S6: O projection ────────────────────────────────────────────────────
