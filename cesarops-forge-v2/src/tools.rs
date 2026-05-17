@@ -6,6 +6,40 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::process::Command;
 use tracing::{info, warn};
 
+/// Load satellite/earthdata credentials from the master .env file.
+/// Returns key-value pairs to inject into Python subprocess environments.
+fn load_satellite_env() -> Vec<(String, String)> {
+    let env_path = "/mnt/data-external/cesarops/repo/.env";
+    let mut vars = Vec::new();
+    if let Ok(content) = std::fs::read_to_string(env_path) {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some((k, v)) = line.split_once('=') {
+                let k = k.trim();
+                let v = v.trim();
+                // Only pass satellite-relevant keys to avoid leaking sudo passwords etc.
+                if k.starts_with("EARTHDATA") || k.starts_with("COPERNICUS")
+                    || k.starts_with("USGS") || k.starts_with("ASF")
+                    || k == "CESAROPS_DATA_DIR"
+                {
+                    vars.push((k.to_string(), v.to_string()));
+                }
+            }
+        }
+    }
+    vars
+}
+
+/// Apply satellite credentials to a Command before spawning.
+fn inject_satellite_env(cmd: &mut Command) {
+    for (k, v) in load_satellite_env() {
+        cmd.env(&k, &v);
+    }
+}
+
 /// Counter for think_harder calls per session. Resets on /clear.
 static THINK_HARDER_COUNT: AtomicU32 = AtomicU32::new(0);
 const THINK_HARDER_LIMIT: u32 = u32::MAX; // No limit — let it search as much as it needs
@@ -472,6 +506,7 @@ async fn scan_region(args: &Value, _state: &AppState) -> String {
         .arg("--output").arg(&output_path)
         .arg("--label").arg(label)
         .arg("--download");  // auto-download the satellite tiles
+    inject_satellite_env(&mut cmd);
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(1800),
@@ -610,6 +645,7 @@ async fn download_satellite_window(args: &Value, _state: &AppState) -> String {
         .arg("--dates").arg(&start_date).arg(&end_date)
         .arg("--max-results").arg(max_results.to_string())
         .arg("--output").arg(output_dir);
+    inject_satellite_env(&mut cmd);
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(1800),

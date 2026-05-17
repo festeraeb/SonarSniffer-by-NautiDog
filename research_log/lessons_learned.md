@@ -346,3 +346,38 @@ See: `research_log/external_contributions/distributed_independent_inference_doct
 - Mid-Lake Michigan (Grand Haven ↔ Milwaukee): NO COVERAGE — Andaste search area is a gap
 
 **Acquisition path:** NOAA NCEI has some flight-line data that could be gridded, but it's raw and needs processing. That's a future research task, not a pipeline fix.
+
+---
+
+## Satellite + Magnetic Data Sources Inventory (May 17, 2026)
+
+### Satellite Sources (no USGS API key needed):
+- Element84 STAC (Sentinel-2 L2A + Landsat C2 L2): `https://earth-search.aws.element84.com/v1` — NO AUTH
+- LandsatLook STAC (Landsat Collection 2): `https://landsatlook.usgs.gov/stac-server` — NO AUTH
+- NASA CMR (HLS, SWOT, ICESat-2): Earthdata token ✅ present in .env
+- ASF (Sentinel-1 SAR): Earthdata token ✅ same
+- Landsat 4-5 TM Collection 2 (1982-2012): via LandsatLook STAC or EarthExplorer
+- Landsat 1-5 MSS (1972-1999): EarthExplorer only (needs USGS account, free)
+- Copernicus Data Space: needs registration (credentials empty)
+- Paid providers with historical access: operator will wire later
+
+### Magnetic Sources (all free, public domain):
+- USGS merged US+Canada magnetic anomaly GeoTIFF (~1km): data.usgs.gov/datacatalog/data/USGS:619a9a3ad34eb622f692f961
+- USGS Michigan Magnetic Maps (2.5km): pubs.usgs.gov/ds/ds411
+- USGS mrdata.usgs.gov (flight-line + gridded, varies 150m-5km): mrdata.usgs.gov/magnetic/
+- USGS Lake Superior compilation (high-res GeoTIFF): mrdata catalog
+- NOAA EMAG2 global (2 arc-min / ~3.7km): ngdc.noaa.gov/geomag/emag2_download.html
+- NOAA NCEI Grid Extract (custom bbox GeoTIFF): ncei.noaa.gov/maps/grid-extract
+- Canada NRCan (200m + 1km compilations): open.canada.ca aeromagnetic compilation
+
+### Priority downloads for wreck detection:
+1. USGS merged US+Canada GeoTIFF — covers all Great Lakes at 1km (screening)
+2. USGS Michigan magnetic maps — 2.5km state-level (Lake Michigan corridor)
+3. mrdata.usgs.gov flight-line data for specific search areas (150m, wreck-scale)
+4. NOAA NCEI custom bbox extract for Andaste corridor (42.9-43.2, -87.2 to -86.2)
+
+### Action items:
+- Download USGS merged grid + Michigan grid → /mnt/data-external/cesarops/mag_grids/
+- Add coverage index to orchestrator (bbox → available grid path)
+- Wire .env EARTHDATA_TOKEN into forge Python tool calls
+- Register for Copernicus Data Space (free, just needs account)
