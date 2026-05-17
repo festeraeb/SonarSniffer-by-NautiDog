@@ -26,6 +26,30 @@ pub struct AppState {
     pub config: Arc<ForgeConfig>,
     pub interrupt: Arc<std::sync::atomic::AtomicBool>,
     pub steering: Arc<Mutex<Vec<String>>>,
+    /// DII node registry — populated by cesarops-node heartbeats.
+    pub node_registry: Arc<Mutex<std::collections::HashMap<String, NodeRegistration>>>,
+}
+
+/// A registered node in the DII cluster.
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct NodeRegistration {
+    pub node_id: String,
+    pub hardware: serde_json::Value,
+    pub available_models: Vec<String>,
+    pub listen_port: u16,
+    /// Last heartbeat state snapshot.
+    pub last_heartbeat: Option<NodeHeartbeat>,
+    /// Unix timestamp of last heartbeat.
+    pub last_seen: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct NodeHeartbeat {
+    pub state: String,
+    pub model: Option<String>,
+    pub port: Option<u16>,
+    pub gpu: serde_json::Value,
+    pub queue_depth: u32,
 }
 
 #[derive(Clone)]
@@ -874,16 +898,116 @@ async fn stop_all_workers() -> Json<serde_json::Value> {
     Json(serde_json::json!({"message": "All GPU workers stopped."}))
 }
 
-/// Discover which nodes are online by probing Tailscale status + known service ports
-async fn discover_nodes() -> Json<serde_json::Value> {
+// ── DII Node Registry Handlers ──────────────────────────────────────────────
+
+/// POST /cluster/node/register — cesarops-node daemon calls this on startup.
+async fn node_register(
+    State(state): State<AppState>,
+    Json(payload): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let node_id = payload["node_id"].as_str().unwrap_or("unknown").to_string();
+
+    let registration = NodeRegistration {
+        node_id: node_id.clone(),
+        hardware: payload["hardware"].clone(),
+        available_models: serde_json::from_value(payload["available_models"].clone())
+            .unwrap_or_default(),
+        listen_port: payload["listen_port"].as_u64().unwrap_or(5500) as u16,
+        last_heartbeat: None,
+        last_seen: now,
+    };
+
+    state.node_registry.lock().await.insert(node_id.clone(), registration);
+    info!("node_register: {} registered", node_id);
+
+    Json(serde_json::json!({ "status": "registered", "node_id": node_id }))
+}
+
+/// POST /cluster/node/heartbeat — cesarops-node sends this every 10s.
+async fn node_heartbeat(
+    State(state): State<AppState>,
+    Json(payload): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let node_id = payload["node_id"].as_str().unwrap_or("");
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let mut registry = state.node_registry.lock().await;
+
+    if let Some(node) = registry.get_mut(node_id) {
+        node.last_heartbeat = Some(NodeHeartbeat {
+            state: payload["state"].as_str().unwrap_or("unknown").to_string(),
+            model: payload["model"].as_str().map(|s| s.to_string()),
+            port: payload["port"].as_u64().map(|p| p as u16),
+            gpu: payload["gpu"].clone(),
+            queue_depth: payload["queue_depth"].as_u64().unwrap_or(0) as u32,
+        });
+        node.last_seen = now;
+        Json(serde_json::json!({ "status": "ok" }))
+    } else {
+        Json(serde_json::json!({ "error": "unknown node, register first" }))
+    }
+}
+
+/// GET /cluster/nodes — list all registered DII nodes with online status.
+async fn list_registered_nodes(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let registry = state.node_registry.lock().await;
+
+    let nodes: Vec<serde_json::Value> = registry.values().map(|n| {
+        let online = now.saturating_sub(n.last_seen) < 30;
+        let mut val = serde_json::to_value(n).unwrap_or_default();
+        val["online"] = serde_json::json!(online);
+        val["last_seen_secs_ago"] = serde_json::json!(now.saturating_sub(n.last_seen));
+        val
+    }).collect();
+
+    Json(serde_json::Value::Array(nodes))
+}
+
+/// Discover which nodes are online — merges DII registry + legacy port probes.
+async fn discover_nodes(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let mut results: Vec<serde_json::Value> = Vec::new();
+    let mut seen_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    // 1. Registry nodes — no HTTP probe needed, heartbeat IS the probe.
+    {
+        let registry = state.node_registry.lock().await;
+        for (name, reg) in registry.iter() {
+            let online = now.saturating_sub(reg.last_seen) < 30;
+            let (node_state, model, port, gpu_val) = match &reg.last_heartbeat {
+                Some(hb) => (hb.state.clone(), hb.model.clone(), hb.port, hb.gpu.clone()),
+                None => ("unknown".to_string(), None, None, serde_json::Value::Null),
+            };
+
+            results.push(serde_json::json!({
+                "name": name,
+                "online": online,
+                "source": "registry",
+                "gpu": reg.hardware.get("gpu").and_then(|v| v.as_str()).unwrap_or("?"),
+                "state": node_state,
+                "model": model,
+                "port": port,
+                "listen_port": reg.listen_port,
+                "gpu_info": gpu_val,
+                "last_seen_secs_ago": now.saturating_sub(reg.last_seen),
+                "services_online": online,
+                "available_models": reg.available_models,
+            }));
+            seen_names.insert(name.clone());
+        }
+    }
+
+    // 2. Legacy nodes from cluster_config.toml — probe ports via HTTP.
     let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
     let content = std::fs::read_to_string(config_path).unwrap_or_default();
     let table: toml::Table = content.parse().unwrap_or_default();
-
-    // First, get live Tailscale peer status
     let tailscale_peers = get_tailscale_peers().await;
 
-    let mut results = Vec::new();
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(2))
         .build()
@@ -892,18 +1016,19 @@ async fn discover_nodes() -> Json<serde_json::Value> {
     if let Some(nodes) = table.get("known_nodes").and_then(|v| v.as_array()) {
         for node in nodes {
             let name = node.get("name").and_then(|v| v.as_str()).unwrap_or("unknown");
+            if seen_names.contains(name) {
+                continue; // Already covered by registry
+            }
+
             let ip = node.get("ip").and_then(|v| v.as_str()).unwrap_or("");
             let gpu_label = node.get("gpu").and_then(|v| v.as_str()).unwrap_or("");
             let empty_ports = vec![];
             let ports = node.get("ports").and_then(|v| v.as_array()).unwrap_or(&empty_ports);
 
-            // Check if node is reachable: localhost is always; LAN (10.x/192.168.x/172.16.x)
-            // is "reachable" optimistically (the per-port HTTP probe will confirm); only
-            // Tailscale peers (100.x) require Tailscale to report them up.
             let ts_online = if ip == "127.0.0.1" || ip == "localhost" {
                 true
-            } else if ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") {
-                true // LAN — assume reachable, port probes decide
+            } else if ip.starts_with("10.") || ip.starts_with("192.168.") {
+                true
             } else {
                 tailscale_peers.iter().any(|p| p.0 == ip && p.1)
             };
@@ -911,42 +1036,39 @@ async fn discover_nodes() -> Json<serde_json::Value> {
             let mut port_status = Vec::new();
             for port_val in ports {
                 let port = port_val.as_integer().unwrap_or(0);
-                // Probe order: /api/extra/version (koboldcpp) → /v1/models (OpenAI-compat) → /health (cesarops services)
-                let probe_paths = ["/api/extra/version", "/v1/models", "/health"];
                 let online = if ts_online {
-                    let mut found: Option<serde_json::Value> = None;
+                    let probe_paths = ["/api/extra/version", "/v1/models", "/health"];
+                    let mut found = false;
                     for path in probe_paths {
                         let url = format!("http://{}:{}{}", ip, port, path);
                         if let Ok(resp) = client.get(&url).send().await {
                             if resp.status().is_success() {
-                                let body: serde_json::Value = resp.json().await.unwrap_or_else(|_| {
-                                    serde_json::json!({"service": "responding", "probe": path})
-                                });
-                                found = Some(body);
+                                found = true;
                                 break;
                             }
                         }
                     }
                     found
                 } else {
-                    None
+                    false
                 };
-                port_status.push(serde_json::json!({
-                    "port": port,
-                    "online": online.is_some(),
-                    "info": online.unwrap_or(serde_json::Value::Null),
-                }));
+                port_status.push(serde_json::json!({"port": port, "online": online}));
             }
 
-            let any_service_online = port_status.iter().any(|p| p.get("online").and_then(|v| v.as_bool()).unwrap_or(false));
+            let any_online = port_status.iter()
+                .any(|p| p.get("online").and_then(|v| v.as_bool()).unwrap_or(false));
+
             results.push(serde_json::json!({
                 "name": name,
                 "ip": ip,
                 "online": ts_online,
-                "services_online": any_service_online,
+                "source": "legacy_probe",
                 "gpu": gpu_label,
+                "state": "unknown",
+                "services_online": any_online,
                 "ports": port_status,
             }));
+            seen_names.insert(name.to_string());
         }
     }
 
@@ -1374,6 +1496,7 @@ async fn main() {
         config: Arc::new(config),
         interrupt: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         steering: Arc::new(Mutex::new(Vec::new())),
+        node_registry: Arc::new(Mutex::new(std::collections::HashMap::new())),
     };
 
     let app = Router::new()
@@ -1407,6 +1530,10 @@ async fn main() {
         .route("/cluster/start-all", post(start_all_workers))
         .route("/cluster/stop-all", post(stop_all_workers))
         .route("/cluster/discover", get(discover_nodes))
+        // ── DII Node Registry ────────────────────────────────────────────
+        .route("/cluster/node/register",  post(node_register))
+        .route("/cluster/node/heartbeat", post(node_heartbeat))
+        .route("/cluster/nodes",          get(list_registered_nodes))
         // ── New per-card control routes ──────────────────────────────────
         .route("/cluster/worker/{name}/apply",         post(worker_apply))
         .route("/cluster/worker/{name}/set_injection", post(worker_set_injection))
