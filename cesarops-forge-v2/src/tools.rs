@@ -463,7 +463,7 @@ async fn scan_region(args: &Value, _state: &AppState) -> String {
     info!("scan_region: bbox=[{}] dates={}..{} label={} output={}",
         bbox_parts.join(","), start_date, end_date, label, output_path);
 
-    let mut cmd = Command::new("python");
+    let mut cmd = Command::new("python3");
     cmd.arg(script_path)
         .arg("--bbox")
         .arg(bbox_parts[0]).arg(bbox_parts[1])
@@ -603,7 +603,7 @@ async fn download_satellite_window(args: &Value, _state: &AppState) -> String {
         bbox, sensors, start_date, end_date, output_dir
     );
 
-    let mut cmd = Command::new("python");
+    let mut cmd = Command::new("python3");
     cmd.arg(script_path)
         .arg("--bbox").arg(bbox)
         .arg("--sensors").arg(sensors)
@@ -716,7 +716,7 @@ async fn weather_window(args: &Value, _state: &AppState) -> String {
         check = check,
     );
 
-    let mut cmd = Command::new("python");
+    let mut cmd = Command::new("python3");
     cmd.arg("-c").arg(&py_script);
 
     let result = tokio::time::timeout(
