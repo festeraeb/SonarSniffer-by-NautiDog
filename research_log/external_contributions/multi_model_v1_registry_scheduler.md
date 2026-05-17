@@ -170,3 +170,36 @@ If this design lands cleanly, the MoE drops slot in naturally:
 struct, and the dispatcher signature matches part 2's `MoeBufferPool`.
 That makes the MoE follow-up spec a much smaller delta — just the
 shaders + loader + dispatcher, not the registry/lifecycle work.
+
+
+---
+
+## Operator's Final Spec Decisions (2026-05-16)
+
+These are the answers to the 6 clarifying questions. Locking these
+into the spec so the integration pass doesn't re-derive them.
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Device topology | **KoboldCPP-style per-GPU pinning only.** Models bind 1:1 to a `gpu_index`. Cake-style sharding deferred — severe sync penalties on Pascal PCIe. |
+| 2 | Eviction / lifecycle | **Reject with HTTP 507 Insufficient Storage.** No silent LRU. Unload is deliberate API call only — avoids unprompted driver stalls mid-inference. |
+| 3 | Max concurrent models default | **4.** Balanced for dual-P100 (16GB each) plus system reserve. |
+| 4 | Legacy fallback (empty `model` field) | **Route to configured `default_model`.** No 400 error. |
+| 5 | MoE scope | **Compile the framework now, keep complex sharding out of v1 merge.** Single-pass 3D coalesced memory layout handlers ship; full-blown distributed expert execution stays staged. |
+| 6 | Other | Persistence: yes, auto-restore on reboot. Telemetry: per-model isolated scorecards, async log. Fairness: **Deficit Round-Robin**, Admin/High class can preempt. |
+
+These directly map onto the contributed code in this drop:
+- (1) → `gpu_index: usize` field on `ActiveModelInstance` ✓
+- (2) → `verify_and_allocate_budget` returns `Err` → handler maps to 507 ✓
+  (polish note #14 in this file already flagged this — confirmed)
+- (3) → `max_concurrent_models: usize` arg to `ActiveExecutionRegistry::new` ✓
+- (4) → `default_model: RwLock<String>` in `MultiQueueScheduler`, used in
+  `submit_job` when `job.model_id.is_empty()` ✓
+- (5) → `MoeBufferPool` slot pre-allocated on `ActiveModelInstance`,
+  initialized only when arch_info.is_moe ✓
+- (6) → Persistence module already in the drop;
+  scheduler is currently strict-priority, **needs DRR upgrade** before merge.
+
+Polish note added: **upgrade `MultiQueueScheduler::pop_next_job` from
+strict priority to Deficit Round-Robin per operator's decision.** Strict
+priority risks low-priority queue starvation.

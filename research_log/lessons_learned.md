@@ -89,3 +89,55 @@ Better next moves on the same theme:
 DeepSeek-R1-Distill-Qwen-7B on the raw `/api/v1/generate` endpoint, when asked for a markdown design document, produces GLSL-flavored pseudocode mixed with reasoning blocks (`</think>` tags leak through). Output is not usable as a spec.
 
 Mitigation: either route through a chat-template-aware endpoint (`/v1/chat/completions`) or use R1-7B only for narrow-question Q&A (single-paragraph answers, code snippets up to ~50 lines). Don't ask it for full design proposals.
+
+## [model-behavior,shader-generation,row-vs-lane-mixup] 2026-05-16
+A "Pascal-tuned wgpu/Vulkan/SPIR-V" agent cluster delivered a Q6_K fused
+matvec v2 that internally mixed two parallelism idioms: it indexed `row =
+gid.x` (per-thread row, the WG=256 idiom from our v1) AND ran a 128-thread
+shared-memory reduction at the end (the one-WG-per-row idiom). Result: the
+reduction sums partials from 128 *different* rows and writes the cross-row
+total to one output slot, leaving 127/128 outputs unwritten. Each thread's
+"lane-stride inner loop" also runs only once per kb iteration because `l =
+lane; l += 32; if l >= 32 break;`.
+
+This is the third distinct class of fleet shader-generation failure we've
+catalogued:
+1. Vec4 accumulator confusion (Gemma-4) — model can't carry vec4 acc through dot()
+2. Raw-prompt EOS (Qwen3.6 on `/api/v1/generate`) — chat template missing
+3. **Parallelism-idiom mixup (this one)** — model picks "WG=128 with shared
+   reduction" from one mental template and "row = gid.x" from another, doesn't
+   notice the contradiction, ships an internally inconsistent kernel.
+
+**Mitigation when asking the fleet for collaborative-thread shaders:**
+- Specify the parallelism explicitly in the prompt: "one workgroup serves one
+  row, all 128 threads collaborate via shared-memory reduction" or "one thread
+  serves one row, no shared memory".
+- Verify by checking: if the kernel uses `workgroupBarrier()` or `var<workgroup>`
+  storage, the row index MUST come from `wid.x` not `gid.x`. If it uses
+  `gid.x`, there must be no inter-thread sync.
+- Other tells of the mixup: a "lane-stride inner loop" (`l = lane; l += 32`)
+  alongside a per-thread row index — the lane stride is collaborative-thread
+  vocabulary in a per-thread context.
+
+The fused-decode + vec4-dot + branchless fp16 + WG=128 pieces of the v2 drop
+were genuinely good — the structural bug is mechanical and fixable. The
+lesson is that the fleet's "tuned" agents still don't validate their own
+parallelism semantics, so the polisher has to.
+
+## [external-code,perf-trap,attention] 2026-05-17
+External attention reference shaders frequently nest the QK^T score computation INSIDE the head_dim output loop, recomputing the same dot product `head_dim` times per (q_pos, k_pos) pair. For head_dim=128 that's a 128× redundant matmul. **Always check loop nesting structure** when reviewing attention kernels from the cluster — the score depends only on (q_pos, k_pos, head), not on d. Hoist score computation OUT of the d-loop, store per-(k_pos) scores in shared memory or registers, then iterate d.
+
+This is the same bug class as the prefill_batching_v1 drop's `attention_prefill.wgsl`. Polish notes flagged it before any benchmarking ran. Without the `--bench` mode landed first, this kind of bug would ship invisibly.
+
+## [external-code,softmax,numerical-stability] 2026-05-17
+External attention shaders almost always ship with the naive `numer += exp(score) * V; denom += exp(score)` softmax pattern. This overflows in fp32 for any score > ~88. Standard FlashAttention online softmax is mandatory:
+```
+m_new = max(m_old, score)
+p     = exp(score - m_new)
+numer = numer * exp(m_old - m_new) + p * V
+denom = denom * exp(m_old - m_new) + p
+```
+This is the same bug class as DEBUG_LOG.md bug #3 (clamp to [-30,30] destroying signal) — softmax max-subtraction is required, not optional. Apply this fix to every attention kernel from the cluster before parity testing.
+
+## [external-code,gqa-indexing] 2026-05-17
+External attention/KV reference shaders default to MHA indexing (using Q head index for K/V access). Our model is GQA (n_heads=12 Q heads, n_kv_heads=2 KV heads, every 6 Q heads share one KV head). **Always check K/V indexing** when integrating: map `kv_head = q_head / (n_heads / n_kv_heads)` before indexing K/V buffers. If the cluster's shader uses bare `head` for K/V it'll read past the KV cache for heads beyond `n_kv_heads-1`.
