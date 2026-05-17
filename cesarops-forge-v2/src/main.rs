@@ -228,6 +228,272 @@ async fn apply_freeform(Json(body): Json<serde_json::Value>) -> Json<serde_json:
     }
 }
 
+// ── Mode swap: CESAROPS (SAR / wreck-hunting) vs CODING ──────────────────
+// CESAROPS mode: workers run their wreck-detection roles (Qwen MoE for
+//                analysis, Gemma for vision-validation, etc).
+// CODING mode:   workers swap to coding configuration. Default coding cluster
+//                is Qwen3.6-MoE on P100s as the main coder, Gemma-4-MoE
+//                layered across 1070 + P1000 as reviewer/draft pair.
+//                The pipeline is: P100 writes -> Gemma reviews -> P100 compiles.
+//
+// State persisted at mode_state.json so a forge restart keeps the active mode.
+
+const MODE_STATE_PATH: &str = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/mode_state.json";
+
+fn read_active_mode() -> String {
+    std::fs::read_to_string(MODE_STATE_PATH)
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("mode").and_then(|m| m.as_str()).map(|s| s.to_string()))
+        .unwrap_or_else(|| "cesarops".to_string())
+}
+
+fn write_active_mode(mode: &str, extras: serde_json::Value) {
+    let payload = serde_json::json!({
+        "mode": mode,
+        "activated_at": chrono_now_unix(),
+        "extras": extras,
+    });
+    let _ = std::fs::write(MODE_STATE_PATH, serde_json::to_string_pretty(&payload).unwrap_or_default());
+}
+
+fn chrono_now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// GET /mode  — returns current active mode (cesarops or coding)
+async fn get_mode() -> Json<serde_json::Value> {
+    let mode = read_active_mode();
+    let extras: serde_json::Value = std::fs::read_to_string(MODE_STATE_PATH)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    Json(serde_json::json!({
+        "mode": mode,
+        "state": extras,
+    }))
+}
+
+/// POST /mode/cesarops  — activate CESAROPS (SAR / wreck-hunting) cluster.
+/// Stops any coding workers, ensures the SAR worker fleet is up.
+async fn mode_cesarops() -> Json<serde_json::Value> {
+    info!("MODE SWAP -> CESAROPS (SAR / wreck-hunting)");
+
+    // Stop coding-mode workers cleanly. We don't know exactly which ones are
+    // running so we kill the known coding ports. SAR workers either auto-restart
+    // via their systemd units or get started below.
+    let stop_cmd = "fuser -k 5001/tcp 2>/dev/null ; fuser -k 5002/tcp 2>/dev/null ; \
+                    pkill -f 'koboldcpp.*--port (5001|5002)' 2>/dev/null ; true";
+    let _ = std::process::Command::new("bash").arg("-c").arg(stop_cmd).output();
+
+    // Drop a marker into the cluster_config that tells the loop_engine which
+    // routing presets to apply. The actual model start-up uses the existing
+    // /cluster/worker/{idx}/start endpoints; this just sets the active mode.
+    write_active_mode("cesarops", serde_json::json!({
+        "primary_role": "wreck_detection",
+        "main_endpoint": "http://127.0.0.1:5001",
+        "thinker_endpoint": "http://10.0.0.41:5570",
+        "corrector_endpoint": "http://10.0.0.129:5200",
+        "draft_endpoint": "http://10.0.0.129:5571",
+    }));
+
+    info!("CESAROPS mode active. Workers expected: GemmaBig (P100#0:5001), QwenBig (P100#1:5002), Picasso (cesarops2:5571)");
+    Json(serde_json::json!({
+        "message": "Mode -> CESAROPS. Workers reset. Use /cluster/worker/{idx}/start for the SAR fleet.",
+        "mode": "cesarops",
+    }))
+}
+
+/// POST /mode/coding  — activate CODING cluster.
+/// Default layout: Qwen3.6-MoE on P100s (main coder), Gemma-4-MoE layered
+/// across 1070 + P1000 (reviewer/draft pair).
+///
+/// Pipeline:
+///   1. User issues a /code command in chat
+///   2. Coder (Qwen MoE on P100s) writes the code
+///   3. Reviewer (Gemma layered 1070+P1000) reviews + suggests fixes
+///   4. Coder applies fixes + compiles
+///   5. Result returned via the standard /send loop
+///
+/// Body (optional):
+///   { "coder_model": "...", "reviewer_model": "...", "free_p100_for_other_work": false }
+async fn mode_coding(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    info!("MODE SWAP -> CODING");
+
+    let coder_model = body
+        .get("coder_model")
+        .and_then(|v| v.as_str())
+        .unwrap_or("/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf");
+    let reviewer_model = body
+        .get("reviewer_model")
+        .and_then(|v| v.as_str())
+        .unwrap_or("/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf");
+    let free_one_p100 = body
+        .get("free_p100_for_other_work")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    // Stop any currently-running cesarops workers on these ports
+    let stop_cmd = "fuser -k 5001/tcp 2>/dev/null ; fuser -k 5002/tcp 2>/dev/null ; \
+                    pkill -f 'koboldcpp.*--port (5001|5002)' 2>/dev/null ; true";
+    let _ = std::process::Command::new("bash").arg("-c").arg(stop_cmd).output();
+
+    // Start coder on P100(s)
+    let p100_layers = if free_one_p100 { "--gpulayers 99 --tensor_split 1,0" } else { "--gpulayers 99 --tensor_split 1,1" };
+    let coder_cmd = format!(
+        "nohup /home/cesarops/koboldcpp --model {} --port 5001 --usevulkan {} > /tmp/coding_coder.log 2>&1 &",
+        coder_model, p100_layers
+    );
+    let coder_started = std::process::Command::new("bash")
+        .arg("-c").arg(&coder_cmd).output().is_ok();
+
+    // Reviewer goes on the secondary fleet (1070 + P1000) — for now we just
+    // mark the endpoints as the coding reviewers in the mode state. The
+    // operator's fleet has these at 10.0.0.129:5200 (1070) + :5571 (P1000).
+    // If they need restarting, the operator does it from those boxes —
+    // the forge can't reach in via SSH from a URL handler.
+
+    write_active_mode("coding", serde_json::json!({
+        "primary_role": "coding",
+        "coder_endpoint": "http://127.0.0.1:5001",
+        "coder_model": coder_model,
+        "reviewer_primary_endpoint": "http://10.0.0.129:5200",
+        "reviewer_draft_endpoint": "http://10.0.0.129:5571",
+        "reviewer_model": reviewer_model,
+        "free_one_p100": free_one_p100,
+        "pipeline": "coder -> reviewer -> coder_compile",
+    }));
+
+    info!(
+        "CODING mode active. Coder: {} ({}), Reviewer-main: 10.0.0.129:5200, Reviewer-draft: 10.0.0.129:5571",
+        coder_model, if free_one_p100 { "1 P100" } else { "2 P100s" }
+    );
+
+    Json(serde_json::json!({
+        "message": format!(
+            "Mode -> CODING. Coder {} on {} P100. Reviewer = layered (1070 + P1000) on cesarops2.",
+            coder_model.split('/').last().unwrap_or("?"),
+            if free_one_p100 { "1" } else { "2" }
+        ),
+        "mode": "coding",
+        "coder_started": coder_started,
+        "coder_endpoint": "http://127.0.0.1:5001",
+        "reviewer_endpoints": [
+            "http://10.0.0.129:5200",
+            "http://10.0.0.129:5571",
+        ],
+    }))
+}
+
+/// POST /code  — coding-mode pipeline entry point.
+/// Routes a coding request through coder -> reviewer -> coder_compile.
+/// Only valid when /mode/coding is active. Falls back to /send in cesarops mode.
+async fn route_code_request(
+    State(state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let active_mode = read_active_mode();
+    if active_mode != "coding" {
+        return Json(serde_json::json!({
+            "error": format!("/code requires CODING mode. Active mode: {}. POST /mode/coding first.", active_mode),
+        }));
+    }
+
+    let task = body.get("task").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    if task.is_empty() {
+        return Json(serde_json::json!({"error": "Field 'task' required."}));
+    }
+
+    info!("CODING pipeline: task='{}'", &task[..task.len().min(120)]);
+
+    // Stage 1: coder writes
+    let coder_resp = call_coder_for_code(&state, &task).await;
+    let initial_code = coder_resp.unwrap_or_else(|e| format!("[CODER ERROR]: {}", e));
+
+    // Stage 2: reviewer reviews
+    let review = call_reviewer_for_review(&state, &task, &initial_code).await
+        .unwrap_or_else(|e| format!("[REVIEWER ERROR]: {}", e));
+
+    // Stage 3: coder applies review + compiles (just returns the integrated answer)
+    let final_resp = call_coder_for_integration(&state, &task, &initial_code, &review).await
+        .unwrap_or_else(|e| format!("[INTEGRATION ERROR]: {}", e));
+
+    Json(serde_json::json!({
+        "task": task,
+        "initial_code": initial_code,
+        "review": review,
+        "final": final_resp,
+        "pipeline": "coder -> reviewer -> coder_integrate",
+    }))
+}
+
+async fn call_coder_for_code(state: &AppState, task: &str) -> Result<String, String> {
+    let prompt = format!(
+        "<|im_start|>system\nYou are a Rust+wgpu specialist. Write production-ready code. \
+        No placeholders, no `todo!()`. Output only the code.\n<|im_end|>\n\
+        <|im_start|>user\n{}\n<|im_end|>\n<|im_start|>assistant\n",
+        task
+    );
+    call_endpoint("http://127.0.0.1:5001", &prompt, 8192, 0.3).await
+}
+
+async fn call_reviewer_for_review(state: &AppState, task: &str, code: &str) -> Result<String, String> {
+    let prompt = format!(
+        "<|im_start|>system\nYou are a code reviewer. Find bugs, suggest improvements. \
+        Be terse. Bullet points only.\n<|im_end|>\n\
+        <|im_start|>user\nTask: {}\n\nCode:\n{}\n<|im_end|>\n<|im_start|>assistant\n",
+        task,
+        if code.len() > 6000 { &code[..6000] } else { code }
+    );
+    // Try the 1070 reviewer first; fall back to draft if down
+    match call_endpoint("http://10.0.0.129:5200", &prompt, 2048, 0.2).await {
+        Ok(r) => Ok(r),
+        Err(_) => call_endpoint("http://10.0.0.129:5571", &prompt, 1024, 0.2).await,
+    }
+}
+
+async fn call_coder_for_integration(state: &AppState, task: &str, code: &str, review: &str) -> Result<String, String> {
+    let prompt = format!(
+        "<|im_start|>system\nApply the review feedback to the code. Output the final corrected code only.\n<|im_end|>\n\
+        <|im_start|>user\nTask: {}\n\nCode:\n{}\n\nReview:\n{}\n<|im_end|>\n<|im_start|>assistant\n",
+        task,
+        if code.len() > 6000 { &code[..6000] } else { code },
+        if review.len() > 2000 { &review[..2000] } else { review }
+    );
+    call_endpoint("http://127.0.0.1:5001", &prompt, 8192, 0.3).await
+}
+
+async fn call_endpoint(url: &str, prompt: &str, max_length: u32, temperature: f32) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let payload = serde_json::json!({
+        "prompt": prompt,
+        "max_length": max_length,
+        "temperature": temperature,
+        "top_p": 0.9,
+        "stop_sequence": ["<|im_end|>", "</s>"],
+    });
+    let resp = client
+        .post(format!("{}/api/v1/generate", url))
+        .json(&payload)
+        .timeout(std::time::Duration::from_secs(600))
+        .send()
+        .await
+        .map_err(|e| format!("{}: {}", url, e))?;
+    let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+    let text = body
+        .get("results")
+        .and_then(|r| r.as_array())
+        .and_then(|a| a.first())
+        .and_then(|r| r.get("text"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("")
+        .to_string();
+    Ok(text)
+}
+
 async fn corrector_connect() -> Json<serde_json::Value> {
     // Update tuning config to re-enable corrector
     let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
@@ -1034,6 +1300,10 @@ async fn main() {
         .route("/cluster/preset/launch", post(launch_preset))
         .route("/cluster/preset/deactivate", post(deactivate_preset))
         .route("/cluster/freeform/apply", post(apply_freeform))
+        .route("/mode", get(get_mode))
+        .route("/mode/cesarops", post(mode_cesarops))
+        .route("/mode/coding", post(mode_coding))
+        .route("/code", post(route_code_request))
         .route("/cluster/agent/run", post(run_agent_task))
         .route("/cluster/corrector/connect", post(corrector_connect))
         .route("/cluster/corrector/disconnect", post(corrector_disconnect))

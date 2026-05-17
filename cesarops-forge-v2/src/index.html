@@ -127,6 +127,7 @@
             <button class="btn-clear" onclick="clearChat()">CLEAR</button>
             <button style="background:#f44336; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="interruptAgent()">STOP</button>
             <button style="background:#ff9800; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="steerAgent()">STEER</button>
+            <button id="modeToggleBtn" style="background:#1565c0; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="toggleMode()">MODE: CESAROPS</button>
             <span class="status" id="status">Connecting...</span>
         </div>
     </header>
@@ -250,6 +251,52 @@
             msgs.innerHTML += '<div class="msg msg-assistant" style="color:#ff9800;">[STEER] ' + (result.message || result.error) + '</div>';
             msgs.scrollTop = msgs.scrollHeight;
         }
+
+        // ── MODE TOGGLE ─────────────────────────────────────────────────────
+        // CESAROPS = SAR / wreck-hunting fleet. Workers run their detection roles.
+        // CODING   = Qwen MoE coder on P100s + Gemma reviewer layered across 1070+P1000.
+        //            /code requests pipeline through coder -> reviewer -> coder_compile.
+        async function refreshModeButton() {
+            try {
+                const resp = await fetch('/mode');
+                const data = await resp.json();
+                const btn = document.getElementById('modeToggleBtn');
+                if (data.mode === 'coding') {
+                    btn.textContent = 'MODE: CODING';
+                    btn.style.background = '#7b1fa2';
+                } else {
+                    btn.textContent = 'MODE: CESAROPS';
+                    btn.style.background = '#1565c0';
+                }
+            } catch (e) {
+                console.error('refreshModeButton failed:', e);
+            }
+        }
+
+        async function toggleMode() {
+            const resp = await fetch('/mode');
+            const data = await resp.json();
+            const target = data.mode === 'coding' ? 'cesarops' : 'coding';
+            if (target === 'coding') {
+                if (!confirm('Switch to CODING mode?\\n\\nThis stops the SAR workers on P100s, starts Qwen3.6-MoE as the coder, and routes /code requests through Gemma layered review (1070+P1000).')) return;
+            } else {
+                if (!confirm('Switch to CESAROPS mode?\\n\\nThis stops the coding workers and returns to SAR / wreck-hunting fleet roles.')) return;
+            }
+            const r2 = await fetch('/mode/' + target, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            const result = await r2.json();
+            const msgs = document.getElementById('messages');
+            msgs.innerHTML += '<div class="msg msg-assistant" style="color:#90caf9;">[MODE] ' + (result.message || result.error || 'Mode swap failed') + '</div>';
+            msgs.scrollTop = msgs.scrollHeight;
+            await refreshModeButton();
+        }
+
+        // Refresh mode button on load and every 30s
+        refreshModeButton();
+        setInterval(refreshModeButton, 30000);
     </script>
 </body>
 </html>
