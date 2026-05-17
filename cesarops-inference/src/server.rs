@@ -32,6 +32,7 @@ pub struct InferenceState {
     pub weights: Arc<ModelWeights>,
     pub decoder: Arc<TransformerDecoder>,
     pub tokenizer: Arc<ZeroAllocBpeTokenizer>,
+    pub prefix_cache: Arc<parking_lot::RwLock<crate::kv_prefix_cache::KvPrefixCache>>,
 }
 
 /// KoboldCPP-compatible generate request.
@@ -76,6 +77,18 @@ pub struct GenerateResult {
 #[derive(Debug, Serialize)]
 pub struct ModelResponse {
     pub result: String,
+    /// KV prefix cache stats (hit/miss/eviction telemetry).
+    pub prefix_cache: PrefixCacheStats,
+}
+
+#[derive(Debug, Serialize, Default)]
+pub struct PrefixCacheStats {
+    pub capacity_tokens: usize,
+    pub total_tokens: usize,
+    pub nodes_alive: usize,
+    pub hits: u64,
+    pub misses: u64,
+    pub evictions: u64,
 }
 
 /// Health check response.
@@ -97,8 +110,20 @@ async fn health(State(state): State<Arc<Mutex<InferenceState>>>) -> Json<HealthR
 
 async fn model_info(State(state): State<Arc<Mutex<InferenceState>>>) -> Json<ModelResponse> {
     let s = state.lock().await;
+    let cache = s.prefix_cache.read();
+    let stats = cache.stats();
+    let capacity = cache.capacity();
+    drop(cache);
     Json(ModelResponse {
         result: format!("cesarops-inference/{}", s.model_name),
+        prefix_cache: PrefixCacheStats {
+            capacity_tokens: capacity,
+            total_tokens: stats.total_tokens,
+            nodes_alive: stats.nodes_alive,
+            hits: stats.hits,
+            misses: stats.misses,
+            evictions: stats.evictions,
+        },
     })
 }
 
@@ -115,7 +140,31 @@ async fn generate(
     let weights = Arc::clone(&s.weights);
     let decoder = Arc::clone(&s.decoder);
     let tokenizer = Arc::clone(&s.tokenizer);
+    let prefix_cache = Arc::clone(&s.prefix_cache);
     drop(s); // Release lock during inference
+
+    // KV prefix-cache telemetry. v1: bookkeeping only (no actual KV state
+    // restore yet). The cache records hits/misses on prompt prefix and
+    // commits the prefix at end-of-generation so subsequent identical
+    // prompts at least register as hits in the stats endpoint.
+    let prompt_template = if req.use_chat_template {
+        format!(
+            "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
+            req.prompt
+        )
+    } else {
+        req.prompt.clone()
+    };
+    let prompt_tokens_for_cache = tokenizer.encode(&prompt_template);
+    let prompt_hashes = crate::kv_prefix_cache::hash_sequence(&prompt_tokens_for_cache, 0);
+
+    {
+        let mut cache = prefix_cache.write();
+        match cache.prefix_match(&prompt_hashes) {
+            Some((len, _slice)) => info!("[cache] hit prefix_len={}", len),
+            None => info!("[cache] miss"),
+        }
+    }
 
     let response_text = run_inference(
         &weights,
@@ -128,6 +177,20 @@ async fn generate(
         req.rep_pen,
         req.use_chat_template,
     );
+
+    // Commit prefix to cache so the next identical prompt registers as hit.
+    // v2 will store actual KV state here for true prefill skip.
+    {
+        let mut cache = prefix_cache.write();
+        cache.commit(
+            &prompt_hashes,
+            crate::kv_prefix_cache::KvSlice {
+                start_pos: 0,
+                len: prompt_tokens_for_cache.len() as u32,
+                layer_data_handle: 0,
+            },
+        );
+    }
 
     let mut s = state.lock().await;
     s.is_generating = false;
@@ -208,6 +271,8 @@ fn run_inference(
         banned_tokens: std::collections::HashSet::new(),
     };
 
+    let diag = crate::diagnostics::Diagnostics::from_env();
+
     for step in 0..max_tokens {
         let position = prompt_tokens.len() + step as usize;
 
@@ -215,17 +280,10 @@ fn run_inference(
         let mut logits = decoder.forward(&mut hidden_state, position, weights, &mut kv_cache);
         kv_cache.advance();
 
-        // Check for NaN in hidden state before logits
-        let has_nan = hidden_state.iter().any(|x| x.is_nan() || x.is_infinite());
-        if has_nan {
-            info!("WARNING: hidden_state contains NaN/Inf after forward pass");
-        }
-
-        // Diagnostic: log logits range
-        let logits_min = logits.iter().cloned().fold(f32::INFINITY, f32::min);
-        let logits_max = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let logits_mean = logits.iter().sum::<f32>() / logits.len() as f32;
-        info!("Logits: min={:.4}, max={:.4}, mean={:.6}", logits_min, logits_max, logits_mean);
+        // Gated NaN check + logits stats. No-op in Off mode (default).
+        // Replaces two unconditional CPU scans per token + per-token info!() log.
+        diag.check_nan("hidden_state", &hidden_state);
+        diag.log_logits(&logits);
 
         // Sample next token
         let recent: Vec<u32> = prompt_tokens.iter()
@@ -247,8 +305,11 @@ fn run_inference(
         // Embed the new token for next iteration
         hidden_state = get_embedding(&embed_data, next_token as usize, h, vocab_size);
 
-        // Log progress every token (for debugging)
-        info!("Step {}: token_id={}", step, next_token);
+        // Log progress every token (debug mode only — gated to avoid
+        // per-token tracing overhead in production).
+        if diag.debug_enabled() {
+            tracing::debug!("Step {}: token_id={}", step, next_token);
+        }
     }
 
     // Decode all generated tokens at once
@@ -366,12 +427,24 @@ pub async fn run_server(
         decoder
     };
 
+    // KV prefix cache. v1: telemetry + bookkeeping only (real prefill skip
+    // lands when KvCache state retention across requests is wired). Sized
+    // for 16 GB P100 / Qwen 1.5B GQA: 57344 bytes/token at fp32, ~75k token cap.
+    // Auto-shrinks for smaller VRAM via from_vram_budget.
+    let prefix_cache = Arc::new(parking_lot::RwLock::new(
+        crate::kv_prefix_cache::KvPrefixCache::from_vram_budget(
+            16 * 1024 * 1024 * 1024,
+            57344,
+        ),
+    ));
+
     let state = Arc::new(Mutex::new(InferenceState {
         model_name: model_name.clone(),
         is_generating: false,
         weights,
         decoder,
         tokenizer,
+        prefix_cache,
     }));
 
     let app = Router::new()
