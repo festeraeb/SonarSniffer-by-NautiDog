@@ -31,7 +31,15 @@ pub async fn execute(name: &str, arguments: &Value, state: &AppState) -> String 
         "remember" => { reset_think_counter(); remember(arguments, state).await },
         "run_command" => { reset_think_counter(); run_command(arguments, state).await },
         "speed_check" => { speed_check(arguments, state).await },
-        _ => format!("Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check", name),
+        // ── Wreck-detection / SAR / downed-aircraft tools ────────────────
+        // These shell out to proven Python (scan_engine, universal_downloader,
+        // weather_service) and the Rust aeromagnetic worker. Same toolchain
+        // serves wreck-hunting + search-and-rescue + downed-aircraft search.
+        "scan_region" => { reset_think_counter(); scan_region(arguments, state).await },
+        "magnetic_dipole_detect" => { reset_think_counter(); magnetic_dipole_detect(arguments, state).await },
+        "download_satellite_window" => { reset_think_counter(); download_satellite_window(arguments, state).await },
+        "weather_window" => { reset_think_counter(); weather_window(arguments, state).await },
+        _ => format!("Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check, scan_region, magnetic_dipole_detect, download_satellite_window, weather_window", name),
     }
 }
 
@@ -379,4 +387,207 @@ fn chrono_now() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
     format!("{}", duration.as_secs())
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// Wreck detection / SAR / downed-aircraft tools
+// ────────────────────────────────────────────────────────────────────────────
+//
+// Same toolchain serves three missions:
+//   1. Wreck hunting   — detect sunken vessels in 500ft of water from satellite
+//   2. Search & rescue — locate missing vessels / aircraft in same waters
+//   3. Downed aircraft — magnetic + glint paint + thermal signatures
+//
+// The physics doesn't change between schooner and Cessna — only the
+// validation database (known_wrecks.json vs known_aircraft.json) and
+// the spectral priors. That's why these are generic.
+
+/// Run the proven Python scan_engine on a bbox + day window.
+/// Engine implements 7-pass detection: anomaly + hydrocarbon + Stumpf
+/// bathymetry + LoG + SWIR silt erasure + mussel clearspot + triple-lock.
+async fn scan_region(args: &Value, _state: &AppState) -> String {
+    let bbox = match args.get("bbox").and_then(|v| v.as_str()) {
+        Some(b) => b,
+        None => return "Error: 'bbox' (lat_min,lon_min,lat_max,lon_max) is required".to_string(),
+    };
+    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as u32;
+    let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("wreck");
+    let _region_name = args.get("region_name").and_then(|v| v.as_str()).unwrap_or("scan");
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let output_path = format!("/tmp/scan_{}.json", timestamp);
+    let script_path = "/mnt/data-external/cesarops/repo/scan_engine.py";
+
+    info!("scan_region: bbox={} days={} mode={}", bbox, days, mode);
+
+    let mut cmd = Command::new("python");
+    cmd.arg(script_path)
+        .arg("--bbox").arg(bbox)
+        .arg("--days").arg(days.to_string())
+        .arg("--mode").arg(mode)
+        .arg("--output").arg(&output_path);
+
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(1800),
+        cmd.output(),
+    ).await;
+
+    match result {
+        Ok(Ok(output)) if output.status.success() => {
+            match tokio::fs::read_to_string(&output_path).await {
+                Ok(content) => truncate_output(&content, 2000),
+                Err(e) => format!("scan_engine ran but output file unreadable ({}): {}",
+                    output_path, e),
+            }
+        }
+        Ok(Ok(output)) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            format!("scan_engine FAILED (exit {}): {}",
+                output.status.code().unwrap_or(-1),
+                truncate_output(&stderr, 1500))
+        }
+        Ok(Err(e)) => format!("Error launching python {}: {}", script_path, e),
+        Err(_) => "Error: scan_engine timed out after 30 minutes".to_string(),
+    }
+}
+
+/// Magnetic dipole detection via the cesarops-aeromagnetic-worker Rust binary.
+/// Real wgpu compute shader running on Pascal — validated against known
+/// wreck sites in Lake Erie + Straits of Mackinac.
+async fn magnetic_dipole_detect(args: &Value, _state: &AppState) -> String {
+    let grid_path = match args.get("grid_path").and_then(|v| v.as_str()) {
+        Some(p) => p,
+        None => return "Error: 'grid_path' (CSV or NPY magnetic grid) is required".to_string(),
+    };
+    let pixel_size = args.get("pixel_size_m").and_then(|v| v.as_f64()).unwrap_or(25.0) as f32;
+    let inner = args.get("inner_radius").and_then(|v| v.as_u64()).unwrap_or(5) as u32;
+    let outer = args.get("outer_radius").and_then(|v| v.as_u64()).unwrap_or(15) as u32;
+
+    let binary_path = "/home/cesarops/wreckhunter2000-1/target/release/cesarops-aeromagnetic-worker";
+
+    info!("magnetic_dipole_detect: grid={} pixel_size={} inner={} outer={}",
+        grid_path, pixel_size, inner, outer);
+
+    if !std::path::Path::new(binary_path).exists() {
+        return format!(
+            "Error: cesarops-aeromagnetic-worker binary not found at {}. \
+             Build it with: cargo build --release -p cesarops-aeromagnetic-worker",
+            binary_path
+        );
+    }
+
+    let mut cmd = Command::new(binary_path);
+    cmd.arg("--grid").arg(grid_path)
+        .arg("--pixel-size").arg(pixel_size.to_string())
+        .arg("--inner").arg(inner.to_string())
+        .arg("--outer").arg(outer.to_string());
+
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(300),
+        cmd.output(),
+    ).await;
+
+    match result {
+        Ok(Ok(output)) if output.status.success() => {
+            truncate_output(&String::from_utf8_lossy(&output.stdout), 2000)
+        }
+        Ok(Ok(output)) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            format!("aeromagnetic_worker FAILED (exit {}): {}",
+                output.status.code().unwrap_or(-1),
+                truncate_output(&stderr, 1500))
+        }
+        Ok(Err(e)) => format!("Error launching {}: {}", binary_path, e),
+        Err(_) => "Error: magnetic_dipole_detect timed out after 5 minutes".to_string(),
+    }
+}
+
+/// Download a satellite tile window for the given bbox via the unified
+/// 5-source downloader (ASF, Copernicus, PO.DAAC, USGS, HLS).
+async fn download_satellite_window(args: &Value, _state: &AppState) -> String {
+    let bbox = match args.get("bbox").and_then(|v| v.as_str()) {
+        Some(b) => b,
+        None => return "Error: 'bbox' (lat_min,lon_min,lat_max,lon_max) is required".to_string(),
+    };
+    let provider = args.get("provider").and_then(|v| v.as_str()).unwrap_or("auto");
+    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as u32;
+    let output_dir = args
+        .get("output_dir")
+        .and_then(|v| v.as_str())
+        .unwrap_or("/tmp/cesarops_downloads/");
+
+    let script_path = "/mnt/data-external/cesarops/repo/universal_downloader.py";
+
+    info!("download_satellite_window: bbox={} provider={} days={} -> {}",
+        bbox, provider, days, output_dir);
+
+    let mut cmd = Command::new("python");
+    cmd.arg(script_path)
+        .arg("--bbox").arg(bbox)
+        .arg("--provider").arg(provider)
+        .arg("--days").arg(days.to_string())
+        .arg("--output-dir").arg(output_dir);
+
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(1800),
+        cmd.output(),
+    ).await;
+
+    match result {
+        Ok(Ok(output)) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            truncate_output(stdout.trim(), 2000)
+        }
+        Ok(Ok(output)) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            format!("downloader FAILED (exit {}): {}",
+                output.status.code().unwrap_or(-1),
+                truncate_output(&stderr, 1500))
+        }
+        Ok(Err(e)) => format!("Error launching python {}: {}", script_path, e),
+        Err(_) => "Error: download_satellite_window timed out after 30 minutes".to_string(),
+    }
+}
+
+/// Weather window classification — wreck/SAR scans benefit from
+/// post-storm windows (sediment settled, water clear, features
+/// stirred up) over calm or storm conditions.
+async fn weather_window(args: &Value, _state: &AppState) -> String {
+    let bbox = match args.get("bbox").and_then(|v| v.as_str()) {
+        Some(b) => b,
+        None => return "Error: 'bbox' (lat_min,lon_min,lat_max,lon_max) is required".to_string(),
+    };
+    let check = args.get("check").and_then(|v| v.as_str()).unwrap_or("post_storm");
+
+    let script_path = "/mnt/data-external/cesarops/repo/weather_service.py";
+
+    info!("weather_window: bbox={} check={}", bbox, check);
+
+    let mut cmd = Command::new("python");
+    cmd.arg(script_path)
+        .arg("--bbox").arg(bbox)
+        .arg("--classify").arg(check);
+
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(60),
+        cmd.output(),
+    ).await;
+
+    match result {
+        Ok(Ok(output)) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            truncate_output(stdout.trim(), 2000)
+        }
+        Ok(Ok(output)) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            format!("weather_service FAILED: {}",
+                truncate_output(&stderr, 1500))
+        }
+        Ok(Err(e)) => format!("Error launching python {}: {}", script_path, e),
+        Err(_) => "Error: weather_window timed out after 60 seconds".to_string(),
+    }
 }
