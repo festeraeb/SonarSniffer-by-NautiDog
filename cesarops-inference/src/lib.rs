@@ -51,3 +51,7 @@ pub mod model_arch;
 pub mod scratch_buffers;
 pub mod arch_detect;
 pub mod pipeline_cache;
+pub mod diagnostics;
+pub mod uniform_pool;
+pub mod gpu_stats;
+pub mod kv_prefix_cache;

@@ -63,4 +63,45 @@ impl KvCache {
     pub fn get_values(&self, layer_idx: usize) -> &[Vec<f32>] {
         &self.layers[layer_idx].values
     }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Speculative decoding support — snapshot / rollback / commit
+    // ───────────────────────────────────────────────────────────────────────
+
+    /// Record the current sequence position. Use before a speculative batch
+    /// so we can roll back on rejection.
+    #[inline]
+    pub fn snapshot_pos(&self) -> u32 {
+        self.seq_len as u32
+    }
+
+    /// Reset the sequence pointer to a prior snapshot position. Truncates
+    /// each layer's K and V vectors so subsequent forward() calls overwrite
+    /// the rolled-back range cleanly.
+    pub fn rollback_to(&mut self, pos: u32) {
+        let target = pos as usize;
+        debug_assert!(
+            target <= self.seq_len,
+            "rollback_to({}) past current seq_len={}",
+            target,
+            self.seq_len
+        );
+        if target >= self.seq_len {
+            return;
+        }
+        for layer in &mut self.layers {
+            layer.keys.truncate(target);
+            layer.values.truncate(target);
+        }
+        self.seq_len = target;
+    }
+
+    /// Mark all positions up to `pos` as committed. Currently a no-op (no
+    /// separate committed/speculative state in this storage), but the API
+    /// is retained so SpeculativeDecoder can record acceptance points
+    /// without a state-machine rewrite later.
+    #[inline]
+    pub fn commit_through(&mut self, pos: u32) {
+        debug_assert!(pos as usize <= self.seq_len);
+    }
 }
