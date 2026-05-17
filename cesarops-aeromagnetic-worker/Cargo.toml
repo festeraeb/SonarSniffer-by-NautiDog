@@ -1,0 +1,20 @@
+[package]
+name = "cesarops-aeromagnetic-worker"
+version = "0.1.0"
+edition = "2021"
+description = "GPU-accelerated magnetic dipole detector for SAR/wreck detection on Pascal P100"
+publish = false
+
+[dependencies]
+bytemuck = { version = "1.25", features = ["derive"] }
+env_logger = "0.11"
+flume = "0.12"
+log = "0.4"
+pollster = "0.4"
+wgpu = "24"
+ndarray = "0.16"
+num-complex = "0.4"
+# Internal nauticuvs (full-precision f64 version, NEVER published to
+# crates.io). The local package is named nauticuvs-full but exposes
+# itself as `nauticuvs` to consumers via the package= alias.
+nauticuvs = { path = "../nauticuvs", package = "nauticuvs-full" }

@@ -4,7 +4,7 @@ mod discriminator;
 use discriminator::{Wellhead, KnownWreck, CandidateMatch, cross_reference_candidate};
 use std::borrow::Cow;
 use ndarray::Array2;
-use nauticuvs::{curvelet_forward, Scalar};
+use nauticuvs::curvelet_forward;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -34,7 +34,7 @@ async fn run_compute() {
         .expect("Failed to find a suitable GPU adapter");
 
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default())
+        .request_device(&wgpu::DeviceDescriptor::default(), None)
         .await
         .expect("Failed to create device");
 
@@ -145,8 +145,8 @@ async fn run_compute() {
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Pipeline Layout"),
-        bind_group_layouts: &[Some(&bind_group_layout)],
-        immediate_size: 0,
+        bind_group_layouts: &[&bind_group_layout],
+        push_constant_ranges: &[],
     });
 
     let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -191,10 +191,7 @@ async fn run_compute() {
     let (sender, receiver) = flume::bounded(1);
     buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
     
-    device.poll(wgpu::PollType::Wait {
-        submission_index: None,
-        timeout: None,
-    }).unwrap();
+    device.poll(wgpu::Maintain::Wait);
     receiver.recv_async().await.unwrap().unwrap();
 
     let data = buffer_slice.get_mapped_range();
@@ -218,7 +215,7 @@ async fn run_compute() {
     // Create an ndarray from the relevant window around the mag anomaly
     let mut energy_ratio = 0.0f32;
     let window_size = 64;
-    let mut window = Array2::<Scalar>::zeros((window_size, window_size));
+    let mut window = Array2::<f32>::zeros((window_size, window_size));
     let x_start = (p_x as i32 - (window_size / 2) as i32).max(0) as u32;
     let y_start = (p_y as i32 - (window_size / 2) as i32).max(0) as u32;
 
