@@ -86,6 +86,7 @@ struct AppInner {
     active_model: RwLock<Option<String>>,
     active_port: RwLock<Option<u16>>,
     gpu_info: RwLock<GpuInfo>,
+    all_gpus: RwLock<Vec<GpuEntry>>,
     start_time: Instant,
     restart_count: RwLock<u32>,
 }
@@ -100,6 +101,7 @@ fn new_state(config: NodeConfig) -> AppState {
         active_model: RwLock::new(None),
         active_port: RwLock::new(None),
         gpu_info: RwLock::new(GpuInfo::default()),
+        all_gpus: RwLock::new(Vec::new()),
         start_time: Instant::now(),
         restart_count: RwLock::new(0),
     })
@@ -109,35 +111,69 @@ fn new_state(config: NodeConfig) -> AppState {
 // GPU telemetry
 // ---------------------------------------------------------------------------
 
+#[derive(Clone, Serialize, Debug, Default)]
+struct GpuEntry {
+    id: u32,
+    name: String,
+    vram_total_mb: u64,
+    vram_used_mb: u64,
+    temperature_c: u32,
+    utilization_pct: u32,
+}
+
 async fn poll_gpu(state: &AppInner) {
+    // Query ALL GPUs on this box, not just the configured one.
     let output = Command::new("nvidia-smi")
         .args([
-            "--query-gpu=name,memory.total,memory.used,temperature.gpu,utilization.gpu",
+            "--query-gpu=index,name,memory.total,memory.used,temperature.gpu,utilization.gpu",
             "--format=csv,noheader,nounits",
-            "-i",
-            &state.config.gpu_id.to_string(),
         ])
         .output()
         .await;
 
-    let mut info = GpuInfo::default();
+    let mut gpus = Vec::new();
     if let Ok(out) = output {
         if out.status.success() {
             let s = String::from_utf8_lossy(&out.stdout);
-            let parts: Vec<&str> = s.trim().split(',').map(|p| p.trim()).collect();
-            if parts.len() >= 5 {
-                info.name = parts[0].to_string();
-                info.vram_total_mb = parts[1].parse().unwrap_or(0);
-                info.vram_used_mb = parts[2].parse().unwrap_or(0);
-                info.temperature_c = parts[3].parse().unwrap_or(0);
-                info.utilization_pct = parts[4].parse().unwrap_or(0);
+            for line in s.lines() {
+                let parts: Vec<&str> = line.split(',').map(|p| p.trim()).collect();
+                if parts.len() >= 6 {
+                    gpus.push(GpuEntry {
+                        id: parts[0].parse().unwrap_or(0),
+                        name: parts[1].to_string(),
+                        vram_total_mb: parts[2].parse().unwrap_or(0),
+                        vram_used_mb: parts[3].parse().unwrap_or(0),
+                        temperature_c: parts[4].parse().unwrap_or(0),
+                        utilization_pct: parts[5].parse().unwrap_or(0),
+                    });
+                }
             }
         }
     }
-    if info.name.is_empty() {
-        info.name = format!("{} (gpu {})", state.config.backend, state.config.gpu_id);
+
+    if gpus.is_empty() {
+        gpus.push(GpuEntry {
+            id: state.config.gpu_id,
+            name: format!("{} (gpu {})", state.config.backend, state.config.gpu_id),
+            ..Default::default()
+        });
     }
-    *state.gpu_info.write().await = info;
+
+    // Write the primary GPU (the one we manage) into the legacy single-gpu field,
+    // and all GPUs into the multi-gpu field.
+    let primary = gpus.iter()
+        .find(|g| g.id == state.config.gpu_id)
+        .cloned()
+        .unwrap_or_else(|| gpus[0].clone());
+
+    *state.gpu_info.write().await = GpuInfo {
+        name: primary.name.clone(),
+        vram_total_mb: primary.vram_total_mb,
+        vram_used_mb: primary.vram_used_mb,
+        temperature_c: primary.temperature_c,
+        utilization_pct: primary.utilization_pct,
+    };
+    *state.all_gpus.write().await = gpus;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,13 +182,24 @@ async fn poll_gpu(state: &AppInner) {
 
 async fn register(state: &AppInner) -> Result<(), String> {
     let gpu = state.gpu_info.read().await.clone();
+    let all_gpus = state.all_gpus.read().await.clone();
     let models = scan_models(&state.config.models_dir);
+
+    let gpus_json: Vec<serde_json::Value> = all_gpus.iter().map(|g| {
+        serde_json::json!({
+            "id": g.id,
+            "name": g.name,
+            "vram_mb": g.vram_total_mb,
+        })
+    }).collect();
+
     let payload = serde_json::json!({
         "node_id": state.config.node_name,
         "hardware": {
             "gpu": gpu.name,
             "vram_mb": gpu.vram_total_mb,
             "backend": state.config.backend,
+            "all_gpus": gpus_json,
         },
         "available_models": models.iter().map(|m| &m.name).collect::<Vec<_>>(),
         "listen_port": state.config.listen_port,
@@ -169,9 +216,21 @@ async fn register(state: &AppInner) -> Result<(), String> {
 
 async fn heartbeat(state: &AppInner) {
     let gpu = state.gpu_info.read().await.clone();
+    let all_gpus = state.all_gpus.read().await.clone();
     let model = state.active_model.read().await.clone();
     let port = *state.active_port.read().await;
     let node_state = state.state.read().await.as_str().to_string();
+
+    let gpus_json: Vec<serde_json::Value> = all_gpus.iter().map(|g| {
+        serde_json::json!({
+            "id": g.id,
+            "name": g.name,
+            "vram_used_mb": g.vram_used_mb,
+            "vram_total_mb": g.vram_total_mb,
+            "temp_c": g.temperature_c,
+            "util_pct": g.utilization_pct,
+        })
+    }).collect();
 
     let payload = serde_json::json!({
         "node_id": state.config.node_name,
@@ -184,6 +243,7 @@ async fn heartbeat(state: &AppInner) {
             "temp_c": gpu.temperature_c,
             "util_pct": gpu.utilization_pct,
         },
+        "all_gpus": gpus_json,
         "queue_depth": 0,
     });
 

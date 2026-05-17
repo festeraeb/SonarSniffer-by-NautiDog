@@ -50,6 +50,8 @@ pub struct NodeHeartbeat {
     pub port: Option<u16>,
     pub gpu: serde_json::Value,
     pub queue_depth: u32,
+    #[serde(default)]
+    pub all_gpus: serde_json::Value,
 }
 
 #[derive(Clone)]
@@ -942,8 +944,15 @@ async fn node_heartbeat(
             port: payload["port"].as_u64().map(|p| p as u16),
             gpu: payload["gpu"].clone(),
             queue_depth: payload["queue_depth"].as_u64().unwrap_or(0) as u32,
+            all_gpus: payload["all_gpus"].clone(),
         });
         node.last_seen = now;
+        // Also update hardware.all_gpus if present (re-registration on heartbeat)
+        if payload["all_gpus"].is_array() && !payload["all_gpus"].as_array().unwrap().is_empty() {
+            if let Some(hw) = node.hardware.as_object_mut() {
+                hw.insert("all_gpus".to_string(), payload["all_gpus"].clone());
+            }
+        }
         Json(serde_json::json!({ "status": "ok" }))
     } else {
         Json(serde_json::json!({ "error": "unknown node, register first" }))
