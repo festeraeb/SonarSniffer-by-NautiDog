@@ -278,3 +278,21 @@ Fits in 48 KB but leaves only 13 KB for other shared-memory uses. Tight.
 Standard mitigation: chunked streaming SwiGLU - compute gate × up element-by-element in workgroup-sized chunks (128 elements = 256 B per chunk). Working set drops from 35 KB to ~512 B. ~70× less shared-memory pressure.
 
 When designing FFN-class fused kernels, ALWAYS check shared-memory budget against intermediate_dim × 2 for gated activations. Hand-waving "shared memory (optional)" without numbers is a red flag.
+
+---
+
+## DII vs Tensor-Parallel (May 17, 2026)
+
+**Distributed Independent Inference (DII)** is the correct architecture for our fleet.
+Never attempt NCCL-style tensor-parallel over Ethernet/PCIe on Pascal hardware.
+
+Key lessons:
+- Each node runs a complete model independently. Network carries only prompts/completions.
+- Queue-per-model routing (not queue-per-node) handles heterogeneous fleets correctly.
+- Cross-node speculative decoding works when inter-node latency < 50ms (LAN).
+- Fault isolation: one node crash = one lost request, not a broken tensor graph.
+- KV-prefix-aware routing minimizes prefill cost — route continuations to the node that already has the session cached.
+- The "Compute Exchange" model (contribute GPU → earn credits) is the sustainable path for volunteer federation.
+- `cesarops-node` daemon is the implementation vehicle: register, heartbeat, spawn/stop, VRAM accounting.
+
+See: `research_log/external_contributions/distributed_independent_inference_doctrine.md`
