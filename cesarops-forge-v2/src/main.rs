@@ -12,6 +12,7 @@ mod validator;
 mod corrector_preset;
 mod model_scorecard;
 mod fleet_registry;
+mod orchestrator;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};
@@ -296,32 +297,65 @@ async fn get_mode() -> Json<serde_json::Value> {
 }
 
 /// POST /mode/cesarops  — activate CESAROPS (SAR / wreck-hunting) cluster.
-/// Stops any coding workers, ensures the SAR worker fleet is up.
+///
+/// In this mode the **P100s are kept clear** so they can take GeoTIFF tile
+/// stacks or magnetic grids the moment a mission lands. The intake / health /
+/// n8n brain runs on **Picasso (P1000 on cesarops2:5571)** — same TinyLlama
+/// instance that's always up for validator + speculative decode duty.
+///
+/// What we actually do:
+///   1. Kill anything on the P100 ports (5001/5002). They MUST be empty.
+///   2. Verify Picasso :5571 is responding; if not, log a warning (we don't
+///      auto-spawn it — that's a remote node).
+///   3. Persist the active mode + role map so the loop_engine knows where to
+///      send intake messages.
 async fn mode_cesarops() -> Json<serde_json::Value> {
-    info!("MODE SWAP -> CESAROPS (SAR / wreck-hunting)");
+    info!("MODE SWAP -> CESAROPS (SAR / wreck-hunting). P100s will be cleared.");
 
-    // Stop coding-mode workers cleanly. We don't know exactly which ones are
-    // running so we kill the known coding ports. SAR workers either auto-restart
-    // via their systemd units or get started below.
+    // 1. Hard-clear the P100 ports. setsid + pkill catches detached koboldcpp
+    //    processes that fuser alone would miss.
     let stop_cmd = "fuser -k 5001/tcp 2>/dev/null ; fuser -k 5002/tcp 2>/dev/null ; \
-                    pkill -f 'koboldcpp.*--port (5001|5002)' 2>/dev/null ; true";
+                    pkill -f 'koboldcpp.*--port 500[12]' 2>/dev/null ; true";
     let _ = std::process::Command::new("bash").arg("-c").arg(stop_cmd).output();
 
-    // Drop a marker into the cluster_config that tells the loop_engine which
-    // routing presets to apply. The actual model start-up uses the existing
-    // /cluster/worker/{idx}/start endpoints; this just sets the active mode.
+    // 2. Probe Picasso (P1000 intake brain). Best-effort — we don't auto-start
+    //    remote nodes.
+    let intake_url = "http://10.0.0.129:5571/api/v1/model";
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap();
+    let intake_online = client.get(intake_url).send().await
+        .map(|r| r.status().is_success())
+        .unwrap_or(false);
+
+    if !intake_online {
+        warn!("CESAROPS mode: Picasso (P1000 intake) at {} not responding. \
+               Intake messages will fall back to scout (cesarops3 1060).", intake_url);
+    }
+
+    // 3. Persist mode. main_endpoint is now Picasso (intake brain), NOT a P100.
     write_active_mode("cesarops", serde_json::json!({
         "primary_role": "wreck_detection",
-        "main_endpoint": "http://127.0.0.1:5001",
+        "intake_endpoint": "http://10.0.0.129:5571",
+        "intake_model": "TinyLlama-1.1B-Chat-v1.0-Q4_K_M",
+        "intake_online": intake_online,
         "thinker_endpoint": "http://10.0.0.41:5570",
-        "corrector_endpoint": "http://10.0.0.129:5200",
-        "draft_endpoint": "http://10.0.0.129:5571",
+        "fallback_intake": "http://10.0.0.41:5570",
+        "p100_status": "cleared_for_tile_compute",
     }));
 
-    info!("CESAROPS mode active. Workers expected: GemmaBig (P100#0:5001), QwenBig (P100#1:5002), Picasso (cesarops2:5571)");
+    info!("CESAROPS mode active. P100s cleared. Intake brain: Picasso ({}).",
+          if intake_online { "online" } else { "OFFLINE — falling back to scout/1060" });
+
     Json(serde_json::json!({
-        "message": "Mode -> CESAROPS. Workers reset. Use /cluster/worker/{idx}/start for the SAR fleet.",
+        "message": format!(
+            "Mode -> CESAROPS. P100s cleared for tile/mag compute. Intake brain: Picasso ({}).",
+            if intake_online { "online" } else { "OFFLINE — fallback to scout" }
+        ),
         "mode": "cesarops",
+        "intake_online": intake_online,
+        "p100_status": "clear",
     }))
 }
 
@@ -341,68 +375,79 @@ async fn mode_cesarops() -> Json<serde_json::Value> {
 async fn mode_coding(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
     info!("MODE SWAP -> CODING");
 
-    let coder_model = body
-        .get("coder_model")
-        .and_then(|v| v.as_str())
-        .unwrap_or("/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf");
-    let reviewer_model = body
-        .get("reviewer_model")
-        .and_then(|v| v.as_str())
-        .unwrap_or("/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf");
+    // Whether to keep one P100 free for tile/mag work even in coding mode.
+    // Defaults false — coding mode wants both heavy hitters by default.
     let free_one_p100 = body
         .get("free_p100_for_other_work")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
-    // Stop any currently-running cesarops workers on these ports
-    let stop_cmd = "fuser -k 5001/tcp 2>/dev/null ; fuser -k 5002/tcp 2>/dev/null ; \
-                    pkill -f 'koboldcpp.*--port (5001|5002)' 2>/dev/null ; true";
-    let _ = std::process::Command::new("bash").arg("-c").arg(stop_cmd).output();
+    // Use our own start_worker route. The cluster_config.toml [[worker]]
+    // entries already pin vulkan_device + gpulayers + maingpu correctly per
+    // P100 (fix from this morning), so the simplest correct path is:
+    // hit /cluster/worker/{name}/start for each card and let that route do
+    // the launching with the right flags. No bespoke koboldcpp shell-out here.
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .unwrap();
 
-    // Start coder on P100(s)
-    let p100_layers = if free_one_p100 { "--gpulayers 99 --tensor_split 1,0" } else { "--gpulayers 99 --tensor_split 1,1" };
-    let coder_cmd = format!(
-        "nohup /home/cesarops/koboldcpp --model {} --port 5001 --usevulkan {} > /tmp/coding_coder.log 2>&1 &",
-        coder_model, p100_layers
-    );
-    let coder_started = std::process::Command::new("bash")
-        .arg("-c").arg(&coder_cmd).output().is_ok();
+    let workers_to_start: Vec<&str> = if free_one_p100 {
+        vec!["GemmaBig"]
+    } else {
+        vec!["GemmaBig", "QwenBig"]
+    };
 
-    // Reviewer goes on the secondary fleet (1070 + P1000) — for now we just
-    // mark the endpoints as the coding reviewers in the mode state. The
-    // operator's fleet has these at 10.0.0.129:5200 (1070) + :5571 (P1000).
-    // If they need restarting, the operator does it from those boxes —
-    // the forge can't reach in via SSH from a URL handler.
+    let mut started = Vec::new();
+    let mut failed = Vec::new();
+    for w in &workers_to_start {
+        // POST to ourselves on localhost. The forge is on 9100.
+        let url = format!("http://127.0.0.1:9100/cluster/worker/{}/start", w);
+        match client.post(&url).send().await {
+            Ok(r) if r.status().is_success() => {
+                started.push(w.to_string());
+                info!("mode_coding: launched {}", w);
+            }
+            Ok(r) => {
+                failed.push(format!("{} (HTTP {})", w, r.status()));
+                warn!("mode_coding: {} returned HTTP {}", w, r.status());
+            }
+            Err(e) => {
+                failed.push(format!("{} ({})", w, e));
+                warn!("mode_coding: {} failed: {}", w, e);
+            }
+        }
+    }
 
     write_active_mode("coding", serde_json::json!({
         "primary_role": "coding",
         "coder_endpoint": "http://127.0.0.1:5001",
-        "coder_model": coder_model,
-        "reviewer_primary_endpoint": "http://10.0.0.129:5200",
-        "reviewer_draft_endpoint": "http://10.0.0.129:5571",
-        "reviewer_model": reviewer_model,
+        "coder_model": "/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf",
+        "reviewer_endpoint": "http://127.0.0.1:5002",
+        "reviewer_model": "/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf",
+        "draft_endpoint": "http://10.0.0.129:5571",
         "free_one_p100": free_one_p100,
-        "pipeline": "coder -> reviewer -> coder_compile",
+        "pipeline": "coder (Gemma) -> reviewer (Qwen) -> draft (Picasso)",
+        "started_workers": started.clone(),
+        "failed_workers": failed.clone(),
     }));
 
     info!(
-        "CODING mode active. Coder: {} ({}), Reviewer-main: 10.0.0.129:5200, Reviewer-draft: 10.0.0.129:5571",
-        coder_model, if free_one_p100 { "1 P100" } else { "2 P100s" }
+        "CODING mode active. Started: {:?}. Failed: {:?}.",
+        started, failed
     );
 
     Json(serde_json::json!({
         "message": format!(
-            "Mode -> CODING. Coder {} on {} P100. Reviewer = layered (1070 + P1000) on cesarops2.",
-            coder_model.split('/').last().unwrap_or("?"),
-            if free_one_p100 { "1" } else { "2" }
+            "Mode -> CODING. Started {} P100 worker(s). Reviewer pair = Gemma (P100#0) + Qwen (P100#1).",
+            started.len()
         ),
         "mode": "coding",
-        "coder_started": coder_started,
+        "started": started,
+        "failed": failed,
         "coder_endpoint": "http://127.0.0.1:5001",
-        "reviewer_endpoints": [
-            "http://10.0.0.129:5200",
-            "http://10.0.0.129:5571",
-        ],
+        "reviewer_endpoint": "http://127.0.0.1:5002",
+        "draft_endpoint": "http://10.0.0.129:5571",
     }))
 }
 
@@ -716,7 +761,16 @@ async fn start_worker(axum::extract::Path(path): axum::extract::Path<String>) ->
             let gpu = worker.get("gpu").and_then(|v| v.as_integer()).unwrap_or(0);
             let name = worker.get("name").and_then(|v| v.as_str()).unwrap_or("worker");
             let host = worker.get("host").and_then(|v| v.as_str()).unwrap_or("local");
-            
+
+            // Optional koboldcpp launch flags. Pulled from cluster_config.toml
+            // [[worker]] entries — these matter on Pascal because the auto-pick
+            // path will spread layers across both P100s and OOM the second
+            // worker we try to launch.
+            let vulkan_device = worker.get("vulkan_device").and_then(|v| v.as_integer()).unwrap_or(gpu);
+            let gpulayers = worker.get("gpulayers").and_then(|v| v.as_integer()).unwrap_or(99);
+            let contextsize = worker.get("contextsize").and_then(|v| v.as_integer()).unwrap_or(8192);
+            let threads = worker.get("threads").and_then(|v| v.as_integer()).unwrap_or(4);
+
             if model.is_empty() {
                 return Json(serde_json::json!({"error": "No model assigned to this worker."}));
             }
@@ -726,10 +780,20 @@ async fn start_worker(axum::extract::Path(path): axum::extract::Path<String>) ->
                 return Json(serde_json::json!({"error": format!("Remote workers ({}) must be started on their host machine.", host)}));
             }
 
-            // Determine if we can handle this model natively or need KoboldCPP
+            // Determine engine. Honor the explicit `engine` field in the
+            // worker config first; fall back to the filename heuristic only
+            // when the operator hasn't pinned it. Without this, koboldcpp-only
+            // models (Qwen3.6-35B-A3B Q4_K_M needs ssm/expert ops the native
+            // engine doesn't yet implement) get launched on cesarops-inference
+            // and panic with "Buffer size > max buffer size".
+            let engine_pin = worker.get("engine").and_then(|v| v.as_str()).unwrap_or("");
             let native_quants = ["q4_0", "q4_k_m", "q6_k", "q8_0", "f16", "f32", "bf16"];
             let model_lower = model.to_lowercase();
-            let use_native = native_quants.iter().any(|q| model_lower.contains(q));
+            let use_native = match engine_pin {
+                "cesarops-inference" | "native" | "wgpu" => true,
+                "koboldcpp" => false,
+                _ => native_quants.iter().any(|q| model_lower.contains(q)),
+            };
 
             let cmd = if use_native {
                 format!(
@@ -737,17 +801,27 @@ async fn start_worker(axum::extract::Path(path): axum::extract::Path<String>) ->
                     model, port, gpu, idx
                 )
             } else {
-                // Fallback to KoboldCPP for unsupported formats (MXFP4, etc.)
+                // koboldcpp fallback. Honor per-worker pin flags so launching
+                // QwenBig doesn't OOM because GemmaBig already auto-spread
+                // across both P100s. setsid + disown so the process survives
+                // the bash wrapper exiting.
                 format!(
-                    "nohup /home/cesarops/koboldcpp --model {} --port {} --usevulkan --gpulayers 99 > /tmp/worker_{}.log 2>&1 &",
-                    model, port, idx
+                    "setsid /home/cesarops/koboldcpp --model {} --port {} \
+                     --usevulkan {} --gpulayers {} --contextsize {} --threads {} \
+                     --quiet --maingpu {} > /tmp/worker_{}.log 2>&1 < /dev/null & disown",
+                    model, port, vulkan_device, gpulayers, contextsize, threads, vulkan_device, idx
                 )
             };
 
             let engine = if use_native { "cesarops-inference" } else { "koboldcpp (fallback)" };
-            
+
             match std::process::Command::new("bash").arg("-c").arg(&cmd).output() {
-                Ok(_) => Json(serde_json::json!({"message": format!("Started {} on GPU {} port {} via {}", name, gpu, port, engine)})),
+                Ok(_) => Json(serde_json::json!({
+                    "message": format!(
+                        "Started {} on GPU {} (vulkan_device {}, gpulayers {}) port {} via {}",
+                        name, gpu, vulkan_device, gpulayers, port, engine
+                    )
+                })),
                 Err(e) => Json(serde_json::json!({"error": format!("Failed to start: {}", e)})),
             }
         } else {
@@ -1341,6 +1415,10 @@ async fn main() {
         .route("/cluster/engines",                     get(get_available_engines))
         .route("/cluster/memory_pool/create",          post(memory_pool_create))
         .route("/cluster/config/full",                 get(get_cluster_config_full))
+        // ── Mission orchestrator (T9 design / T11 implementation) ─────────
+        .route("/orchestrator/probe",   get(orchestrator::orchestrator_probe))
+        .route("/orchestrator/plan",    post(orchestrator::orchestrator_plan))
+        .route("/orchestrator/execute", post(orchestrator::orchestrator_execute))
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 9100));

@@ -1,0 +1,19 @@
+{
+  "activated_at": 1779029247,
+  "extras": {
+    "coder_endpoint": "http://127.0.0.1:5001",
+    "coder_model": "/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf",
+    "draft_endpoint": "http://10.0.0.129:5571",
+    "failed_workers": [],
+    "free_one_p100": false,
+    "pipeline": "coder (Gemma) -> reviewer (Qwen) -> draft (Picasso)",
+    "primary_role": "coding",
+    "reviewer_endpoint": "http://127.0.0.1:5002",
+    "reviewer_model": "/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf",
+    "started_workers": [
+      "GemmaBig",
+      "QwenBig"
+    ]
+  },
+  "mode": "coding"
+}

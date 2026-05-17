@@ -62,6 +62,13 @@ engine = "koboldcpp"
 backend = "vulkan"
 inject_vectors = true
 memory_pool = ""
+# Launch flags — match what koboldcpp needs for this exact P100 setup.
+# vulkan_device pins which Vulkan adapter koboldcpp picks (Pascal needs explicit).
+# gpulayers=999 = full offload (Gemma-4-26B-MoE fits in 16 GB IQ4_XS).
+vulkan_device = 0
+gpulayers = 999
+contextsize = 8192
+threads = 4
 
 # P100 #1 (port 5002) — Qwen3.6-35B-A3B Q4_K_M — big hitter #2 (partial offload)
 [[worker]]
@@ -76,6 +83,12 @@ engine = "koboldcpp"
 backend = "vulkan"
 inject_vectors = true
 memory_pool = ""
+# Qwen3.6-35B-A3B at Q4_K_M is ~21 GB — only 32 layers fit on a 16 GB P100,
+# the rest spill to CPU/RAM. Pinned to vulkan_device 1 to stay off P100 #0.
+vulkan_device = 1
+gpulayers = 32
+contextsize = 8192
+threads = 4
 
 # cesarops2 GTX 1070 — DISABLED for today
 # DeepSeek-Coder-V2-Lite (the only ~7B model on this box) uses MLA attention

@@ -1,7 +1,7 @@
 # CESARops Inference Engine — Debug Log
 
 ## Model: Qwen2.5-Coder-1.5B-Instruct Q6_K
-- hidden_dim=1536, intermediate_dim=8960, n_heads=12, n_kv_heads=2
+- hidden_dim=1536, intermediate_dim=8960, [text](..)n_heads=12, n_kv_heads=2
 - head_dim=128, n_layers=28, vocab_size=151936, rope_theta=1000000
 
 ## Bugs Found & Fixed
