@@ -409,33 +409,69 @@ fn chrono_now() -> String {
 // validation database (known_wrecks.json vs known_aircraft.json) and
 // the spectral priors. That's why these are generic.
 
-/// Run the proven Python scan_engine on a bbox + day window.
+/// Run the proven Python scan_cli (scan_engine library is invoked through it).
 /// Engine implements 7-pass detection: anomaly + hydrocarbon + Stumpf
 /// bathymetry + LoG + SWIR silt erasure + mussel clearspot + triple-lock.
 async fn scan_region(args: &Value, _state: &AppState) -> String {
+    // bbox arrives as "lat_min,lon_min,lat_max,lon_max" string. scan_cli
+    // takes 4 separate floats via nargs=4 argument so we split.
     let bbox = match args.get("bbox").and_then(|v| v.as_str()) {
         Some(b) => b,
         None => return "Error: 'bbox' (lat_min,lon_min,lat_max,lon_max) is required".to_string(),
     };
-    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as u32;
-    let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("wreck");
-    let _region_name = args.get("region_name").and_then(|v| v.as_str()).unwrap_or("scan");
+    let bbox_parts: Vec<&str> = bbox.split(',').map(|s| s.trim()).collect();
+    if bbox_parts.len() != 4 {
+        return format!("Error: 'bbox' must be 4 comma-separated floats, got: {}", bbox);
+    }
 
-    let timestamp = std::time::SystemTime::now()
+    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as i64;
+    // mode is a forge-side hint for the operator log; scan_cli doesn't use it
+    let _mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("wreck");
+    let label = args.get("region_name").and_then(|v| v.as_str()).unwrap_or("forge_scan");
+
+    // scan_cli requires --dates START END (YYYY-MM-DD), build from days arg
+    let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
+        .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
-    let output_path = format!("/tmp/scan_{}.json", timestamp);
-    let script_path = "/mnt/data-external/cesarops/repo/scan_engine.py";
+    let end_ts = now;
+    let start_ts = now - (days * 86400);
+    let format_date = |ts: i64| -> String {
+        // YYYY-MM-DD via libc-free arithmetic
+        let secs_per_day = 86400i64;
+        let days_since_epoch = ts / secs_per_day;
+        // Days from 1970-01-01 to {y, m, d}; algorithm from RFC 3339 / civil_from_days
+        let days = days_since_epoch + 719468;
+        let era = if days >= 0 { days / 146097 } else { (days - 146096) / 146097 };
+        let doe = days - era * 146097;
+        let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+        let y = yoe + era * 400;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let d = doy - (153 * mp + 2) / 5 + 1;
+        let m = if mp < 10 { mp + 3 } else { mp - 9 };
+        let yyyy = if m <= 2 { y + 1 } else { y };
+        format!("{:04}-{:02}-{:02}", yyyy, m, d)
+    };
+    let start_date = format_date(start_ts);
+    let end_date = format_date(end_ts);
 
-    info!("scan_region: bbox={} days={} mode={}", bbox, days, mode);
+    let timestamp = now;
+    let output_path = format!("/tmp/scan_{}.json", timestamp);
+    let script_path = "/mnt/data-external/cesarops/repo/scan_cli.py";
+
+    info!("scan_region: bbox=[{}] dates={}..{} label={} output={}",
+        bbox_parts.join(","), start_date, end_date, label, output_path);
 
     let mut cmd = Command::new("python");
     cmd.arg(script_path)
-        .arg("--bbox").arg(bbox)
-        .arg("--days").arg(days.to_string())
-        .arg("--mode").arg(mode)
-        .arg("--output").arg(&output_path);
+        .arg("--bbox")
+        .arg(bbox_parts[0]).arg(bbox_parts[1])
+        .arg(bbox_parts[2]).arg(bbox_parts[3])
+        .arg("--dates").arg(&start_date).arg(&end_date)
+        .arg("--output").arg(&output_path)
+        .arg("--label").arg(label)
+        .arg("--download");  // auto-download the satellite tiles
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(1800),
@@ -444,20 +480,18 @@ async fn scan_region(args: &Value, _state: &AppState) -> String {
 
     match result {
         Ok(Ok(output)) if output.status.success() => {
-            match tokio::fs::read_to_string(&output_path).await {
-                Ok(content) => truncate_output(&content, 2000),
-                Err(e) => format!("scan_engine ran but output file unreadable ({}): {}",
-                    output_path, e),
-            }
+            // scan_cli writes results to the output dir. Read summary from stdout.
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            truncate_output(stdout.trim(), 2000)
         }
         Ok(Ok(output)) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            format!("scan_engine FAILED (exit {}): {}",
+            format!("scan_cli FAILED (exit {}): {}",
                 output.status.code().unwrap_or(-1),
                 truncate_output(&stderr, 1500))
         }
         Ok(Err(e)) => format!("Error launching python {}: {}", script_path, e),
-        Err(_) => "Error: scan_engine timed out after 30 minutes".to_string(),
+        Err(_) => "Error: scan_cli timed out after 30 minutes".to_string(),
     }
 }
 
@@ -519,24 +553,63 @@ async fn download_satellite_window(args: &Value, _state: &AppState) -> String {
         Some(b) => b,
         None => return "Error: 'bbox' (lat_min,lon_min,lat_max,lon_max) is required".to_string(),
     };
+    // Map our friendly 'provider' to universal_downloader's --sensors flag
     let provider = args.get("provider").and_then(|v| v.as_str()).unwrap_or("auto");
-    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as u32;
+    let sensors = match provider {
+        "auto" | "all" => "all",
+        "sentinel" => "sentinel2,sentinel1",
+        "landsat" => "landsat",
+        "ecostress" => "ecostress",
+        "swot" => "swot",
+        other => other,
+    };
+    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as i64;
+    let max_results = args
+        .get("max_results")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(20) as u32;
     let output_dir = args
         .get("output_dir")
         .and_then(|v| v.as_str())
         .unwrap_or("/tmp/cesarops_downloads/");
 
+    // Build YYYY-MM-DD date pair from days window
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let format_date = |ts: i64| -> String {
+        let secs_per_day = 86400i64;
+        let days_since_epoch = ts / secs_per_day;
+        let days = days_since_epoch + 719468;
+        let era = if days >= 0 { days / 146097 } else { (days - 146096) / 146097 };
+        let doe = days - era * 146097;
+        let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+        let y = yoe + era * 400;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let d = doy - (153 * mp + 2) / 5 + 1;
+        let m = if mp < 10 { mp + 3 } else { mp - 9 };
+        let yyyy = if m <= 2 { y + 1 } else { y };
+        format!("{:04}-{:02}-{:02}", yyyy, m, d)
+    };
+    let end_date = format_date(now);
+    let start_date = format_date(now - (days * 86400));
+
     let script_path = "/mnt/data-external/cesarops/repo/universal_downloader.py";
 
-    info!("download_satellite_window: bbox={} provider={} days={} -> {}",
-        bbox, provider, days, output_dir);
+    info!(
+        "download_satellite_window: bbox={} sensors={} dates={}..{} -> {}",
+        bbox, sensors, start_date, end_date, output_dir
+    );
 
     let mut cmd = Command::new("python");
     cmd.arg(script_path)
         .arg("--bbox").arg(bbox)
-        .arg("--provider").arg(provider)
-        .arg("--days").arg(days.to_string())
-        .arg("--output-dir").arg(output_dir);
+        .arg("--sensors").arg(sensors)
+        .arg("--dates").arg(&start_date).arg(&end_date)
+        .arg("--max-results").arg(max_results.to_string())
+        .arg("--output").arg(output_dir);
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(1800),
@@ -562,21 +635,89 @@ async fn download_satellite_window(args: &Value, _state: &AppState) -> String {
 /// Weather window classification — wreck/SAR scans benefit from
 /// post-storm windows (sediment settled, water clear, features
 /// stirred up) over calm or storm conditions.
+///
+/// weather_service.py is a LIBRARY, not a CLI. We invoke get_scan_windows()
+/// via a one-liner python -c. Center of bbox becomes the lat/lon for
+/// weather lookup.
 async fn weather_window(args: &Value, _state: &AppState) -> String {
     let bbox = match args.get("bbox").and_then(|v| v.as_str()) {
         Some(b) => b,
         None => return "Error: 'bbox' (lat_min,lon_min,lat_max,lon_max) is required".to_string(),
     };
-    let check = args.get("check").and_then(|v| v.as_str()).unwrap_or("post_storm");
+    let bbox_parts: Vec<&str> = bbox.split(',').map(|s| s.trim()).collect();
+    if bbox_parts.len() != 4 {
+        return format!("Error: 'bbox' must be 4 comma-separated floats, got: {}", bbox);
+    }
+    let lat_min: f64 = match bbox_parts[0].parse() {
+        Ok(v) => v, Err(e) => return format!("Error parsing lat_min: {}", e),
+    };
+    let lon_min: f64 = match bbox_parts[1].parse() {
+        Ok(v) => v, Err(e) => return format!("Error parsing lon_min: {}", e),
+    };
+    let lat_max: f64 = match bbox_parts[2].parse() {
+        Ok(v) => v, Err(e) => return format!("Error parsing lat_max: {}", e),
+    };
+    let lon_max: f64 = match bbox_parts[3].parse() {
+        Ok(v) => v, Err(e) => return format!("Error parsing lon_max: {}", e),
+    };
+    let center_lat = (lat_min + lat_max) / 2.0;
+    let center_lon = (lon_min + lon_max) / 2.0;
 
-    let script_path = "/mnt/data-external/cesarops/repo/weather_service.py";
+    let check = args.get("check").and_then(|v| v.as_str())
+        .or_else(|| args.get("condition").and_then(|v| v.as_str()))  // panel sends 'condition'
+        .unwrap_or("post_storm");
 
-    info!("weather_window: bbox={} check={}", bbox, check);
+    let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(14) as i64;
+
+    // Build YYYY-MM-DD start/end window ending today
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let format_date = |ts: i64| -> String {
+        let secs_per_day = 86400i64;
+        let days_since_epoch = ts / secs_per_day;
+        let dd = days_since_epoch + 719468;
+        let era = if dd >= 0 { dd / 146097 } else { (dd - 146096) / 146097 };
+        let doe = dd - era * 146097;
+        let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+        let y = yoe + era * 400;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let d = doy - (153 * mp + 2) / 5 + 1;
+        let m = if mp < 10 { mp + 3 } else { mp - 9 };
+        let yyyy = if m <= 2 { y + 1 } else { y };
+        format!("{:04}-{:02}-{:02}", yyyy, m, d)
+    };
+    let end_date = format_date(now);
+    let start_date = format_date(now - (days * 86400));
+
+    info!("weather_window: lat={:.4} lon={:.4} dates={}..{} check={}",
+        center_lat, center_lon, start_date, end_date, check);
+
+    // weather_service.py is a library — invoke via python -c importing it.
+    // Output is JSON to stdout.
+    let py_script = format!(
+        "import sys; sys.path.insert(0, '/mnt/data-external/cesarops/repo'); \
+         import json; \
+         from weather_service import get_scan_windows; \
+         w = get_scan_windows({lat}, {lon}, '{start}', '{end}'); \
+         w.pop('conditions', None); \
+         summary = {{k: len(v) if isinstance(v, list) else v for k, v in w.items()}}; \
+         out = {{'window_summary': summary, \
+                'recommended_dates_post_storm': (w.get('post_storm_1', [])[-3:] + w.get('post_storm_2', [])[-3:]), \
+                'recommended_dates_calm': w.get('calm', [])[-3:], \
+                'check_filter': '{check}'}}; \
+         print(json.dumps(out, indent=2))",
+        lat = center_lat,
+        lon = center_lon,
+        start = start_date,
+        end = end_date,
+        check = check,
+    );
 
     let mut cmd = Command::new("python");
-    cmd.arg(script_path)
-        .arg("--bbox").arg(bbox)
-        .arg("--classify").arg(check);
+    cmd.arg("-c").arg(&py_script);
 
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(60),
@@ -593,7 +734,7 @@ async fn weather_window(args: &Value, _state: &AppState) -> String {
             format!("weather_service FAILED: {}",
                 truncate_output(&stderr, 1500))
         }
-        Ok(Err(e)) => format!("Error launching python {}: {}", script_path, e),
+        Ok(Err(e)) => format!("Error launching python: {}", e),
         Err(_) => "Error: weather_window timed out after 60 seconds".to_string(),
     }
 }

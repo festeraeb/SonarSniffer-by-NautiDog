@@ -212,6 +212,24 @@ async fn deactivate_preset() -> Json<serde_json::Value> {
     Json(serde_json::json!({"message": "CESAROPS deactivated. Freeform mode."}))
 }
 
+/// POST /tool/{name}  — direct tool invocation, bypassing AI orchestration.
+/// Used by the cluster panel for human-driven tool calls without going
+/// through chat.
+///
+/// Body: { "arguments": { ...tool-specific args... } }
+/// Returns: { "result": "<tool-output-string>", "tool": "<name>" }
+async fn invoke_tool(
+    State(state): State<AppState>,
+    axum::extract::Path(name): axum::extract::Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let args = body.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+    info!("Direct tool invocation: {} args={}", name,
+        args.to_string().chars().take(120).collect::<String>());
+    let result = tools::execute(&name, &args, &state).await;
+    Json(serde_json::json!({"result": result, "tool": name}))
+}
+
 async fn apply_freeform(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
     let freeform_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/freeform_state.json";
     match std::fs::write(freeform_path, serde_json::to_string_pretty(&body).unwrap_or_default()) {
@@ -1300,6 +1318,7 @@ async fn main() {
         .route("/cluster/preset/launch", post(launch_preset))
         .route("/cluster/preset/deactivate", post(deactivate_preset))
         .route("/cluster/freeform/apply", post(apply_freeform))
+        .route("/tool/{name}", post(invoke_tool))
         .route("/mode", get(get_mode))
         .route("/mode/cesarops", post(mode_cesarops))
         .route("/mode/coding", post(mode_coding))
