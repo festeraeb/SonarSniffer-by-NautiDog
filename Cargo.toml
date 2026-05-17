@@ -1,3 +1,22 @@
+[workspace]
+# CESAROPS workspace — only the actively-built SAR + inference crates.
+# Other crates (sovereign-cloud, nauticuvs, cesarops-thought-engine,
+# cesarops-aeromagnetic-worker, etc.) remain as standalone workspaces
+# because they have divergent or stale deps. Add them here when they're
+# brought back to current Cargo / wgpu versions.
+#
+# cesarops-aeromagnetic-worker is currently broken: missing Cargo.toml,
+# expects nauticuvs-publish path that doesn't exist, active nauticuvs
+# crate is missing curvelet_forward + Scalar exports. Track for v2.
+members = [
+    "cesarops-inference",
+    "cesarops-forge-v2",
+    "cesarops-detection",
+]
+# The top-level cesarops-adaptive package below is also a member implicitly
+# (because [package] is at the root).
+resolver = "2"
+
 [package]
 name = "cesarops-adaptive"
 version = "0.1.0"

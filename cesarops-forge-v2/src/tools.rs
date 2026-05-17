@@ -39,7 +39,13 @@ pub async fn execute(name: &str, arguments: &Value, state: &AppState) -> String 
         "magnetic_dipole_detect" => { reset_think_counter(); magnetic_dipole_detect(arguments, state).await },
         "download_satellite_window" => { reset_think_counter(); download_satellite_window(arguments, state).await },
         "weather_window" => { reset_think_counter(); weather_window(arguments, state).await },
-        _ => format!("Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check, scan_region, magnetic_dipole_detect, download_satellite_window, weather_window", name),
+        // ── Triple-lock detection HTTP service (cesarops-detection :5580) ─
+        // Submit + poll detection jobs through the orchestration service.
+        // Falls back gracefully if the service or TPU jitter VM is down.
+        "detection_health" => { reset_think_counter(); detection_health(arguments, state).await },
+        "detection_scan" => { reset_think_counter(); detection_scan(arguments, state).await },
+        "detection_poll" => { reset_think_counter(); detection_poll(arguments, state).await },
+        _ => format!("Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check, scan_region, magnetic_dipole_detect, download_satellite_window, weather_window, detection_health, detection_scan, detection_poll", name),
     }
 }
 
@@ -589,5 +595,167 @@ async fn weather_window(args: &Value, _state: &AppState) -> String {
         }
         Ok(Err(e)) => format!("Error launching python {}: {}", script_path, e),
         Err(_) => "Error: weather_window timed out after 60 seconds".to_string(),
+    }
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// Triple-lock detection service (cesarops-detection on port 5580)
+// ────────────────────────────────────────────────────────────────────────────
+//
+// The detection service orchestrates the Triple-Lock pipeline:
+//   Scout (1060 Florence-2)  → Validator (P1000 Moondream2)  → Jitter (TPU VM)
+//
+// If the TPU VM is offline, the pipeline runs in 2-lock degraded mode
+// (Confirmed promotes to Investigate on jitter unavailability).
+//
+// Service must be started first via:
+//   cesarops-detection/scripts/start.sh
+// or the worker control panel in the forge.
+
+/// Probe detection service health + report worker status.
+async fn detection_health(_args: &Value, _state: &AppState) -> String {
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return format!("Error building HTTP client: {}", e),
+    };
+
+    match client.get("http://127.0.0.1:5580/health").send().await {
+        Ok(resp) => {
+            match resp.json::<Value>().await {
+                Ok(json) => {
+                    let workers = json.get("workers");
+                    let scout_ok = workers
+                        .and_then(|w| w.get("scout_1060"))
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    let val_ok = workers
+                        .and_then(|w| w.get("validator_p1000"))
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    let jitter_ok = workers
+                        .and_then(|w| w.get("jitter_tpu"))
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+
+                    let status = |b: bool| if b { "OK" } else { "OFFLINE" };
+                    let degrade = if !jitter_ok {
+                        "  (pipeline runs in 2-lock degraded mode — Confirmed -> Investigate on jitter offline)"
+                    } else {
+                        ""
+                    };
+
+                    format!(
+                        "Detection service: ONLINE\n\
+                         Scout (1060):     {}\n\
+                         Validator (P1000): {}\n\
+                         Jitter (TPU):     {}\n\
+                         {}",
+                        status(scout_ok),
+                        status(val_ok),
+                        status(jitter_ok),
+                        degrade
+                    )
+                }
+                Err(e) => format!("Detection service responded but JSON malformed: {}", e),
+            }
+        }
+        Err(_) => {
+            "Detection service OFFLINE on http://127.0.0.1:5580.\n\
+             Start with: cesarops-detection/scripts/start.sh\n\
+             Or via the cluster panel start_worker for the detection service."
+                .to_string()
+        }
+    }
+}
+
+/// Submit a tile-list scan job to the detection service.
+/// Returns the job_id for subsequent polling.
+async fn detection_scan(args: &Value, _state: &AppState) -> String {
+    let region = match args.get("region").and_then(|v| v.as_str()) {
+        Some(r) => r,
+        None => return "Error: 'region' (string label, e.g. \"lake_erie_central\") is required".to_string(),
+    };
+    let tiles = match args.get("tiles") {
+        Some(t) if t.is_array() => t.clone(),
+        _ => return "Error: 'tiles' must be an array of {lat, lon, image_b64} objects".to_string(),
+    };
+
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return format!("Error building HTTP client: {}", e),
+    };
+
+    let body = serde_json::json!({
+        "region": region,
+        "tiles": tiles,
+    });
+
+    info!("detection_scan: region={} tiles={}", region,
+        tiles.as_array().map(|a| a.len()).unwrap_or(0));
+
+    match client.post("http://127.0.0.1:5580/scan").json(&body).send().await {
+        Ok(resp) => {
+            match resp.json::<Value>().await {
+                Ok(json) => {
+                    let job_id = json
+                        .get("job_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+                    let tile_count = json
+                        .get("tiles")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    format!(
+                        "Scan submitted. job_id={} ({} tiles queued). \
+                         Use detection_poll {{ \"job_id\": \"{}\" }} to check progress.",
+                        job_id, tile_count, job_id
+                    )
+                }
+                Err(e) => format!("Detection service replied but JSON malformed: {}", e),
+            }
+        }
+        Err(e) => format!(
+            "Error submitting scan: {}. Is detection service running on :5580?",
+            e
+        ),
+    }
+}
+
+/// Poll a previously-submitted scan job for status + confirmed detections.
+async fn detection_poll(args: &Value, _state: &AppState) -> String {
+    let job_id = match args.get("job_id").and_then(|v| v.as_str()) {
+        Some(id) => id,
+        None => return "Error: 'job_id' (uuid string from detection_scan) is required".to_string(),
+    };
+
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return format!("Error building HTTP client: {}", e),
+    };
+
+    let url = format!("http://127.0.0.1:5580/scan/{}", job_id);
+    match client.get(&url).send().await {
+        Ok(resp) => {
+            match resp.json::<Value>().await {
+                Ok(json) => {
+                    // Pretty-print but truncate long detection arrays
+                    let pretty = serde_json::to_string_pretty(&json)
+                        .unwrap_or_else(|_| json.to_string());
+                    truncate_output(&pretty, 2000)
+                }
+                Err(e) => format!("Poll response not JSON: {}", e),
+            }
+        }
+        Err(e) => format!("Error polling job {}: {}", job_id, e),
     }
 }
