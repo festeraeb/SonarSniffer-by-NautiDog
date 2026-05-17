@@ -161,3 +161,48 @@ Make `reset()` private and expose only `reset_after(submission_idx, device)` to 
 
 ## [external-code,yagni,dead-code] 2026-05-17
 External allocator designs often ship with both bump-pointer and free-list paths "for completeness." With forward-pass-scope reset, every allocation has the same lifetime so the free list is dead code. Drop it. ~30 LOC simpler, lock-free, easier to reason about. If we later need mid-pass reuse, add it then. Pure YAGNI.
+
+## [design-principle,subgroup-locked-pipeline] 2026-05-17
+Doctrine adopted from cluster: every dispatch's workgroup size MUST be a multiple of the device's `subgroup_size`. Active-lane utilization is an explicit correctness constraint, not a performance optimization.
+
+Concrete rule:
+- subgroup=32 (NVIDIA Pascal/Volta/Turing/Ampere) → workgroup=128 default
+- subgroup=64 (AMD wave64, older RDNA) → workgroup=256 default
+- variable RDNA → use device's `subgroup_max_size` as the multiplier base
+
+For matvec kernels where `out_dim < workgroup_size`, restructure to either (a) shrink the workgroup to match, or (b) parallelize multiple output rows per workgroup to fill threads. Hardcoded 256-thread workgroups are an anti-pattern when out_dim varies.
+
+## [design-principle,kernel-fusion-contract] 2026-05-17
+Doctrine adopted from cluster: every fused kernel MUST satisfy:
+1. operates on subgroup-sized tiles
+2. NEVER writes intermediate global buffers (only registers and shared/workgroup memory between stages)
+3. passes data via registers → shared memory only between stages
+4. avoids dispatch chains inside the kernel (no recursive enqueue)
+
+Consequence: the K-buffer + V-buffer + `copy_buffer_to_buffer`-into-cache pattern we currently use violates rule 2. The q6k_kv stash fix replaces that with direct cache writes from inside the projection kernel.
+
+## [target-architecture,dispatch-budget] 2026-05-17
+Post-fusion per-layer dispatch target on Pascal:
+1. rmsnorm
+2. fused_qkv_rope_cache (replaces matvec×3 + bias×3 + rope×1 + copy×2)
+3. fused_attention (FA-lite, replaces split per-head)
+4. out_proj_bias (matvec + bias fused)
+5. rmsnorm (post-attention)
+6. fused_ffn (up + gate + SwiGLU + down)
+
+= 6 dispatches per layer × 28 layers = 168 dispatches per token.
+Down from current ~476 = 2.8× dispatch reduction per token.
+
+Stacks with wgpu_hal submit-path port for an additional dispatch-overhead reduction (per-submit cost approaching zero with command-buffer reuse).
+
+## [perf-projection,t-per-s-ladder] 2026-05-17
+Realistic tokens/sec projection ladder for Qwen 1.5B Q6_K on P100 16GB:
+- Current baseline: 2.2 t/s
+- + fused K/V/Q proj+RoPE+cache (q6k_kv stash): 3.0-4.0 t/s
+- + FA-lite fused attention: 5.0-7.0 t/s
+- + KV cache fp16 promotion: 6.0-9.0 t/s
+- + KV cache read amplification fix (pending cluster drop): 8.0-14.0 t/s
+- + wgpu_hal submit path: 12.0-25.0 t/s
+- + persistent-head fused attention: 18.0-35.0 t/s
+
+Each step assumes the prior step has landed. Sub-linear stacking because each fix removes part of the bottleneck the next one was assuming. Target koboldcpp parity (60+ t/s) requires steps beyond this ladder (probably packed-int8 paths + speculative decoding).
