@@ -13,6 +13,7 @@ members = [
     "cesarops-forge-v2",
     "cesarops-detection",
     "cesarops-aeromagnetic-worker",
+    "cesarops-node",
     "nauticuvs",
 ]
 # The top-level cesarops-adaptive package below is also a member implicitly

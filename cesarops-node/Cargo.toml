@@ -1,0 +1,19 @@
+[package]
+name = "cesarops-node"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight node daemon for DII cluster — registers, heartbeats, spawns/stops inference workers"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = true
+strip = true
