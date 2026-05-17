@@ -296,3 +296,53 @@ Key lessons:
 - `cesarops-node` daemon is the implementation vehicle: register, heartbeat, spawn/stop, VRAM accounting.
 
 See: `research_log/external_contributions/distributed_independent_inference_doctrine.md`
+
+---
+
+## Pipeline Sequencing: Weather-First Download Targeting (May 17, 2026)
+
+**Current behavior (v1):** All modules dispatch in parallel. Weather and satellite download run simultaneously. We download 14 days of imagery then pick the best post-storm windows after the fact.
+
+**Correct behavior (v2):** Weather scan runs FIRST as a gate. Its output (`recommended_dates_post_storm` + `recommended_dates_calm`) feeds directly into the satellite download's `--dates` argument. This means:
+
+1. Weather window analysis (fast, ~5s) → produces target dates
+2. Satellite download (slow, minutes) → only pulls tiles for the 2-4 best dates
+3. Mag/detection/stitching → runs on the targeted tiles
+
+**Why this matters:**
+- Reduces download volume by 70-80% (4 dates vs 14 days)
+- Enables swarm downloader pattern: split target dates across multiple download workers in parallel
+- Better imagery quality: post-storm clarity windows have less turbidity/cloud
+- Faster end-to-end: don't waste time downloading cloudy/stormy days we'll discard
+
+**Implementation plan:**
+- Add `depends_on: ["wx-window"]` field to ModuleSpec
+- Orchestrator dispatches in dependency order (topological sort)
+- Weather module output gets parsed and injected into sat-dl module's tool_args before dispatch
+- Swarm downloader: split N target dates across M workers (one per node with bandwidth)
+
+**Swarm downloader concept:**
+- Each cesarops-node can run a download worker
+- Orchestrator splits dates: node A gets dates[0..2], node B gets dates[2..4]
+- Results merge back at the forge before tile-compute stage
+- Eliminates single-node bandwidth bottleneck on large bbox searches
+
+---
+
+## Magnetic Data Coverage Gaps (May 17, 2026)
+
+**Issue:** The mag-dipole module currently fires on every WreckHunt mission regardless of whether real aeromagnetic survey data exists for the target bbox. Mid-Lake Michigan (Grand Haven ↔ Milwaukee corridor) has no publicly available aeromagnetic grid data. Running the wgpu shader on a synthetic/dummy grid produces false positives.
+
+**Fix (v2):**
+- Add a coverage index: a simple GeoJSON or bbox list of regions where we have real .csv/.npy mag grids
+- Orchestrator checks coverage before including mag-dipole in the plan
+- If no coverage: module status = "skipped_no_data" with a note explaining why
+- If partial coverage: clip the bbox to the covered region, run on that subset
+
+**Known coverage (as of May 2026):**
+- Lake Erie (western basin): NOAA aeromagnetic survey, 25m resolution
+- Straits of Mackinac: partial coverage from USGS
+- Thunder Bay (Lake Huron): NOAA sanctuary survey data
+- Mid-Lake Michigan (Grand Haven ↔ Milwaukee): NO COVERAGE — Andaste search area is a gap
+
+**Acquisition path:** NOAA NCEI has some flight-line data that could be gridded, but it's raw and needs processing. That's a future research task, not a pipeline fix.
