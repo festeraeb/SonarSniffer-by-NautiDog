@@ -612,51 +612,80 @@ async fn bring_up_local(client: &Client, w: &SecondaryWorker) -> BringUpOutcome 
     }
 }
 
-async fn bring_up_remote(w: &SecondaryWorker) -> BringUpOutcome {
-    // First check the host is reachable at all. A 1-second TCP probe to port
-    // 22 is a reasonable proxy for "SSH would work".
-    let ssh_addr = format!("{}:22", w.host);
-    let host_up = matches!(
-        timeout(Duration::from_millis(1500), tokio::net::TcpStream::connect(&ssh_addr)).await,
-        Ok(Ok(_))
-    );
-    if !host_up {
-        return BringUpOutcome::HostUnreachable;
-    }
+struct SpawnConfig {
+    model_path: String,
+    gpu_layers: u32,
+    context_size: u32,
+}
 
-    // Try invoking ~/start_<name>.sh on the remote box. Operator maintains
-    // these scripts per-worker; orchestrator just kicks them.
-    let script = format!("~/start_{}.sh", w.name.to_lowercase());
-    let cmd = format!(
-        "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=4 cesarops@{} \
-         'if [ -x {} ]; then setsid {} > /tmp/{}_remote.log 2>&1 < /dev/null & disown; echo started; \
-          else echo missing_script; fi'",
-        w.host, script, script, w.name
-    );
-
-    let result = tokio::task::spawn_blocking(move || {
-        std::process::Command::new("bash").arg("-c").arg(&cmd).output()
+fn load_worker_spawn_config(name: &str) -> Option<SpawnConfig> {
+    let path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+    let content = std::fs::read_to_string(path).ok()?;
+    let table: toml::Table = content.parse().ok()?;
+    let workers = table.get("worker")?.as_array()?;
+    let worker = workers.iter().find(|w| w.get("name").and_then(|v| v.as_str()) == Some(name))?;
+    Some(SpawnConfig {
+        model_path: worker.get("model").and_then(|v| v.as_str())?.to_string(),
+        gpu_layers: worker.get("gpulayers").and_then(|v| v.as_integer()).unwrap_or(999) as u32,
+        context_size: worker.get("contextsize").and_then(|v| v.as_integer()).unwrap_or(8192) as u32,
     })
+}
+
+async fn bring_up_remote(w: &SecondaryWorker) -> BringUpOutcome {
+    let client = reqwest::Client::new();
+    let base_url = format!("http://{}:5500", w.host);
+
+    // 1. Check if node daemon is reachable.
+    let status_res = timeout(
+        Duration::from_secs(3),
+        client.get(format!("{}/status", base_url)).send(),
+    )
     .await;
 
-    match result {
-        Ok(Ok(out)) if out.status.success() => {
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            if stdout.contains("started") {
-                BringUpOutcome::Started
-            } else if stdout.contains("missing_script") {
-                BringUpOutcome::Failed(format!("no ~/start_{}.sh on {}", w.name.to_lowercase(), w.host))
-            } else {
-                BringUpOutcome::Failed(format!("unexpected ssh output: {}", stdout.trim()))
-            }
+    let status_val = match status_res {
+        Ok(Ok(r)) if r.status().is_success() => {
+            r.json::<serde_json::Value>().await.unwrap_or_default()
         }
-        Ok(Ok(out)) => BringUpOutcome::Failed(format!(
-            "ssh exit {}: {}",
-            out.status.code().unwrap_or(-1),
-            String::from_utf8_lossy(&out.stderr).trim()
-        )),
-        Ok(Err(e)) => BringUpOutcome::Failed(format!("ssh spawn: {}", e)),
-        Err(e) => BringUpOutcome::Failed(format!("ssh join: {}", e)),
+        _ => return BringUpOutcome::HostUnreachable,
+    };
+
+    // 2. If already serving, nothing to do.
+    if status_val.get("state").and_then(|s| s.as_str()) == Some("serving") {
+        return BringUpOutcome::Started;
+    }
+
+    // 3. Load spawn config from cluster_config.toml.
+    let cfg = match load_worker_spawn_config(&w.name) {
+        Some(c) => c,
+        None => return BringUpOutcome::Failed(format!("no config for worker '{}'", w.name)),
+    };
+
+    // 4. POST /spawn to the node daemon.
+    let payload = serde_json::json!({
+        "model_path": cfg.model_path,
+        "port": w.port,
+        "gpu_layers": cfg.gpu_layers,
+        "context_size": cfg.context_size,
+    });
+
+    let spawn_res = timeout(
+        Duration::from_secs(130),
+        client.post(format!("{}/spawn", base_url)).json(&payload).send(),
+    )
+    .await;
+
+    match spawn_res {
+        Ok(Ok(r)) if r.status().is_success() => {
+            info!("bring_up_remote: {} spawned on {}:{}", w.name, w.host, w.port);
+            BringUpOutcome::Started
+        }
+        Ok(Ok(r)) => {
+            let body = r.json::<serde_json::Value>().await.unwrap_or_default();
+            let err = body.get("error").and_then(|e| e.as_str()).unwrap_or("unknown");
+            BringUpOutcome::Failed(err.to_string())
+        }
+        Ok(Err(e)) => BringUpOutcome::Failed(format!("spawn transport: {}", e)),
+        Err(_) => BringUpOutcome::Failed("spawn timeout (130s)".to_string()),
     }
 }
 

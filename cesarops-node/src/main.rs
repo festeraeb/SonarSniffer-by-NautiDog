@@ -248,8 +248,20 @@ async fn heartbeat(state: &AppInner) {
     });
 
     let url = format!("{}/cluster/node/heartbeat", state.config.forge_url);
-    if let Err(e) = reqwest::Client::new().post(&url).json(&payload).send().await {
-        warn!("heartbeat: {}", e);
+    match reqwest::Client::new().post(&url).json(&payload).send().await {
+        Ok(resp) => {
+            // If forge says "unknown node", re-register automatically.
+            // This handles forge restarts (in-memory registry lost).
+            if let Ok(body) = resp.json::<serde_json::Value>().await {
+                if body.get("error").and_then(|e| e.as_str()).unwrap_or("").contains("unknown node") {
+                    info!("heartbeat: forge lost us, re-registering...");
+                    if let Err(e) = register(state).await {
+                        warn!("re-register failed: {}", e);
+                    }
+                }
+            }
+        }
+        Err(e) => warn!("heartbeat: {}", e),
     }
 }
 

@@ -1030,6 +1030,13 @@ async fn discover_nodes(State(state): State<AppState>) -> Json<serde_json::Value
             }
 
             let ip = node.get("ip").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Skip localhost legacy entries if we have any registry node — the
+            // local cesarops-node daemon already reports this box via heartbeat.
+            if (ip == "127.0.0.1" || ip == "localhost") && !seen_names.is_empty() {
+                continue;
+            }
+
             let gpu_label = node.get("gpu").and_then(|v| v.as_str()).unwrap_or("");
             let empty_ports = vec![];
             let ports = node.get("ports").and_then(|v| v.as_array()).unwrap_or(&empty_ports);
