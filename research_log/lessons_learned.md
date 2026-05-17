@@ -381,3 +381,17 @@ See: `research_log/external_contributions/distributed_independent_inference_doct
 - Add coverage index to orchestrator (bbox → available grid path)
 - Wire .env EARTHDATA_TOKEN into forge Python tool calls
 - Register for Copernicus Data Space (free, just needs account)
+
+---
+
+## Government Data Download Gotchas (May 17, 2026)
+
+USGS/NOAA data portals don't serve direct file downloads from their catalog URLs. They redirect to HTML pages with JavaScript-driven download interfaces. Approaches that work:
+
+- **USGS mrdata.usgs.gov**: Use their WMS/WCS endpoints for programmatic access, not direct file URLs
+- **NOAA NCEI Grid Extract**: Interactive map tool at ncei.noaa.gov/maps/grid-extract — exports custom bbox GeoTIFFs but requires browser session
+- **NOAA EMAG2**: The .zip URL changed; need to find current hosting or use the NCEI API
+- **Element84 STAC**: Works perfectly for programmatic download (COG direct links)
+- **NASA CMR + Earthdata**: Works with Bearer token auth — our .env has the token
+
+For the multi-source downloader: use STAC/CMR/ERDDAP APIs (they return direct download URLs), not catalog page URLs. The government "download" pages are for humans, not scripts.
