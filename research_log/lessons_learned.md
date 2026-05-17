@@ -141,3 +141,23 @@ This is the same bug class as DEBUG_LOG.md bug #3 (clamp to [-30,30] destroying 
 
 ## [external-code,gqa-indexing] 2026-05-17
 External attention/KV reference shaders default to MHA indexing (using Q head index for K/V access). Our model is GQA (n_heads=12 Q heads, n_kv_heads=2 KV heads, every 6 Q heads share one KV head). **Always check K/V indexing** when integrating: map `kv_head = q_head / (n_heads / n_kv_heads)` before indexing K/V buffers. If the cluster's shader uses bare `head` for K/V it'll read past the KV cache for heads beyond `n_kv_heads-1`.
+
+## [external-code,allocator,reset-cadence] 2026-05-17
+External scratch-pool designs frequently default to either per-token reset (wastes intra-pass reuse) or persistent-across-passes (compounding fragmentation). The right cadence for transformer inference scratch is **per forward pass**, because:
+- KV cache already defines the token-level persistence boundary, so scratch doesn't need to live across tokens
+- All per-layer scratch (attention scores, FFN intermediate, projection outputs) has lifetimes that collapse cleanly to forward-pass boundaries
+- Per-layer reset would underutilize reuse within a layer (e.g., tiled attention reusing K-tile across multiple Q tiles)
+
+Forward-pass-scope reset is the canonical choice. Recorded so future scratch-allocator polish doesn't re-derive this.
+
+## [external-code,allocator,sync-correctness] 2026-05-17
+Reset-style scratch pools have one easy-to-miss correctness flag: **the GPU must finish consuming the previous frame's allocations before reset() runs.** Otherwise reuse during in-flight dispatch causes silent corruption. wgpu doesn't enforce this for us. The pattern:
+- `submit()` returns a `SubmissionIndex`
+- Forward pass returns the index to the caller
+- Caller calls `device.poll(Maintain::WaitForSubmissionIndex(idx))` before resetting the pool
+- This is fence-equivalent in wgpu and upgrades cleanly to native fences when wgpu_hal port lands
+
+Make `reset()` private and expose only `reset_after(submission_idx, device)` to enforce this at the type level.
+
+## [external-code,yagni,dead-code] 2026-05-17
+External allocator designs often ship with both bump-pointer and free-list paths "for completeness." With forward-pass-scope reset, every allocation has the same lifetime so the free list is dead code. Drop it. ~30 LOC simpler, lock-free, easier to reason about. If we later need mid-pass reuse, add it then. Pure YAGNI.
