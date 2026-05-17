@@ -230,3 +230,51 @@ Per cluster: Vulkan `vkQueueSubmit` ≈ 10-50 µs per dispatch on Pascal. At 30 
 Implication: the wgpu_hal port's value is NOT removing 14 ms of submit cost (it's only 3% of token time). The real gain is removing per-submit barrier insertion + bind group revalidation, which compounds across 476 submits and is much harder to measure but much bigger.
 
 Calibration: don't oversell wgpu_hal as "30-60% gain" (cluster's general claim). For our specific workload at 476 submits/token, the gain is in the per-submit overhead REDUCTION, not the submit count itself. Realistic projection: 1.3-1.5× gain on P100 from wgpu_hal alone, stacking sub-linearly with kernel fusion.
+
+## [external-code,doctrine-drift] 2026-05-17
+The cluster has now contradicted ITSELF on two architecture decisions across drops:
+1. Capability detection part 1 explicitly rejected device-name-string matching ("vendor branching is an anti-pattern"). The wgpu_hal scratch pool drop two messages later used `device_name.contains("P100")` for classification.
+2. Attention scratch pool drop adopted forward-pass-scope reset with no free list. The wgpu_hal scratch pool drop reverted to per-layer reset with a `reset_each_layer` boolean flag and bump-only offset (no per-pass reset at all).
+
+Implication: cluster outputs DRIFT across messages. They don't carry their own prior recommendations forward. Each drop is fresh-context.
+
+Mitigation: when integrating, ALWAYS re-apply our previously-locked overrides. Don't assume a later drop respects an earlier polish. Specifically check for:
+- device-name string matching (replace with feature bitfield)
+- naive softmax (replace with online max-subtract)
+- MHA-default indexing (replace with GQA mapping)
+- per-layer-only allocator reset (replace with reset_after(submission_idx))
+- score-loop nested in d-loop (hoist out)
+
+This is now confirmed as the ~5 standard polish patterns per cluster drop.
+
+## [design-principle,three-stream-memory] 2026-05-17
+Final memory architecture per cluster framing:
+- Stream 1: KV cache - bandwidth-bound, persistent across tokens, never reset, lives in device-local-fast heap
+- Stream 2: FFN intermediates - compute-bound, fused inline (registers + small workgroup memory), never hits global memory
+- Stream 3: Attention scratch - subgroup-windowed, per-pass reset, lives in pool
+
+Three orthogonal lifetime tiers. Each stream gets its own placement strategy. The ScratchManager only owns Stream 3 - KV cache is owned by model context, FFN intermediates are register/workgroup-only.
+
+Useful test for future kernel design: which stream is the data in? If it crosses stream boundaries (e.g., a "scratch buffer for intermediate FFN result that gets read back next layer") it's an architecture smell.
+
+## [external-code,swiglu-vs-gelu] 2026-05-17
+Cluster shipped a "fused FFN" kernel with the math expression `silu(h) * gelu_gate(h)`. This is wrong notation that mixes GeLU and SiLU. The actual SwiGLU pattern is `silu(W_gate · x) ⊙ (W_up · x)` - TWO separate weight matrices applied to the same input, then element-wise multiply. Their kernel had only ONE matmul before activation.
+
+Different model architectures use different FFN flavors:
+- GeLU FFN (GPT-2, BERT, older Llama): 2 matmuls, single activation
+- SwiGLU FFN (Qwen, Llama-2/3, Mistral): 3 matmuls (gate, up, down), elementwise multiply
+- ReLU FFN (rare): 2 matmuls
+
+For our Qwen 1.5B target we need SwiGLU. Make activation pluggable via spec constant or push-constant flag so we can support multiple model families with one shader.
+
+## [external-code,workgroup-memory-budget] 2026-05-17
+Pascal workgroup memory limit is 48 KB. For Qwen 1.5B FFN with intermediate_dim=8960:
+- gate vector: 8960 fp16 = 17.5 KB
+- up vector: 8960 fp16 = 17.5 KB
+- gate * up holding both = 35 KB peak before elementwise multiply
+
+Fits in 48 KB but leaves only 13 KB for other shared-memory uses. Tight.
+
+Standard mitigation: chunked streaming SwiGLU - compute gate × up element-by-element in workgroup-sized chunks (128 elements = 256 B per chunk). Working set drops from 35 KB to ~512 B. ~70× less shared-memory pressure.
+
+When designing FFN-class fused kernels, ALWAYS check shared-memory budget against intermediate_dim × 2 for gated activations. Hand-waving "shared memory (optional)" without numbers is a red flag.
