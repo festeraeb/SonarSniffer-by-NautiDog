@@ -206,3 +206,27 @@ Realistic tokens/sec projection ladder for Qwen 1.5B Q6_K on P100 16GB:
 - + persistent-head fused attention: 18.0-35.0 t/s
 
 Each step assumes the prior step has landed. Sub-linear stacking because each fix removes part of the bottleneck the next one was assuming. Target koboldcpp parity (60+ t/s) requires steps beyond this ladder (probably packed-int8 paths + speculative decoding).
+
+## [external-code,softmax-naive,three-strikes] 2026-05-17
+The cluster has now shipped THREE attention/KV kernels with naive `numer/denom` softmax (no max-subtraction): prefill_batching_v1 attention_prefill, fusion_rewrite_architecture attention_kv, and kv_prefetch_v1 attention_compute. Each one will overflow fp32 for any score > ~88. The fix (online softmax with running max) is cheap and mandatory.
+
+This is now a confirmed pattern, not a one-off. Going forward: assume every external attention kernel ships with naive softmax and budget the polish-pass for it. Same as how we budget the GQA indexing fix and the score-loop-nesting fix.
+
+Three-strikes rule applies: don't ask the cluster for "polished softmax" again. Just ship the fix in our integration polish layer.
+
+## [external-code,megakernel-rejected] 2026-05-17
+Cluster offered a persistent megakernel design for "zero-sync decode loop" (Stage #12). The technique works in CUDA but has Vulkan/wgpu portability and correctness risks:
+- Vulkan TDR timeout exposure on consumer cards (1070 may enforce, P100/P40 typically don't)
+- Naga validation may reject GPU-polling-state-buffer infinite loop patterns
+- Cross-workgroup state via storage buffers needs explicit atomics + memory barriers (drop did not address)
+- Read-after-write hazard inside a single dispatch is exactly the bug we hit on P100 storage buffers (DEBUG_LOG bug #1)
+- Trades observability for performance — we cannot bisect a 28-layer megakernel by dumping intermediates
+
+The same dispatch-cost reduction is achievable via the wgpu_hal::vulkan submit-path port (pre-recorded command buffers + replay) without these risks. Architecture choice: stick with multi-dispatch + wgpu_hal, reject persistent kernels.
+
+## [submit-cost-calibration,vulkan] 2026-05-17
+Per cluster: Vulkan `vkQueueSubmit` ≈ 10-50 µs per dispatch on Pascal. At 30 µs average × 476 submits/token = ~14 ms of submit overhead per token. At 2.2 t/s (455 ms/token), that's ~3% pure-submit overhead.
+
+Implication: the wgpu_hal port's value is NOT removing 14 ms of submit cost (it's only 3% of token time). The real gain is removing per-submit barrier insertion + bind group revalidation, which compounds across 476 submits and is much harder to measure but much bigger.
+
+Calibration: don't oversell wgpu_hal as "30-60% gain" (cluster's general claim). For our specific workload at 476 submits/token, the gain is in the per-submit overhead REDUCTION, not the submit count itself. Realistic projection: 1.3-1.5× gain on P100 from wgpu_hal alone, stacking sub-linearly with kernel fusion.
