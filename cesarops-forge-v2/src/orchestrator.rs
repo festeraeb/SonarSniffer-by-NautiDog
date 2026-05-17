@@ -931,6 +931,128 @@ pub async fn dispatch_modules(
 }
 
 // ---------------------------------------------------------------------------
+// 5b. LLM plan refinement (optional, graceful degradation)
+// ---------------------------------------------------------------------------
+
+/// Ask the intake brain (Picasso/scout) to refine the heuristic plan.
+/// If the LLM is unreachable or returns garbage, the heuristic plan is
+/// returned unchanged — this is a best-effort enhancement, not a gate.
+async fn llm_refine_plan(
+    heuristic_plan: MissionPlan,
+    scenario: &OperatorScenario,
+    notes: &mut Vec<String>,
+) -> MissionPlan {
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return heuristic_plan,
+    };
+
+    let module_names: Vec<&str> = heuristic_plan.modules.iter()
+        .map(|m| m.name.as_str())
+        .collect();
+
+    let prompt = format!(
+        "You are a SAR mission planner. Given this scenario and initial plan, output ONLY valid JSON.\n\n\
+         Scenario: {}\nBBox: {:?}\n\n\
+         Current plan:\n- Class: {:?}\n- Modules: {:?}\n\n\
+         If the plan looks correct, output: {{\"action\": \"accept\"}}\n\
+         If you want to add a module, output: {{\"action\": \"add_module\", \"module\": {{\"id\": \"llm-added\", \"name\": \"tool_name\", \"tool_name\": \"tool_name\", \"tool_args\": {{}}}}}}\n\
+         If you want to change the scenario class, output: {{\"action\": \"reclassify\", \"class\": \"WreckHunt\"}}\n\n\
+         Output ONLY valid JSON:",
+        scenario.raw_text, scenario.bbox, heuristic_plan.scenario_class, module_names
+    );
+
+    let payload = serde_json::json!({
+        "prompt": prompt,
+        "max_length": 256,
+        "temperature": 0.1,
+        "stop_sequence": ["\n\n"]
+    });
+
+    for endpoint in [INTAKE_ENDPOINT, INTAKE_FALLBACK] {
+        let url = format!("{}/api/v1/generate", endpoint);
+        let resp = match client.post(&url).json(&payload).send().await {
+            Ok(r) if r.status().is_success() => r,
+            _ => continue,
+        };
+        let body: serde_json::Value = match resp.json().await {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let text = match body["results"][0]["text"].as_str() {
+            Some(t) => t.trim().to_string(),
+            None => continue,
+        };
+        // Try to parse the LLM output as JSON action.
+        let action: serde_json::Value = match serde_json::from_str(&text) {
+            Ok(v) => v,
+            Err(_) => {
+                // Try extracting JSON from within the text (LLM may add preamble).
+                let start = text.find('{');
+                let end = text.rfind('}');
+                if let (Some(s), Some(e)) = (start, end) {
+                    match serde_json::from_str(&text[s..=e]) {
+                        Ok(v) => v,
+                        Err(_) => { notes.push("LLM refinement: parse failed".to_string()); return heuristic_plan; }
+                    }
+                } else {
+                    notes.push("LLM refinement: no JSON in response".to_string());
+                    return heuristic_plan;
+                }
+            }
+        };
+
+        let mut plan = heuristic_plan.clone();
+        match action.get("action").and_then(|a| a.as_str()) {
+            Some("accept") => {
+                notes.push("LLM refinement: accepted heuristic plan".to_string());
+                return plan;
+            }
+            Some("add_module") => {
+                if let Some(m) = action.get("module") {
+                    let module = ModuleSpec {
+                        id: m.get("id").and_then(|v| v.as_str()).unwrap_or("llm-added").to_string(),
+                        name: m.get("name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
+                        delegate: DelegateType::Cpu,
+                        bbox: None,
+                        tool_name: m.get("tool_name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        tool_args: m.get("tool_args").cloned().unwrap_or(serde_json::json!({})),
+                    };
+                    plan.modules.push(module);
+                    notes.push("LLM refinement: added module".to_string());
+                }
+                return plan;
+            }
+            Some("reclassify") => {
+                if let Some(cls) = action.get("class").and_then(|c| c.as_str()) {
+                    let new_class = match cls {
+                        "WreckHunt" => ScenarioClass::WreckHunt,
+                        "DownedAircraft" => ScenarioClass::DownedAircraft,
+                        "SearchRescue" => ScenarioClass::SearchRescue,
+                        _ => plan.scenario_class.clone(),
+                    };
+                    if new_class != plan.scenario_class {
+                        notes.push(format!("LLM refinement: reclassified to {:?}", new_class));
+                        return build_plan(new_class, scenario);
+                    }
+                }
+                return plan;
+            }
+            _ => {
+                notes.push("LLM refinement: unknown action".to_string());
+                return heuristic_plan;
+            }
+        }
+    }
+
+    notes.push("LLM refinement: intake brain unreachable, using heuristic".to_string());
+    heuristic_plan
+}
+
+// ---------------------------------------------------------------------------
 // 6. Top-level mission execution
 // ---------------------------------------------------------------------------
 
@@ -970,6 +1092,9 @@ pub async fn execute_mission(scenario: OperatorScenario) -> MissionReport {
             };
         }
     };
+
+    // LLM refinement pass — ask intake brain to validate/enhance the plan.
+    let plan = llm_refine_plan(plan, &scenario, &mut notes).await;
 
     let class = plan.scenario_class.clone();
     notes.push(format!("classified as {:?}", class));

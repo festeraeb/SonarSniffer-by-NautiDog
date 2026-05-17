@@ -28,6 +28,20 @@ pub struct AppState {
     pub steering: Arc<Mutex<Vec<String>>>,
     /// DII node registry — populated by cesarops-node heartbeats.
     pub node_registry: Arc<Mutex<std::collections::HashMap<String, NodeRegistration>>>,
+    /// Mission history — populated by webhook intake + orchestrator execute.
+    pub missions: Arc<Mutex<Vec<MissionRecord>>>,
+}
+
+/// A mission submitted via webhook or direct execute.
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct MissionRecord {
+    pub id: String,
+    pub source: String,
+    pub scenario_text: String,
+    pub status: String,
+    pub submitted_at: u64,
+    pub completed_at: Option<u64>,
+    pub report: Option<orchestrator::MissionReport>,
 }
 
 /// A registered node in the DII cluster.
@@ -1491,6 +1505,104 @@ async fn validate_ping(State(state): State<AppState>) -> Json<serde_json::Value>
     }))
 }
 
+// ── Webhook Mission Intake ──────────────────────────────────────────────────
+
+/// POST /webhook/mission — accept a mission from cesarops.com or any external source.
+/// Returns immediately with a mission_id; execution runs in background.
+async fn webhook_mission(
+    State(state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let scenario_text = match body.get("scenario").and_then(|v| v.as_str()) {
+        Some(s) => s.to_string(),
+        None => return Json(serde_json::json!({"error": "missing 'scenario' field"})),
+    };
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap();
+    let mission_id = format!("{:016x}", now.as_nanos() & 0xFFFFFFFFFFFFFFFF);
+    let source = body.get("source").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+    let priority = body.get("priority").and_then(|v| v.as_u64()).unwrap_or(2) as u8;
+    let bbox: Option<[f64; 4]> = body.get("bbox").and_then(|v| serde_json::from_value(v.clone()).ok());
+    let callback_url = body.get("callback_url").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+    let record = MissionRecord {
+        id: mission_id.clone(),
+        source: source.clone(),
+        scenario_text: scenario_text.clone(),
+        status: "running".to_string(),
+        submitted_at: now.as_secs(),
+        completed_at: None,
+        report: None,
+    };
+
+    {
+        let mut missions = state.missions.lock().await;
+        missions.push(record);
+        // Cap at 50 entries.
+        if missions.len() > 50 {
+            let excess = missions.len() - 50;
+            missions.drain(0..excess);
+        }
+    }
+
+    // Spawn background execution.
+    let state_clone = state.clone();
+    let mid = mission_id.clone();
+    tokio::spawn(async move {
+        let scenario = orchestrator::OperatorScenario {
+            raw_text: scenario_text,
+            priority,
+            bbox,
+            days_back: None,
+        };
+        let report = orchestrator::execute_mission(scenario).await;
+
+        // Update mission record.
+        {
+            let mut missions = state_clone.missions.lock().await;
+            if let Some(rec) = missions.iter_mut().find(|m| m.id == mid) {
+                rec.status = report.status.clone();
+                rec.completed_at = Some(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+                );
+                rec.report = Some(report.clone());
+            }
+        }
+
+        // Best-effort callback.
+        if let Some(url) = callback_url {
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new());
+            let _ = client.post(&url).json(&report).send().await;
+        }
+    });
+
+    Json(serde_json::json!({
+        "status": "accepted",
+        "mission_id": mission_id,
+    }))
+}
+
+/// GET /webhook/missions — list recent missions.
+async fn list_missions(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let missions = state.missions.lock().await;
+    let list: Vec<serde_json::Value> = missions.iter().map(|m| {
+        serde_json::json!({
+            "id": m.id,
+            "source": m.source,
+            "scenario": m.scenario_text,
+            "status": m.status,
+            "submitted_at": m.submitted_at,
+            "completed_at": m.completed_at,
+        })
+    }).collect();
+    Json(serde_json::Value::Array(list))
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -1513,11 +1625,15 @@ async fn main() {
         interrupt: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         steering: Arc::new(Mutex::new(Vec::new())),
         node_registry: Arc::new(Mutex::new(std::collections::HashMap::new())),
+        missions: Arc::new(Mutex::new(Vec::new())),
     };
 
     let app = Router::new()
         .route("/", get(index))
         .route("/cluster", get(cluster_panel))
+        // ── Webhook intake ───────────────────────────────────────────────
+        .route("/webhook/mission", post(webhook_mission))
+        .route("/webhook/missions", get(list_missions))
         .route("/health", get(health))
         .route("/send", post(send_message))
         .route("/clear", post(clear))
