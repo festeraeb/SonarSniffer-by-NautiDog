@@ -395,3 +395,28 @@ USGS/NOAA data portals don't serve direct file downloads from their catalog URLs
 - **NASA CMR + Earthdata**: Works with Bearer token auth — our .env has the token
 
 For the multi-source downloader: use STAC/CMR/ERDDAP APIs (they return direct download URLs), not catalog page URLs. The government "download" pages are for humans, not scripts.
+
+---
+
+## NCEI NOS Survey BAG File Access (May 18, 2026)
+
+**No Playwright needed.** The NCEI survey index at `https://www.ngdc.noaa.gov/nos/H12001-H14000/` is a plain Apache directory listing. Each survey has an HTML metadata page.
+
+**URL pattern for BAG files:**
+```
+https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/{SURVEY_ID}/BAG/{SURVEY_ID}_MB_{resolution}_LWD_{part}.bag
+```
+
+Example: `H13607_MB_50cm_LWD_1of1.bag`
+
+**Scraping strategy:**
+1. Fetch index page → extract all H##### survey IDs (~900 surveys in H12001-H14000 range)
+2. For each survey, fetch `https://www.ngdc.noaa.gov/nos/H12001-H14000/H#####.html`
+3. Parse lat/lon from the metadata to filter Great Lakes surveys
+4. Construct BAG download URL and fetch directly (no auth needed)
+
+**Other survey ranges to check:**
+- `https://www.ngdc.noaa.gov/nos/H10001-H12000/` (older surveys)
+- `https://www.ngdc.noaa.gov/nos/H08001-H10000/` (even older)
+
+All public domain, no authentication required.
