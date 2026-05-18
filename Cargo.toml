@@ -14,6 +14,7 @@ members = [
     "cesarops-detection",
     "cesarops-aeromagnetic-worker",
     "cesarops-node",
+    "nauti-inferer",
     "nauticuvs",
 ]
 # The top-level cesarops-adaptive package below is also a member implicitly
