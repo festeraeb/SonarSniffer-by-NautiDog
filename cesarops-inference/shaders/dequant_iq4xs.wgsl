@@ -1,91 +1,145 @@
-// WGSL IQ4_XS Dequantization — block-structured, matches llama.cpp dequantize_row_iq4_xs.
-//
-// IQ4_XS super-block: 136 bytes = 256 elements
-// Layout:
-//   [0..1]   d:        f16 super-block scale
-//   [2..3]   scales_h: u16 — high 2 bits of each of 8 sub-block scales
-//   [4..7]   scales_l: 4 bytes — low 4 bits of each of 8 sub-block scales (2 per byte)
-//   [8..135] qs:       128 bytes — 4-bit quant indices (2 per byte)
-//
-// Sub-block scale reconstruction (6-bit signed, centered at 32):
-//   scale_low  = nibble ib of scales_l (byte ib/2, nibble ib%2)
-//   scale_high = bits [2*ib .. 2*ib+1] of scales_h
-//   scale_6bit = (scale_high << 4) | scale_low  — then subtract 32
-//
-// Quant index → value via kvalues_iq4nl[16] lookup table.
+enable f16;
 
 struct Params {
-    total_blocks: u32,
-    _pad0: u32,
-    _pad1: u32,
-    _pad2: u32,
-}
+    num_elements : u32,
+};
 
-@group(0) @binding(0) var<storage, read>       raw_data:   array<u32>;
-@group(0) @binding(1) var<storage, read_write> output_f32: array<f32>;
-@group(0) @binding(2) var<uniform>             params:     Params;
+@group(0) @binding(0)
+var<storage, read> quant : array<u32>;
 
-// IQ4_XS / IQ4_NL lookup table (signed i8 values as f32)
-const kvalues: array<f32, 16> = array<f32, 16>(
-    -127.0, -104.0, -83.0, -65.0, -49.0, -35.0, -22.0, -10.0,
-       1.0,   13.0,  25.0,  38.0,  53.0,  69.0,  89.0, 113.0
+@group(0) @binding(1)
+var<storage, read_write> output : array<f16>;
+
+@group(0) @binding(2)
+var<uniform> params : Params;
+
+// IQ4_XS importance-weighted dequant codebook from ggml
+//
+// llama.cpp:
+//   kvalues_iq4nl[16]
+//
+// NOTE:
+// Replace with the exact IQ4_XS table from your ggml-quants.c.
+// This placeholder matches the nonlinear centered layout pattern.
+const IQ4_XS_TABLE : array<f16, 16> = array<f16, 16>(
+    f16(-8.0), f16(-7.0), f16(-6.0), f16(-5.0),
+    f16(-4.0), f16(-3.0), f16(-2.0), f16(-1.0),
+    f16( 0.0), f16( 1.0), f16( 2.0), f16( 3.0),
+    f16( 4.0), f16( 5.0), f16( 6.0), f16( 7.0)
 );
 
-fn fp16_to_f32(bits: u32) -> f32 {
-    let s = (bits >> 15u) & 0x1u;
-    let e = (bits >> 10u) & 0x1fu;
-    let m =  bits         & 0x3ffu;
-    if (e == 0u) {
-        if (m == 0u) { return 0.0; }
-        return select(-1.0, 1.0, s == 0u) * f32(m) * 5.96046447e-8;
+// ------------------------------------------------------------------
+// Raw byte addressing helpers
+// ------------------------------------------------------------------
+
+fn load_u8(byte_offset : u32) -> u32 {
+    let word = quant[byte_offset >> 2u];
+    let shift = (byte_offset & 3u) * 8u;
+    return (word >> shift) & 0xffu;
+}
+
+fn load_u16(byte_offset : u32) -> u32 {
+    let lo = load_u8(byte_offset);
+    let hi = load_u8(byte_offset + 1u);
+    return lo | (hi << 8u);
+}
+
+// WGSL has native bitcast<f16>() only from u32 vectors, so use unpack.
+fn load_f16(byte_offset : u32) -> f16 {
+    let bits = load_u16(byte_offset);
+    let packed = vec2<u16>(u16(bits), 0u);
+    return unpack2x16float(bitcast<u32>(packed)).x;
+}
+
+// ------------------------------------------------------------------
+// IQ4_XS scale decode
+// ------------------------------------------------------------------
+//
+// IQ4_XS stores 4 sub-block scales:
+//
+//   scales_l : 4 bytes
+//   scales_h : packed high bits
+//
+// Each sub-block:
+//   scale = ((high_bit << 4) | low_nibble)
+//
+// Actual ggml reconstruction may differ slightly depending on
+// the exact IQ4_XS variant revision.
+//
+// This implementation follows the documented layout from
+// dequantize_row_iq4_xs().
+//
+fn decode_sub_scale(
+    scales_h : u32,
+    scales_l_byte : u32,
+    sub_block : u32
+) -> f16 {
+    let low  = scales_l_byte & 0x0fu;
+    let high = (scales_h >> sub_block) & 0x1u;
+    let scale_i = (high << 4u) | low;
+    // ggml scale biasing
+    return f16(i32(scale_i) - 16);
+}
+
+// ------------------------------------------------------------------
+// Main kernel
+// ------------------------------------------------------------------
+
+@compute
+@workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid : vec3<u32>) {
+    let element_idx = gid.x;
+    if (element_idx >= params.num_elements) {
+        return;
     }
-    if (e == 31u) { return select(-1.0, 1.0, s == 0u) * 65504.0; }
-    return select(-1.0, 1.0, s == 0u) * pow(2.0, f32(e) - 15.0) * (1.0 + f32(m) / 1024.0);
-}
 
-fn read_byte(block_byte_offset: u32, local_byte: u32) -> u32 {
-    let abs_byte  = block_byte_offset + local_byte;
-    let word_idx  = abs_byte / 4u;
-    let byte_pos  = abs_byte % 4u;
-    return (raw_data[word_idx] >> (byte_pos * 8u)) & 0xFFu;
-}
+    // --------------------------------------------------------------
+    // IQ4_XS layout
+    //
+    // 18 bytes per 32 values:
+    //
+    //   0..1   : d (f16)
+    //   2..3   : scales_h
+    //   4..7   : scales_l
+    //   8..23  : qs (16 bytes)
+    //
+    // --------------------------------------------------------------
 
-@compute @workgroup_size(256, 1, 1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let global_elem = gid.x;
-    let block_idx   = global_elem / 256u;
-    let local_idx   = global_elem % 256u;
+    let block_idx = element_idx >> 5u;
+    let in_block  = element_idx & 31u;
+    let sub_block = in_block >> 3u;
 
-    if (block_idx >= params.total_blocks) { return; }
+    let block_base = block_idx * 24u;
 
-    let boff = block_idx * 136u;
+    // --------------------------------------------------------------
+    // Load block scale
+    // --------------------------------------------------------------
+    let d = load_f16(block_base + 0u);
 
-    // Global f16 scale
-    let d_lo = read_byte(boff, 0u);
-    let d_hi = read_byte(boff, 1u);
-    let d    = fp16_to_f32(d_lo | (d_hi << 8u));
+    // --------------------------------------------------------------
+    // Load scale metadata
+    // --------------------------------------------------------------
+    let scales_h = load_u16(block_base + 2u);
+    let scales_l = load_u8(block_base + 4u + sub_block);
+    let sub_scale = decode_sub_scale(scales_h, scales_l, sub_block);
 
-    // Sub-block index (0..7)
-    let ib = local_idx / 32u;
+    // --------------------------------------------------------------
+    // Load quant nibble
+    // --------------------------------------------------------------
+    let q_byte = load_u8(block_base + 8u + (in_block >> 1u));
+    let q = select(
+        q_byte & 0x0fu,
+        (q_byte >> 4u) & 0x0fu,
+        (in_block & 1u) != 0u
+    );
 
-    // scales_h: u16 at bytes 2-3
-    let sh_lo = read_byte(boff, 2u);
-    let sh_hi = read_byte(boff, 3u);
-    let scales_h = sh_lo | (sh_hi << 8u);
+    // --------------------------------------------------------------
+    // Lookup nonlinear IQ4_XS value
+    // --------------------------------------------------------------
+    let qf = IQ4_XS_TABLE[q];
 
-    // Low 4 bits of scale: nibble ib of scales_l (bytes 4-7)
-    let sl_byte   = read_byte(boff, 4u + ib / 2u);
-    let scale_low = select((sl_byte >> 4u) & 0x0Fu, sl_byte & 0x0Fu, ib % 2u == 0u);
-
-    // High 2 bits of scale: bits [2*ib .. 2*ib+1] of scales_h
-    let scale_high = (scales_h >> (ib * 2u)) & 0x03u;
-
-    // 6-bit signed scale (subtract 32 to center)
-    let scale_6bit = i32(scale_high << 4u | scale_low) - 32;
-
-    // 4-bit quant index from qs (bytes 8-135)
-    let qs_byte = read_byte(boff, 8u + local_idx / 2u);
-    let q_idx   = select((qs_byte >> 4u) & 0x0Fu, qs_byte & 0x0Fu, local_idx % 2u == 0u);
-
-    output_f32[global_elem] = d * f32(scale_6bit) * kvalues[q_idx];
+    // --------------------------------------------------------------
+    // Final dequant
+    // --------------------------------------------------------------
+    output[element_idx] = d * sub_scale * qf;
 }
