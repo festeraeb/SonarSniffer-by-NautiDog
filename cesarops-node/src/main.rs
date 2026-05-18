@@ -87,8 +87,18 @@ struct AppInner {
     active_port: RwLock<Option<u16>>,
     gpu_info: RwLock<GpuInfo>,
     all_gpus: RwLock<Vec<GpuEntry>>,
+    accelerators: RwLock<Vec<AcceleratorEntry>>,
     start_time: Instant,
     restart_count: RwLock<u32>,
+}
+
+/// Non-GPU accelerators (TPU, VPU, etc.)
+#[derive(Clone, Serialize, Debug, Default)]
+struct AcceleratorEntry {
+    name: String,
+    accel_type: String, // "tpu", "vpu", "npu"
+    device_path: String,
+    available: bool,
 }
 
 type AppState = Arc<AppInner>;
@@ -102,6 +112,7 @@ fn new_state(config: NodeConfig) -> AppState {
         active_port: RwLock::new(None),
         gpu_info: RwLock::new(GpuInfo::default()),
         all_gpus: RwLock::new(Vec::new()),
+        accelerators: RwLock::new(Vec::new()),
         start_time: Instant::now(),
         restart_count: RwLock::new(0),
     })
@@ -176,6 +187,53 @@ async fn poll_gpu(state: &AppInner) {
     *state.all_gpus.write().await = gpus;
 }
 
+/// Detect non-GPU accelerators: Coral Edge TPU (/dev/apex_*) and
+/// Intel Movidius NCS (USB VID 03e7).
+async fn poll_accelerators(state: &AppInner) {
+    let mut accels = Vec::new();
+
+    // Coral Edge TPU — check for /dev/apex_* devices
+    if let Ok(entries) = std::fs::read_dir("/dev") {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("apex_") {
+                accels.push(AcceleratorEntry {
+                    name: format!("Google Coral Edge TPU ({})", name),
+                    accel_type: "tpu".to_string(),
+                    device_path: format!("/dev/{}", name),
+                    available: true,
+                });
+            }
+        }
+    }
+
+    // Intel Movidius NCS — check lsusb for VID 03e7 (Intel Myriad)
+    if let Ok(out) = Command::new("lsusb").output().await {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            for line in s.lines() {
+                if line.contains("03e7:") {
+                    let name = if line.contains("2150") {
+                        "Intel Movidius Neural Compute Stick (Myriad X)"
+                    } else if line.contains("2485") {
+                        "Intel Movidius NCS2 (Myriad X)"
+                    } else {
+                        "Intel Movidius VPU"
+                    };
+                    accels.push(AcceleratorEntry {
+                        name: name.to_string(),
+                        accel_type: "vpu".to_string(),
+                        device_path: "usb".to_string(),
+                        available: true,
+                    });
+                }
+            }
+        }
+    }
+
+    *state.accelerators.write().await = accels;
+}
+
 // ---------------------------------------------------------------------------
 // Forge communication
 // ---------------------------------------------------------------------------
@@ -183,6 +241,7 @@ async fn poll_gpu(state: &AppInner) {
 async fn register(state: &AppInner) -> Result<(), String> {
     let gpu = state.gpu_info.read().await.clone();
     let all_gpus = state.all_gpus.read().await.clone();
+    let accels = state.accelerators.read().await.clone();
     let models = scan_models(&state.config.models_dir);
 
     let gpus_json: Vec<serde_json::Value> = all_gpus.iter().map(|g| {
@@ -193,6 +252,15 @@ async fn register(state: &AppInner) -> Result<(), String> {
         })
     }).collect();
 
+    let accels_json: Vec<serde_json::Value> = accels.iter().map(|a| {
+        serde_json::json!({
+            "name": a.name,
+            "type": a.accel_type,
+            "device": a.device_path,
+            "available": a.available,
+        })
+    }).collect();
+
     let payload = serde_json::json!({
         "node_id": state.config.node_name,
         "hardware": {
@@ -200,6 +268,7 @@ async fn register(state: &AppInner) -> Result<(), String> {
             "vram_mb": gpu.vram_total_mb,
             "backend": state.config.backend,
             "all_gpus": gpus_json,
+            "accelerators": accels_json,
         },
         "available_models": models.iter().map(|m| &m.name).collect::<Vec<_>>(),
         "listen_port": state.config.listen_port,
@@ -440,8 +509,9 @@ async fn main() {
     let port = config.listen_port;
     let state = new_state(config);
 
-    // Initial GPU poll.
+    // Initial GPU + accelerator poll.
     poll_gpu(&state).await;
+    poll_accelerators(&state).await;
 
     // Register with forge (best-effort).
     *state.state.write().await = NodeState::Registering;
