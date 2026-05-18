@@ -1505,6 +1505,153 @@ async fn validate_ping(State(state): State<AppState>) -> Json<serde_json::Value>
     }))
 }
 
+// ── IDE Backend Handlers ─────────────────────────────────────────────────────
+
+/// GET /ide — serve the IDE HTML page (will be replaced by Gemma's output)
+async fn ide_page() -> Html<&'static str> {
+    Html(include_str!("ide.html"))
+}
+
+/// GET /ide/file?path=/path/to/file — read a file's contents
+async fn ide_read_file(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Json<serde_json::Value> {
+    let path = match params.get("path") {
+        Some(p) => p,
+        None => return Json(serde_json::json!({"error": "path parameter required"})),
+    };
+    match std::fs::read_to_string(path) {
+        Ok(content) => Json(serde_json::json!({"path": path, "content": content})),
+        Err(e) => Json(serde_json::json!({"error": format!("read: {}", e), "path": path})),
+    }
+}
+
+/// POST /ide/file — write a file
+async fn ide_write_file(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let path = match body.get("path").and_then(|v| v.as_str()) {
+        Some(p) => p,
+        None => return Json(serde_json::json!({"error": "path required"})),
+    };
+    let content = match body.get("content").and_then(|v| v.as_str()) {
+        Some(c) => c,
+        None => return Json(serde_json::json!({"error": "content required"})),
+    };
+    match std::fs::write(path, content) {
+        Ok(_) => Json(serde_json::json!({"status": "ok", "path": path})),
+        Err(e) => Json(serde_json::json!({"error": format!("write: {}", e)})),
+    }
+}
+
+/// GET /ide/tree?root=/path — list directory tree (one level deep)
+async fn ide_file_tree(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Json<serde_json::Value> {
+    let root = params.get("root").map(|s| s.as_str())
+        .unwrap_or("/home/cesarops/wreckhunter2000-1");
+    let mut entries = Vec::new();
+    if let Ok(dir) = std::fs::read_dir(root) {
+        for entry in dir.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') && name != ".env" { continue; }
+            let is_dir = entry.path().is_dir();
+            entries.push(serde_json::json!({
+                "name": name,
+                "path": entry.path().to_string_lossy(),
+                "type": if is_dir { "dir" } else { "file" },
+            }));
+        }
+    }
+    entries.sort_by(|a, b| {
+        let a_dir = a["type"] == "dir";
+        let b_dir = b["type"] == "dir";
+        b_dir.cmp(&a_dir).then(a["name"].as_str().unwrap_or("").cmp(b["name"].as_str().unwrap_or("")))
+    });
+    Json(serde_json::Value::Array(entries))
+}
+
+/// POST /ide/exec — run a shell command and return output
+async fn ide_exec(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let command = match body.get("command").and_then(|v| v.as_str()) {
+        Some(c) => c,
+        None => return Json(serde_json::json!({"error": "command required"})),
+    };
+    let cwd = body.get("cwd").and_then(|v| v.as_str())
+        .unwrap_or("/home/cesarops/wreckhunter2000-1");
+
+    let output = tokio::process::Command::new("bash")
+        .arg("-c")
+        .arg(command)
+        .current_dir(cwd)
+        .output()
+        .await;
+
+    match output {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            Json(serde_json::json!({
+                "exit_code": out.status.code(),
+                "stdout": stdout,
+                "stderr": stderr,
+            }))
+        }
+        Err(e) => Json(serde_json::json!({"error": format!("exec: {}", e)})),
+    }
+}
+
+/// POST /ide/chat/stream — proxy a generate request to a koboldcpp endpoint
+/// and stream tokens back as SSE (Server-Sent Events).
+async fn ide_chat_stream(
+    Json(body): Json<serde_json::Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use axum::body::Body;
+
+    let endpoint = body.get("endpoint").and_then(|v| v.as_str())
+        .unwrap_or("http://127.0.0.1:5001");
+    let prompt = body.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
+    let max_length = body.get("max_length").and_then(|v| v.as_u64()).unwrap_or(1024);
+    let temperature = body.get("temperature").and_then(|v| v.as_f64()).unwrap_or(0.4);
+
+    let url = format!("{}/api/extra/generate/stream", endpoint);
+    let payload = serde_json::json!({
+        "prompt": prompt,
+        "max_length": max_length,
+        "temperature": temperature,
+        "top_p": 0.95,
+        "rep_pen": 1.1,
+    });
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let resp = match client.post(&url).json(&payload).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            let body = Body::from(format!("data: {{\"error\": \"{}\"}}\n\n", e));
+            return axum::response::Response::builder()
+                .header("Content-Type", "text/event-stream")
+                .header("Cache-Control", "no-cache")
+                .body(body)
+                .unwrap();
+        }
+    };
+
+    // For v1: read full response and forward as SSE. The koboldcpp streaming
+    // endpoint returns newline-delimited JSON tokens. We pass them through.
+    let body_bytes = resp.bytes().await.unwrap_or_default();
+    let body = Body::from(body_bytes);
+
+    axum::response::Response::builder()
+        .header("Content-Type", "text/event-stream")
+        .header("Cache-Control", "no-cache")
+        .header("X-Accel-Buffering", "no")
+        .body(body)
+        .unwrap()
+}
+
 // ── Webhook Mission Intake ──────────────────────────────────────────────────
 
 /// POST /webhook/mission — accept a mission from cesarops.com or any external source.
@@ -1631,6 +1778,12 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index))
         .route("/cluster", get(cluster_panel))
+        // ── IDE routes ───────────────────────────────────────────────────
+        .route("/ide", get(ide_page))
+        .route("/ide/file", get(ide_read_file).post(ide_write_file))
+        .route("/ide/tree", get(ide_file_tree))
+        .route("/ide/exec", post(ide_exec))
+        .route("/ide/chat/stream", post(ide_chat_stream))
         // ── Webhook intake ───────────────────────────────────────────────
         .route("/webhook/mission", post(webhook_mission))
         .route("/webhook/missions", get(list_missions))
