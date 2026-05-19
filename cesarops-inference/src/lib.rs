@@ -55,3 +55,4 @@ pub mod diagnostics;
 pub mod uniform_pool;
 pub mod gpu_stats;
 pub mod kv_prefix_cache;
+pub mod shader_synth;
