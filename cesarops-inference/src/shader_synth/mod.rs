@@ -22,6 +22,8 @@ pub mod spirv_builder;
 pub mod tensor_repack;
 pub mod ir_graph;
 pub mod microbench;
+pub mod simt_sim;
+pub mod hil_trainer;
 
 /// Shader IR operations — the intermediate representation
 /// between high-level intent and low-level GPU instructions.
