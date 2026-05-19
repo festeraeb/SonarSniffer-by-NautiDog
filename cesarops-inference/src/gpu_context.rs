@@ -129,12 +129,11 @@ impl GpuContext {
         const MAX_N: usize = 16384; // max output dimension
         const MAX_M: usize = 1;     // single token
 
-        // For matvec: we only need buf_a=[1,K] and buf_c=[1,N]
-        // The weight matrix lives in its own per-layer buffer (not buf_b_t)
-        let buf_a_size = MAX_K * std::mem::size_of::<f32>();       // 64 KB
-        let buf_b_t_size = MAX_K * MAX_N * std::mem::size_of::<f32>(); // 1 GB — use 256MB cap
-        let buf_b_t_size = buf_b_t_size.min(256 * 1024 * 1024);   // Cap at 256 MB
-        let buf_c_size = MAX_N * std::mem::size_of::<f32>();       // 64 KB
+        // Buffer sizing: all scratch buffers capped at 256 MB
+        let buf_cap: usize = 256 * 1024 * 1024; // 256 MB each
+        let buf_a_size = buf_cap;   // input (oversized but safe)
+        let buf_b_t_size = buf_cap; // weights chunk
+        let buf_c_size = buf_cap;   // output chunk
 
         let buf_a = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("buf_a"), size: buf_a_size as u64,
@@ -165,6 +164,45 @@ impl GpuContext {
 
     /// Dispatches C = A x B^T on the GPU and returns C.
     pub fn matmul_gpu(&self, a: &[f32], b_t: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
+        let b_t_bytes = k * n * std::mem::size_of::<f32>();
+        let buf_b_t_capacity = self.buf_b_t.size() as usize;
+
+        // If weight matrix fits in buf_b_t, do single-pass matmul
+        if b_t_bytes <= buf_b_t_capacity {
+            return self.matmul_gpu_single(a, b_t, m, k, n);
+        }
+
+        // Otherwise: chunked matmul along N dimension
+        // Split output columns into chunks that fit in buf_b_t
+        let max_n_per_chunk = buf_b_t_capacity / (k * std::mem::size_of::<f32>());
+        let mut result = vec![0.0f32; m * n];
+
+        let mut col_offset = 0;
+        while col_offset < n {
+            let chunk_n = (n - col_offset).min(max_n_per_chunk);
+
+            // Extract the chunk of b_t: rows col_offset..col_offset+chunk_n of the transposed matrix
+            // b_t is stored as [n, k] (each row is one output neuron's weights)
+            let chunk_start = col_offset * k;
+            let chunk_end = (col_offset + chunk_n) * k;
+            let b_t_chunk = &b_t[chunk_start..chunk_end];
+
+            let partial = self.matmul_gpu_single(a, b_t_chunk, m, k, chunk_n);
+
+            // Copy partial results into the right columns of the output
+            for row in 0..m {
+                for col in 0..chunk_n {
+                    result[row * n + col_offset + col] = partial[row * chunk_n + col];
+                }
+            }
+
+            col_offset += chunk_n;
+        }
+
+        result
+    }
+
+    fn matmul_gpu_single(&self, a: &[f32], b_t: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
         // 1. Upload dimensions uniform
         self.queue.write_buffer(&self.buf_dims, 0, bytemuck::cast_slice(&[MatrixDimensions { m: m as u32, k: k as u32, n: n as u32, pad: 0 }]));
 
