@@ -1652,6 +1652,47 @@ async fn ide_chat_stream(
         .unwrap()
 }
 
+// ── Model Swap Route ────────────────────────────────────────────────────────
+
+/// POST /orchestrator/swap — swap a model on any node in the fleet.
+///
+/// Body:
+/// ```json
+/// {
+///   "host": "10.0.0.41",        // node IP (or "local" for T440 P100s)
+///   "worker": "GemmaBig",       // worker name (for local swaps)
+///   "model_path": "/path/to/model.gguf",
+///   "port": 5100,
+///   "gpu_layers": 999,
+///   "context_size": 8192
+/// }
+/// ```
+async fn orchestrator_swap_model(
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let host = body.get("host").and_then(|v| v.as_str()).unwrap_or("local");
+    let model_path = match body.get("model_path").and_then(|v| v.as_str()) {
+        Some(p) => p,
+        None => return Json(serde_json::json!({"error": "model_path required"})),
+    };
+    let port = body.get("port").and_then(|v| v.as_u64()).unwrap_or(5100) as u16;
+    let gpu_layers = body.get("gpu_layers").and_then(|v| v.as_u64()).unwrap_or(999) as u32;
+    let context_size = body.get("context_size").and_then(|v| v.as_u64()).unwrap_or(8192) as u32;
+
+    if host == "local" {
+        let worker = body.get("worker").and_then(|v| v.as_str()).unwrap_or("GemmaBig");
+        match orchestrator::swap_local_worker(worker, model_path).await {
+            Ok(model) => Json(serde_json::json!({"status": "ok", "model": model, "worker": worker})),
+            Err(e) => Json(serde_json::json!({"error": e})),
+        }
+    } else {
+        match orchestrator::swap_model_on_node(host, model_path, port, gpu_layers, context_size).await {
+            Ok(model) => Json(serde_json::json!({"status": "ok", "model": model, "host": host, "port": port})),
+            Err(e) => Json(serde_json::json!({"error": e})),
+        }
+    }
+}
+
 // ── Webhook Mission Intake ──────────────────────────────────────────────────
 
 /// POST /webhook/mission — accept a mission from cesarops.com or any external source.
@@ -1831,6 +1872,7 @@ async fn main() {
         .route("/orchestrator/probe",   get(orchestrator::orchestrator_probe))
         .route("/orchestrator/plan",    post(orchestrator::orchestrator_plan))
         .route("/orchestrator/execute", post(orchestrator::orchestrator_execute))
+        .route("/orchestrator/swap",    post(orchestrator_swap_model))
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 9100));
