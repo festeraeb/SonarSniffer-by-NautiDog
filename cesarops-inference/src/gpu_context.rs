@@ -118,14 +118,23 @@ impl GpuContext {
             cache: None,
         });
 
-        // Pre-allocate buffers for largest expected matmul (lm_head: 1x1536 x 151936x1536)
-        const MAX_K: usize = 4096;
-        const MAX_N: usize = 160_000;
-        const MAX_M: usize = 8192;
+        // Pre-allocate buffers for matmul (matvec mode: M=1).
+        // Largest weight in Qwen-1.5B: FFN gate [1536, 8960] → transposed [8960, 1536]
+        // Largest weight in Gemma-26B-MoE: expert FFN [2048, 16384]
+        // buf_a: input vector [1, K] — max 16384 elements = 64 KB
+        // buf_b_t: weight matrix [K, N] — max 16384×16384 = 1 GB (TOO BIG)
+        // SOLUTION: use matvec pattern (buf_b_t holds one ROW at a time, not full matrix)
+        // The actual weight stays in its own buffer; buf_b_t is just scratch.
+        const MAX_K: usize = 16384; // max input dimension (intermediate_size)
+        const MAX_N: usize = 16384; // max output dimension
+        const MAX_M: usize = 1;     // single token
 
-        let buf_a_size = (MAX_M * MAX_K) * std::mem::size_of::<f32>();
-        let buf_b_t_size = (MAX_K * MAX_N) * std::mem::size_of::<f32>();
-        let buf_c_size = (MAX_M * MAX_N) * std::mem::size_of::<f32>();
+        // For matvec: we only need buf_a=[1,K] and buf_c=[1,N]
+        // The weight matrix lives in its own per-layer buffer (not buf_b_t)
+        let buf_a_size = MAX_K * std::mem::size_of::<f32>();       // 64 KB
+        let buf_b_t_size = MAX_K * MAX_N * std::mem::size_of::<f32>(); // 1 GB — use 256MB cap
+        let buf_b_t_size = buf_b_t_size.min(256 * 1024 * 1024);   // Cap at 256 MB
+        let buf_c_size = MAX_N * std::mem::size_of::<f32>();       // 64 KB
 
         let buf_a = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("buf_a"), size: buf_a_size as u64,
