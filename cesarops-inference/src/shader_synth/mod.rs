@@ -20,6 +20,8 @@ pub mod layout_reverse;
 pub mod jit_runtime;
 pub mod spirv_builder;
 pub mod tensor_repack;
+pub mod ir_graph;
+pub mod microbench;
 
 /// Shader IR operations — the intermediate representation
 /// between high-level intent and low-level GPU instructions.
