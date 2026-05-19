@@ -689,6 +689,141 @@ async fn bring_up_remote(w: &SecondaryWorker) -> BringUpOutcome {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Model swap — stop current model, load a different one
+// ---------------------------------------------------------------------------
+
+/// Swap the model on a node. Stops whatever is running, loads the requested model.
+/// Used by the orchestrator when a mission step needs a specific model type.
+///
+/// `host`: node IP (e.g. "10.0.0.41")
+/// `model_path`: full path to the .gguf on that node
+/// `port`: inference port to serve on
+/// `gpu_layers`: layers to offload
+/// `context_size`: context window
+///
+/// Returns the model name if successful.
+pub async fn swap_model_on_node(
+    host: &str,
+    model_path: &str,
+    port: u16,
+    gpu_layers: u32,
+    context_size: u32,
+) -> Result<String, String> {
+    let client = http_client(10);
+    let base_url = format!("http://{}:5500", host);
+
+    // 1. Check if node daemon is reachable
+    let status = timeout(Duration::from_secs(3), client.get(format!("{}/status", base_url)).send())
+        .await
+        .map_err(|_| "node unreachable (timeout)".to_string())?
+        .map_err(|e| format!("node unreachable: {}", e))?;
+
+    if !status.status().is_success() {
+        return Err(format!("node status HTTP {}", status.status()));
+    }
+
+    let status_json: serde_json::Value = status.json().await.unwrap_or_default();
+    let current_state = status_json.get("state").and_then(|s| s.as_str()).unwrap_or("unknown");
+
+    // 2. If currently serving, stop it first
+    if current_state == "serving" || current_state == "loading" {
+        info!("swap_model: stopping current model on {}", host);
+        let stop_res = timeout(
+            Duration::from_secs(10),
+            client.post(format!("{}/stop", base_url)).send(),
+        ).await;
+
+        match stop_res {
+            Ok(Ok(r)) if r.status().is_success() => {
+                info!("swap_model: stopped on {}", host);
+            }
+            Ok(Ok(r)) => warn!("swap_model: stop returned HTTP {}", r.status()),
+            Ok(Err(e)) => warn!("swap_model: stop failed: {}", e),
+            Err(_) => warn!("swap_model: stop timed out"),
+        }
+
+        // Brief pause for VRAM to free
+        tokio::time::sleep(Duration::from_secs(2)).await;
+    }
+
+    // 3. Spawn the new model
+    let payload = serde_json::json!({
+        "model_path": model_path,
+        "port": port,
+        "gpu_layers": gpu_layers,
+        "context_size": context_size,
+    });
+
+    info!("swap_model: spawning {} on {}:{}", model_path, host, port);
+
+    let spawn_res = timeout(
+        Duration::from_secs(130),
+        client.post(format!("{}/spawn", base_url)).json(&payload).send(),
+    ).await;
+
+    match spawn_res {
+        Ok(Ok(r)) if r.status().is_success() => {
+            let body: serde_json::Value = r.json().await.unwrap_or_default();
+            let model = body.get("model").and_then(|m| m.as_str()).unwrap_or(model_path);
+            info!("swap_model: {} now serving on {}:{}", model, host, port);
+            Ok(model.to_string())
+        }
+        Ok(Ok(r)) => {
+            let body: serde_json::Value = r.json().await.unwrap_or_default();
+            let err = body.get("error").and_then(|e| e.as_str()).unwrap_or("spawn failed");
+            Err(err.to_string())
+        }
+        Ok(Err(e)) => Err(format!("spawn transport: {}", e)),
+        Err(_) => Err("spawn timeout (130s)".to_string()),
+    }
+}
+
+/// Swap a model on a LOCAL worker (P100s on the T440).
+/// Uses the forge's own /cluster/worker/{name}/stop + /start routes.
+pub async fn swap_local_worker(worker_name: &str, model_path: &str) -> Result<String, String> {
+    let client = http_client(10);
+
+    // Stop current
+    let stop_url = format!("{}/cluster/worker/{}/stop", FORGE_BASE, worker_name);
+    let _ = client.post(&stop_url).send().await;
+    tokio::time::sleep(Duration::from_secs(3)).await;
+
+    // The start route uses cluster_config.toml — but we want a DIFFERENT model.
+    // For now, we'll use the node daemon's /spawn if running locally.
+    // The local node daemon is at 127.0.0.1:5500.
+    let payload = serde_json::json!({
+        "model_path": model_path,
+        "port": match worker_name {
+            "GemmaBig" => 5001,
+            "QwenBig" => 5002,
+            _ => 5010,
+        },
+        "gpu_layers": 999,
+        "context_size": 8192,
+    });
+
+    let spawn_url = format!("http://127.0.0.1:5500/spawn");
+    let spawn_res = timeout(
+        Duration::from_secs(130),
+        client.post(&spawn_url).json(&payload).send(),
+    ).await;
+
+    match spawn_res {
+        Ok(Ok(r)) if r.status().is_success() => {
+            let body: serde_json::Value = r.json().await.unwrap_or_default();
+            let model = body.get("model").and_then(|m| m.as_str()).unwrap_or(model_path);
+            Ok(model.to_string())
+        }
+        Ok(Ok(r)) => {
+            let body: serde_json::Value = r.json().await.unwrap_or_default();
+            Err(body.get("error").and_then(|e| e.as_str()).unwrap_or("failed").to_string())
+        }
+        Ok(Err(e)) => Err(format!("spawn: {}", e)),
+        Err(_) => Err("spawn timeout".to_string()),
+    }
+}
+
 async fn wait_for_remote_port(
     client: &Client,
     host: &str,

@@ -1,0 +1,88 @@
+{
+  "mission_id": "MB2-001",
+  "name": "SS Marquette & Bessemer No. 2 — Lake Erie Central Basin Search",
+  "classification": "WreckHunt",
+  "priority": 1,
+  "target": {
+    "vessel": "SS Marquette & Bessemer No. 2",
+    "type": "Railroad car ferry, steel hull",
+    "length_ft": 338,
+    "beam_ft": 54,
+    "tonnage": 2514,
+    "lost_date": "1909-12-07",
+    "last_known_position": "Departed Conneaut, OH bound for Port Stanley, ON",
+    "route": "Conneaut OH (41.96N, -80.55W) → Port Stanley ON (42.66N, -81.22W)",
+    "conditions": "Severe winter storm, gale force winds, heavy seas",
+    "status": "Never found. Largest vessel lost on Lake Erie."
+  },
+  "search_area": {
+    "bbox": [41.8, -81.5, 42.7, -80.3],
+    "description": "Lake Erie central basin, Conneaut-Port Stanley corridor",
+    "depth_range_ft": [40, 210],
+    "notes": "Central basin max depth ~210ft. Wreck likely in 60-180ft range based on route."
+  },
+  "known_evidence": {
+    "debris_sightings": [
+      "Life raft found near Long Point, ON",
+      "Bodies recovered near Erie, PA (east of route)",
+      "Wreckage reported near Conneaut harbor entrance"
+    ],
+    "previous_searches": [
+      "Multiple sonar surveys (inconclusive)",
+      "David Swayze research (historian)",
+      "Great Lakes Shipwreck Museum references"
+    ]
+  },
+  "pipeline_steps": [
+    {
+      "step": 1,
+      "name": "historical_research",
+      "description": "Search for historical accounts, news articles from 1909-1910, debris sighting locations with coordinates",
+      "assigned_to": "gemma_p100_0",
+      "tools": ["web_search", "think_harder"]
+    },
+    {
+      "step": 2,
+      "name": "drift_analysis",
+      "description": "Given debris sighting locations and December 1909 weather (SW gale), back-calculate probable sinking location using wind/current drift models",
+      "assigned_to": "qwen_p100_1",
+      "tools": ["weather_window", "think_harder"],
+      "inputs_from": "step_1"
+    },
+    {
+      "step": 3,
+      "name": "aeromagnetic_scan",
+      "description": "Check USGS/NOAA aeromagnetic data for the probable search area. Steel hull (2514 tons) should produce strong dipole signature if data exists.",
+      "assigned_to": "local_tool",
+      "tools": ["magnetic_dipole_detect"],
+      "inputs_from": "step_2"
+    },
+    {
+      "step": 4,
+      "name": "satellite_window_analysis",
+      "description": "Analyze 15-year satellite archive (2010-2025) for optimal detection windows. Look for: post-storm clarity, low turbidity, calm surface. Lake Erie central basin is shallow enough for optical detection in clear conditions.",
+      "assigned_to": "qwen_p100_1",
+      "tools": ["weather_window", "download_satellite_window"],
+      "inputs_from": "step_2"
+    },
+    {
+      "step": 5,
+      "name": "detection_scan",
+      "description": "Run detection pipeline on best satellite tiles from the probable search area",
+      "assigned_to": "local_tool",
+      "tools": ["detection_scan", "scan_region"],
+      "inputs_from": ["step_2", "step_4"]
+    }
+  ],
+  "orchestrator_instructions": {
+    "mode": "sequential_with_branching",
+    "notes": [
+      "Step 1 must complete before step 2 (drift needs debris locations)",
+      "Steps 3 and 4 can run in parallel after step 2",
+      "Step 5 depends on both step 2 (bbox) and step 4 (best dates)",
+      "If no aeromagnetic data exists for the area, note it and continue",
+      "If drift analysis produces multiple probable zones, run steps 3-5 for each",
+      "Final report should include: probable sinking location(s), confidence levels, recommended survey areas, best detection windows"
+    ]
+  }
+}
