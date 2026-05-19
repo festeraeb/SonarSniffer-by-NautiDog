@@ -1,0 +1,22 @@
+[package]
+name = "hetero_infer"
+version = "0.1.0"
+edition = "2021"
+description = "Heterogeneous distributed inference runtime — multi-GPU MoE execution with RL routing, speculative decoding, and KV compression"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+bincode = "1"
+tokio = { version = "1", features = ["full"] }
+dashmap = "6"
+rand = "0.8"
+
+[[bin]]
+name = "coordinator"
+path = "src/bin/coordinator.rs"
+
+[[bin]]
+name = "worker"
+path = "src/bin/worker.rs"
+
+[workspace]
