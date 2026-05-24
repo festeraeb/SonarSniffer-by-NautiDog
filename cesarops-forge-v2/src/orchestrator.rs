@@ -24,17 +24,68 @@ use tracing::{info, warn};
 // is the source of truth for worker names.
 // ---------------------------------------------------------------------------
 
-const FORGE_BASE: &str = "http://127.0.0.1:9100";
-const MODULE_TIMEOUT_SECS: u64 = 120;
+const MODULE_TIMEOUT_DEFAULT_SECS: u64 = 120;
 const PLAN_RETRY_CAP: u32 = 1;
 
-/// Intake brain — TinyLlama on cesarops2 P1000 (always-on, also serves n8n
-/// + health/validator duty). The orchestrator never sends planning requests
-/// to the P100s, because in CESAROPS mode the P100s must stay clear for
-/// tile/mag compute.
-const INTAKE_ENDPOINT: &str = "http://10.0.0.129:5571";
-/// If Picasso is offline we fall back to scout (cesarops3 1060/P106-100).
-const INTAKE_FALLBACK: &str = "http://10.0.0.41:5570";
+fn forge_base() -> String {
+    std::env::var("FORGE_URL").unwrap_or_else(|_| "http://127.0.0.1:9100".to_string())
+}
+
+/// Per-tool timeouts — sat_mission can run for hours; detection poll is quick.
+fn module_timeout_secs(tool: &str) -> u64 {
+    match tool {
+        "sat_mission" => 7200,
+        "download_satellite_window" => 1800,
+        "detection_scan" => 600,
+        "detection_poll" => 120,
+        "magnetic_dipole_detect" => 600,
+        _ => MODULE_TIMEOUT_DEFAULT_SECS,
+    }
+}
+
+/// Intake brain pool — probed in order from cluster_config [endpoint_pool.intake].
+/// Falls back to cesarops2 draft (1070) → thinker (2060) → T440 P100s.
+fn load_intake_pool() -> Vec<String> {
+    let path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+    let content = std::fs::read_to_string(path).unwrap_or_default();
+    let table: toml::Table = content.parse().unwrap_or_default();
+    if let Some(pool) = table.get("endpoint_pool").and_then(|v| v.as_table()) {
+        if let Some(intake) = pool.get("intake").and_then(|v| v.as_table()) {
+            if let Some(urls) = intake.get("urls").and_then(|v| v.as_array()) {
+                let parsed: Vec<String> = urls
+                    .iter()
+                    .filter_map(|u| u.as_str().map(String::from))
+                    .collect();
+                if !parsed.is_empty() {
+                    return parsed;
+                }
+            }
+        }
+    }
+    vec![
+        "http://10.0.0.201:5571".into(),
+        "http://10.0.0.200:5571".into(),
+        "http://10.0.0.201:5200".into(),
+        "http://10.0.0.200:5200".into(),
+        "http://127.0.0.1:5002".into(),
+        "http://127.0.0.1:5001".into(),
+    ]
+}
+
+async fn probe_llama_endpoint(client: &Client, base: &str) -> bool {
+    for path in ["/v1/models", "/health", "/api/v1/model"] {
+        if client
+            .get(format!("{}{}", base.trim_end_matches('/'), path))
+            .send()
+            .await
+            .map(|r| r.status().is_success())
+            .unwrap_or(false)
+        {
+            return true;
+        }
+    }
+    false
+}
 
 /// P100 endpoints the orchestrator may need to verify-clear before running a
 /// tile-compute mission. Names must match cluster_config.toml [[worker]] entries.
@@ -83,6 +134,21 @@ pub struct OperatorScenario {
     /// Optional date window in days back from now, for satellite stages.
     #[serde(default)]
     pub days_back: Option<u32>,
+    /// JSON mission spec for `sat_mission` (n8n / webhook satellite path).
+    #[serde(default)]
+    pub spec_path: Option<String>,
+    /// Knob overrides merged into the mission spec.
+    #[serde(default)]
+    pub knobs: Option<serde_json::Value>,
+    /// Stage list override for sat_mission_orchestrator.py.
+    #[serde(default)]
+    pub stages: Option<Vec<String>>,
+    /// Skip network downloads in satellite stages.
+    #[serde(default)]
+    pub dry_run: Option<bool>,
+    /// `parallel` (legacy) or `sequential` (default when spec_path set).
+    #[serde(default)]
+    pub pipeline_mode: Option<String>,
 }
 
 fn default_priority() -> u8 { 2 }
@@ -111,6 +177,12 @@ pub struct ModuleSpec {
     /// Pre-built tool args.
     #[serde(default)]
     pub tool_args: serde_json::Value,
+    /// Module ids that must complete before this one (sequential pipeline).
+    #[serde(default)]
+    pub depends_on: Vec<String>,
+    /// If true, failures do not abort the sequential pipeline.
+    #[serde(default)]
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +235,9 @@ pub struct MissionReport {
     pub status: String,
     /// Free-form notes (retool decisions, fallbacks, soft-skips).
     pub notes: Vec<String>,
+    /// Optional MTP reviewer summary (polish pass).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub review: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +248,7 @@ pub async fn probe_cluster() -> Result<ClusterSnapshot, String> {
     // /cluster/discover internally does HTTP probes against N nodes × N ports
     // with 2s budget each, so worst case is ~20s. Give it generous headroom.
     let client = http_client(30);
-    let url = format!("{}/cluster/discover", FORGE_BASE);
+    let url = format!("{}/cluster/discover", forge_base());
     let resp = client.get(&url).send().await.map_err(|e| format!("probe: {}", e))?;
     if !resp.status().is_success() {
         return Err(format!("probe: HTTP {}", resp.status()));
@@ -204,6 +279,9 @@ pub async fn probe_cluster() -> Result<ClusterSnapshot, String> {
 // ---------------------------------------------------------------------------
 
 pub async fn plan_from_scenario(scenario: &OperatorScenario) -> Result<MissionPlan, String> {
+    if scenario.spec_path.is_some() {
+        return Ok(build_satellite_spec_plan(scenario));
+    }
     let class = classify_scenario(&scenario.raw_text);
     let plan = build_plan(class, scenario);
     Ok(plan)
@@ -228,15 +306,42 @@ fn classify_scenario(text: &str) -> ScenarioClass {
     }
 }
 
+fn build_satellite_spec_plan(scenario: &OperatorScenario) -> MissionPlan {
+    let bbox = scenario.bbox;
+    let bbox_str = bbox.map(fmt_bbox);
+    let days = scenario.days_back.unwrap_or(30);
+    let spec = scenario.spec_path.clone().unwrap_or_default();
+    let class = classify_scenario(&scenario.raw_text);
+
+    MissionPlan {
+        scenario_class: class,
+        modules: vec![
+            weather_module(bbox, days, true),
+            sat_mission_module(&spec, scenario),
+            sat_read_reports_module(&spec),
+            detection_health_module(),
+            detection_scan_module(bbox_str.clone(), "wreck"),
+            detection_poll_module("det-wreck"),
+        ],
+        stitching: Some(StitchingStrategy {
+            n_tiles: 20,
+            stacks_per_p100: 2,
+            tiles_per_stack: 10,
+            merge_method: "MeanOfMeans".to_string(),
+        }),
+    }
+}
+
 fn build_plan(class: ScenarioClass, scenario: &OperatorScenario) -> MissionPlan {
     let bbox = scenario.bbox;
     let bbox_str = bbox.map(fmt_bbox);
     let days = scenario.days_back.unwrap_or(14);
+    let sequential = scenario.pipeline_mode.as_deref() != Some("parallel");
 
     let (modules, stitching) = match class {
         ScenarioClass::WreckHunt => (
             vec![
-                weather_module(bbox),
+                weather_module(bbox, days, sequential),
                 satellite_dl_module(bbox_str.clone(), days),
                 magnetic_module(),
                 detection_scan_module(bbox_str.clone(), "wreck"),
@@ -250,7 +355,7 @@ fn build_plan(class: ScenarioClass, scenario: &OperatorScenario) -> MissionPlan 
         ),
         ScenarioClass::DownedAircraft => (
             vec![
-                weather_module(bbox),
+                weather_module(bbox, days, sequential),
                 satellite_dl_module(bbox_str.clone(), days),
                 detection_scan_module(bbox_str.clone(), "aircraft"),
             ],
@@ -263,7 +368,7 @@ fn build_plan(class: ScenarioClass, scenario: &OperatorScenario) -> MissionPlan 
         ),
         ScenarioClass::SearchRescue => (
             vec![
-                weather_module(bbox),
+                weather_module(bbox, days, sequential),
                 detection_scan_module(bbox_str.clone(), "sar"),
             ],
             None,
@@ -284,6 +389,8 @@ fn build_plan(class: ScenarioClass, scenario: &OperatorScenario) -> MissionPlan 
                     bbox: None,
                     tool_name: Some("detection_health".to_string()),
                     tool_args: serde_json::json!({}),
+                    depends_on: Vec::new(),
+                    optional: false,
                 },
             ],
             None,
@@ -301,7 +408,7 @@ fn fmt_bbox(b: [f64; 4]) -> String {
     format!("{},{},{},{}", b[0], b[1], b[2], b[3])
 }
 
-fn weather_module(bbox: Option<[f64; 4]>) -> ModuleSpec {
+fn weather_module(bbox: Option<[f64; 4]>, days: u32, optional: bool) -> ModuleSpec {
     let bbox_str = bbox
         .map(fmt_bbox)
         .unwrap_or_else(|| "44.0,-87.0,45.0,-86.0".to_string());
@@ -314,8 +421,63 @@ fn weather_module(bbox: Option<[f64; 4]>) -> ModuleSpec {
         tool_args: serde_json::json!({
             "bbox": bbox_str,
             "check": "post_storm",
-            "days": 14,
+            "days": days,
         }),
+        depends_on: Vec::new(),
+        optional,
+    }
+}
+
+fn sat_mission_module(spec_path: &str, scenario: &OperatorScenario) -> ModuleSpec {
+    let mut args = serde_json::json!({
+        "spec_path": spec_path,
+        "dry_run": scenario.dry_run.unwrap_or(false),
+    });
+    if let Some(k) = &scenario.knobs {
+        args["knobs"] = k.clone();
+    }
+    if let Some(stages) = &scenario.stages {
+        args["stages"] = serde_json::json!(stages);
+    }
+    ModuleSpec {
+        id: "sat-mission".to_string(),
+        name: "sat_mission".to_string(),
+        delegate: DelegateType::Cpu,
+        bbox: scenario.bbox,
+        tool_name: Some("sat_mission".to_string()),
+        tool_args: args,
+        depends_on: vec!["wx-window".to_string()],
+        optional: false,
+    }
+}
+
+fn sat_read_reports_module(spec_path: &str) -> ModuleSpec {
+    let mut args = serde_json::json!({ "spec_path": spec_path });
+    if let Some(dir) = read_spec_output_dir(spec_path) {
+        args["output_dir"] = serde_json::json!(dir);
+    }
+    ModuleSpec {
+        id: "sat-reports".to_string(),
+        name: "sat_read_mission_report".to_string(),
+        delegate: DelegateType::Cpu,
+        bbox: None,
+        tool_name: Some("sat_read_mission_report".to_string()),
+        tool_args: args,
+        depends_on: vec!["sat-mission".to_string()],
+        optional: true,
+    }
+}
+
+fn detection_health_module() -> ModuleSpec {
+    ModuleSpec {
+        id: "det-health".to_string(),
+        name: "detection_health".to_string(),
+        delegate: DelegateType::Cpu,
+        bbox: None,
+        tool_name: Some("detection_health".to_string()),
+        tool_args: serde_json::json!({}),
+        depends_on: vec!["sat-mission".to_string()],
+        optional: true,
     }
 }
 
@@ -331,6 +493,8 @@ fn satellite_dl_module(bbox: Option<String>, days: u32) -> ModuleSpec {
             "provider": "auto",
             "days": days,
         }),
+        depends_on: Vec::new(),
+        optional: false,
     }
 }
 
@@ -344,20 +508,34 @@ fn magnetic_module() -> ModuleSpec {
         // Real grid path injected by the operator via /orchestrator/execute
         // override; v1 keeps a stub that the worker will reject cleanly.
         tool_args: serde_json::json!({
-            "grid_path": "/tmp/forge_mag_grid.csv",
+            "grid_path": "/tmp/forge_mag_grid.npy",
             "pixel_size_m": 25.0,
-            "inner_radius": 5,
-            "outer_radius": 15,
+            "inner_radius": 10,
+            "outer_radius": 25,
+            "min_score": 0.5,
+            "top_n": 200,
         }),
+        depends_on: Vec::new(),
+        optional: true,
+    }
+}
+
+fn detection_poll_module(scan_module_id: &str) -> ModuleSpec {
+    ModuleSpec {
+        id: "det-poll".to_string(),
+        name: "detection_poll".to_string(),
+        delegate: DelegateType::Hybrid,
+        bbox: None,
+        tool_name: Some("detection_poll".to_string()),
+        tool_args: serde_json::json!({}),
+        depends_on: vec![scan_module_id.to_string()],
+        optional: true,
     }
 }
 
 fn detection_scan_module(bbox: Option<String>, mode: &str) -> ModuleSpec {
-    // detection_scan expects {region: <label>, tiles: [...]}. Tiles get
-    // populated in v2 by chaining the sat-dl module's output. For v1 we
-    // pass an empty tile list — the detection service handles that gracefully
-    // and returns a job_id with 0 tiles queued, which is a useful smoke
-    // signal that the service is alive.
+    // detection_scan expects {region, tiles}. Sequential pipeline fills tiles
+    // from wreck_targets_all.csv after sat-mission via PipelineContext.
     let region = match mode {
         "wreck" => "lake_michigan_wreck_scan",
         "aircraft" => "downed_aircraft_scan",
@@ -376,7 +554,192 @@ fn detection_scan_module(bbox: Option<String>, mode: &str) -> ModuleSpec {
             "bbox": bbox.unwrap_or_else(|| "44.0,-87.0,45.0,-86.0".to_string()),
             "mode": mode,
         }),
+        depends_on: vec!["sat-mission".to_string()],
+        optional: true,
     }
+}
+
+fn read_spec_output_dir(spec_path: &str) -> Option<String> {
+    let content = std::fs::read_to_string(spec_path).ok()?;
+    let v: serde_json::Value = serde_json::from_str(&content).ok()?;
+    v.get("paths")
+        .and_then(|p| p.get("output_dir"))
+        .and_then(|o| o.as_str())
+        .map(|s| s.to_string())
+}
+
+fn use_sequential_pipeline(scenario: &OperatorScenario) -> bool {
+    if scenario.spec_path.is_some() {
+        return true;
+    }
+    matches!(
+        scenario.pipeline_mode.as_deref(),
+        Some("sequential") | Some("staged")
+    )
+}
+
+/// Mutable state passed between sequential module invocations.
+#[derive(Default)]
+struct PipelineContext {
+    output_dir: Option<String>,
+    detection_job_id: Option<String>,
+}
+
+impl PipelineContext {
+    fn from_scenario(scenario: &OperatorScenario) -> Self {
+        let mut ctx = Self::default();
+        if let Some(spec_path) = &scenario.spec_path {
+            ctx.output_dir = read_spec_output_dir(spec_path);
+        }
+        ctx
+    }
+
+    fn absorb_module_result(&mut self, spec: &ModuleSpec, data: &str) {
+        if spec.id == "sat-mission" || spec.tool_name.as_deref() == Some("sat_mission") {
+            if let Some(dir) = extract_output_dir_line(data) {
+                self.output_dir = Some(dir);
+            } else if let Some(dir) = extract_output_dir_guess(data) {
+                self.output_dir = Some(dir);
+            } else if let Some(dir) = extract_output_dir_json(data) {
+                self.output_dir = Some(dir);
+            }
+        }
+        if spec.tool_name.as_deref() == Some("detection_scan") {
+            if let Some(id) = extract_job_id(data) {
+                self.detection_job_id = Some(id);
+            }
+        }
+    }
+
+    fn enrich_tool_args(&self, spec: &mut ModuleSpec) {
+        if spec.id == "sat-reports" {
+            if let Some(dir) = &self.output_dir {
+                spec.tool_args = serde_json::json!({
+                    "output_dir": dir,
+                    "which": "both",
+                });
+            }
+        }
+        if spec.tool_name.as_deref() == Some("detection_scan") {
+            if let Some(dir) = &self.output_dir {
+                let csv = std::path::Path::new(dir).join("wreck_targeting/wreck_targets_all.csv");
+                if let Some(tiles) = load_detection_tiles_from_csv(&csv, 32) {
+                    if let Some(obj) = spec.tool_args.as_object_mut() {
+                        obj.insert("tiles".to_string(), tiles);
+                    }
+                }
+            }
+        }
+        if spec.tool_name.as_deref() == Some("magnetic_dipole_detect") {
+            if let Some(dir) = &self.output_dir {
+                let grid = std::path::Path::new(dir).join("mag_grid.npy");
+                if grid.exists() {
+                    if let Some(obj) = spec.tool_args.as_object_mut() {
+                        obj.insert(
+                            "grid_path".to_string(),
+                            serde_json::Value::String(grid.display().to_string()),
+                        );
+                    }
+                }
+            }
+        }
+        if spec.tool_name.as_deref() == Some("detection_poll") {
+            if let Some(id) = &self.detection_job_id {
+                spec.tool_args = serde_json::json!({ "job_id": id });
+            }
+        }
+    }
+}
+
+/// 1×1 gray PNG — valid input for triple-lock smoke when chips are not fetched yet.
+const PLACEHOLDER_TILE_B64: &str =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+/// Build detection_scan tiles from wreck_targets_all.csv (lat/lon per wreck).
+fn load_detection_tiles_from_csv(
+    csv_path: &std::path::Path,
+    max_tiles: usize,
+) -> Option<serde_json::Value> {
+    let content = std::fs::read_to_string(csv_path).ok()?;
+    let mut lines = content.lines();
+    let header = lines.next()?;
+    let cols: Vec<&str> = header.split(',').map(|s| s.trim()).collect();
+    let lat_i = cols.iter().position(|c| *c == "lat")?;
+    let lon_i = cols.iter().position(|c| *c == "lon")?;
+    let name_i = cols.iter().position(|c| *c == "wreck_name");
+
+    let mut tiles = Vec::new();
+    for line in lines {
+        if tiles.len() >= max_tiles {
+            break;
+        }
+        let fields: Vec<&str> = line.split(',').collect();
+        if fields.len() <= lat_i.max(lon_i) {
+            continue;
+        }
+        let lat: f64 = fields[lat_i].trim().parse().ok()?;
+        let lon: f64 = fields[lon_i].trim().parse().ok()?;
+        let tile_id = name_i
+            .and_then(|i| fields.get(i))
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| format!("wreck_{}", tiles.len()));
+        tiles.push(serde_json::json!({
+            "lat": lat,
+            "lon": lon,
+            "image_b64": PLACEHOLDER_TILE_B64,
+            "tile_id": tile_id,
+        }));
+    }
+    if tiles.is_empty() {
+        None
+    } else {
+        Some(serde_json::Value::Array(tiles))
+    }
+}
+
+fn extract_output_dir_line(text: &str) -> Option<String> {
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix("output_dir=") {
+            return Some(rest.trim().to_string());
+        }
+    }
+    None
+}
+
+fn extract_output_dir_guess(text: &str) -> Option<String> {
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix("output_dir_guess=") {
+            return Some(rest.trim().to_string());
+        }
+    }
+    None
+}
+
+/// Last JSON object in stdout may contain paths.output_dir or output_dir.
+fn extract_output_dir_json(text: &str) -> Option<String> {
+    let start = text.rfind('{')?;
+    let end = text.rfind('}')?;
+    let slice = &text[start..=end];
+    let v: serde_json::Value = serde_json::from_str(slice).ok()?;
+    v.get("output_dir")
+        .and_then(|o| o.as_str())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            v.get("paths")
+                .and_then(|p| p.get("output_dir"))
+                .and_then(|o| o.as_str())
+                .map(|s| s.to_string())
+        })
+}
+
+fn extract_job_id(text: &str) -> Option<String> {
+    for token in text.split_whitespace() {
+        if let Some(rest) = token.strip_prefix("job_id=") {
+            return Some(rest.trim_end_matches(|c: char| ",.)".contains(c)).to_string());
+        }
+    }
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -387,7 +750,11 @@ pub fn assign_specialists(modules: &[ModuleSpec], cluster: &ClusterSnapshot) -> 
     let mut assignments = Vec::with_capacity(modules.len());
 
     for m in modules {
-        let endpoint = format!("{}/tool/{}", FORGE_BASE, m.tool_name.clone().unwrap_or_else(|| "noop".to_string()));
+        let endpoint = format!(
+            "{}/tool/{}",
+            forge_base(),
+            m.tool_name.clone().unwrap_or_else(|| "noop".to_string())
+        );
 
         let fallback_endpoints = match m.delegate {
             DelegateType::CoralTpuInt8 => {
@@ -399,7 +766,7 @@ pub fn assign_specialists(modules: &[ModuleSpec], cluster: &ClusterSnapshot) -> 
                 // Pick the lowest-load worker that's not a P100 (those are reserved
                 // for tile compute during WreckHunt/DownedAircraft missions).
                 pick_llm_fallback(cluster)
-                    .map(|name| vec![format!("{}/cluster/worker/{}/apply", FORGE_BASE, name)])
+                    .map(|name| vec![format!("{}/cluster/worker/{}/apply", forge_base(), name)])
                     .unwrap_or_default()
             }
             _ => Vec::new(),
@@ -460,7 +827,7 @@ pub async fn retool_for_mission(plan: &MissionPlan) -> Result<RetoolReceipt, Str
         if !is_port_bound(port).await {
             continue;
         }
-        let url = format!("{}/cluster/worker/{}/stop", FORGE_BASE, worker_name);
+        let url = format!("{}/cluster/worker/{}/stop", forge_base(), worker_name);
         match client.post(&url).send().await {
             Ok(r) if r.status().is_success() => {
                 stopped.push(worker_name.to_string());
@@ -474,7 +841,7 @@ pub async fn retool_for_mission(plan: &MissionPlan) -> Result<RetoolReceipt, Str
     Ok(RetoolReceipt { stopped_workers: stopped })
 }
 
-/// Bring the **secondary fleet** (1060/1070/P1000 across cesarops2 + cesarops3)
+/// Bring the **secondary fleet** (1070/2060/P106 on cesarops2) online when needed.
 /// back online so the n8n / health / intake / draft / corrector roles are
 /// available. Called at the end of every mission — its job is to make sure
 /// every box that should be answering is answering, regardless of whether
@@ -604,7 +971,7 @@ enum BringUpOutcome {
 }
 
 async fn bring_up_local(client: &Client, w: &SecondaryWorker) -> BringUpOutcome {
-    let url = format!("{}/cluster/worker/{}/start", FORGE_BASE, w.name);
+    let url = format!("{}/cluster/worker/{}/start", forge_base(), w.name);
     match client.post(&url).send().await {
         Ok(r) if r.status().is_success() => BringUpOutcome::Started,
         Ok(r) => BringUpOutcome::Failed(format!("HTTP {}", r.status())),
@@ -696,7 +1063,7 @@ async fn bring_up_remote(w: &SecondaryWorker) -> BringUpOutcome {
 /// Swap the model on a node. Stops whatever is running, loads the requested model.
 /// Used by the orchestrator when a mission step needs a specific model type.
 ///
-/// `host`: node IP (e.g. "10.0.0.41")
+/// `host`: node IP (e.g. "10.0.0.201")
 /// `model_path`: full path to the .gguf on that node
 /// `port`: inference port to serve on
 /// `gpu_layers`: layers to offload
@@ -785,7 +1152,7 @@ pub async fn swap_local_worker(worker_name: &str, model_path: &str) -> Result<St
     let client = http_client(10);
 
     // Stop current
-    let stop_url = format!("{}/cluster/worker/{}/stop", FORGE_BASE, worker_name);
+    let stop_url = format!("{}/cluster/worker/{}/stop", forge_base(), worker_name);
     let _ = client.post(&stop_url).send().await;
     tokio::time::sleep(Duration::from_secs(3)).await;
 
@@ -858,7 +1225,7 @@ pub async fn restore_cluster_legacy(receipt: &RetoolReceipt) -> Vec<String> {
     let port_by_name = load_worker_ports();
 
     for worker in &receipt.stopped_workers {
-        let url = format!("{}/cluster/worker/{}/start", FORGE_BASE, worker);
+        let url = format!("{}/cluster/worker/{}/start", forge_base(), worker);
         match client.post(&url).send().await {
             Ok(r) if r.status().is_success() => {
                 info!("restore: requested start for {}", worker);
@@ -908,40 +1275,47 @@ async fn is_port_bound(port: u16) -> bool {
 /// up matters because it's also serving n8n + cesarops.com webhook intake.
 struct IntakeStatus {
     primary_online: bool,
+    primary_url: Option<String>,
     fallback_online: bool,
+    fallback_url: Option<String>,
 }
 
 impl IntakeStatus {
     fn note(&self) -> String {
-        match (self.primary_online, self.fallback_online) {
-            (true, _) => format!("intake brain: Picasso online ({})", INTAKE_ENDPOINT),
-            (false, true) => format!("intake brain: Picasso DOWN, scout fallback online ({})", INTAKE_FALLBACK),
-            (false, false) => "intake brain: Picasso DOWN and scout DOWN — heuristic planner only".to_string(),
+        match (&self.primary_url, self.primary_online, self.fallback_online) {
+            (Some(url), true, _) => format!("intake brain: online ({})", url),
+            (_, false, true) => format!(
+                "intake brain: primary down, fallback online ({})",
+                self.fallback_url.as_deref().unwrap_or("?")
+            ),
+            _ => "intake brain: all nodes offline — heuristic planner only".to_string(),
         }
     }
 }
 
 async fn probe_intake_brain() -> IntakeStatus {
     let client = http_client(3);
-    let primary = client
-        .get(format!("{}/api/v1/model", INTAKE_ENDPOINT))
-        .send()
-        .await
-        .map(|r| r.status().is_success())
-        .unwrap_or(false);
-    let fallback = if !primary {
-        client
-            .get(format!("{}/api/v1/model", INTAKE_FALLBACK))
-            .send()
-            .await
-            .map(|r| r.status().is_success())
-            .unwrap_or(false)
-    } else {
-        false
-    };
+    let pool = load_intake_pool();
+    let mut primary: Option<String> = None;
+    let mut fallback: Option<String> = None;
+
+    for url in &pool {
+        if !probe_llama_endpoint(&client, url).await {
+            continue;
+        }
+        if primary.is_none() {
+            primary = Some(url.clone());
+        } else if fallback.is_none() {
+            fallback = Some(url.clone());
+            break;
+        }
+    }
+
     IntakeStatus {
-        primary_online: primary,
-        fallback_online: fallback,
+        primary_online: primary.is_some(),
+        primary_url: primary,
+        fallback_online: fallback.is_some(),
+        fallback_url: fallback,
     }
 }
 
@@ -989,7 +1363,7 @@ pub async fn dispatch_modules(
     routing: &[RouteAssignment],
 ) -> Vec<ModuleResult> {
     let mut set: JoinSet<ModuleResult> = JoinSet::new();
-    let client = http_client(MODULE_TIMEOUT_SECS as u64 + 5);
+    let client = http_client(MODULE_TIMEOUT_DEFAULT_SECS + 5);
 
     // Index modules by id for fast lookup (avoid O(n*m) in routing loop).
     let mut spec_by_id = std::collections::HashMap::new();
@@ -1044,12 +1418,15 @@ pub async fn dispatch_modules(
                 }
             };
 
-            match timeout(Duration::from_secs(MODULE_TIMEOUT_SECS), task).await {
+            let secs = module_timeout_secs(
+                spec.tool_name.as_deref().unwrap_or("noop"),
+            );
+            match timeout(Duration::from_secs(secs), task).await {
                 Ok(r) => r,
                 Err(_) => ModuleResult {
                     module_id: route.module_id,
                     status: "timeout".to_string(),
-                    data: Some(format!("exceeded {}s", MODULE_TIMEOUT_SECS)),
+                    data: Some(format!("exceeded {}s", secs)),
                 },
             }
         });
@@ -1063,6 +1440,105 @@ pub async fn dispatch_modules(
         }
     }
     out
+}
+
+/// Run modules in plan order; optional modules may fail without aborting.
+pub async fn dispatch_modules_sequential(
+    plan: &MissionPlan,
+    scenario: &OperatorScenario,
+) -> Vec<ModuleResult> {
+    let client = http_client(MODULE_TIMEOUT_DEFAULT_SECS + 5);
+    let mut ctx = PipelineContext::from_scenario(scenario);
+    let mut results = Vec::new();
+    let mut completed: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for spec in &plan.modules {
+        let tool = match &spec.tool_name {
+            Some(t) => t.clone(),
+            None => {
+                results.push(ModuleResult {
+                    module_id: spec.id.clone(),
+                    status: "skipped".to_string(),
+                    data: Some("no tool_name".to_string()),
+                });
+                continue;
+            }
+        };
+
+        if !spec.depends_on.is_empty()
+            && !spec.depends_on.iter().all(|d| completed.contains(d))
+        {
+            results.push(ModuleResult {
+                module_id: spec.id.clone(),
+                status: "skipped".to_string(),
+                data: Some(format!("deps not met: {:?}", spec.depends_on)),
+            });
+            continue;
+        }
+
+        let mut spec_mut = spec.clone();
+        ctx.enrich_tool_args(&mut spec_mut);
+
+        let endpoint = format!("{}/tool/{}", forge_base(), tool);
+        let body = serde_json::json!({ "arguments": spec_mut.tool_args });
+
+        let task = async {
+            match client.post(&endpoint).json(&body).send().await {
+                Ok(r) if r.status().is_success() => {
+                    let txt = r.text().await.unwrap_or_default();
+                    ModuleResult {
+                        module_id: spec.id.clone(),
+                        status: "ok".to_string(),
+                        data: Some(truncate(&txt, 4000)),
+                    }
+                }
+                Ok(r) => {
+                    let code = r.status();
+                    let txt = r.text().await.unwrap_or_default();
+                    ModuleResult {
+                        module_id: spec.id.clone(),
+                        status: format!("http_{}", code.as_u16()),
+                        data: Some(truncate(&txt, 1500)),
+                    }
+                }
+                Err(e) => ModuleResult {
+                    module_id: spec.id.clone(),
+                    status: "failed".to_string(),
+                    data: Some(format!("transport: {}", e)),
+                },
+            }
+        };
+
+        let secs = module_timeout_secs(&tool);
+        let result = match timeout(Duration::from_secs(secs), task).await {
+            Ok(r) => r,
+            Err(_) => ModuleResult {
+                module_id: spec.id.clone(),
+                status: "timeout".to_string(),
+                data: Some(format!("exceeded {}s", secs)),
+            },
+        };
+
+        if let Some(ref data) = result.data {
+            ctx.absorb_module_result(spec, data);
+        }
+
+        let failed = result.status != "ok";
+        if result.status == "ok" {
+            completed.insert(spec.id.clone());
+        }
+        results.push(result);
+
+        if failed && !spec.optional {
+            warn!(
+                "sequential pipeline: abort after required module {} failed",
+                spec.id
+            );
+            break;
+        }
+    }
+
+    results
 }
 
 // ---------------------------------------------------------------------------
@@ -1100,26 +1576,20 @@ async fn llm_refine_plan(
         scenario.raw_text, scenario.bbox, heuristic_plan.scenario_class, module_names
     );
 
-    let payload = serde_json::json!({
-        "prompt": prompt,
-        "max_length": 256,
-        "temperature": 0.1,
-        "stop_sequence": ["\n\n"]
-    });
-
-    for endpoint in [INTAKE_ENDPOINT, INTAKE_FALLBACK] {
-        let url = format!("{}/api/v1/generate", endpoint);
-        let resp = match client.post(&url).json(&payload).send().await {
-            Ok(r) if r.status().is_success() => r,
-            _ => continue,
-        };
-        let body: serde_json::Value = match resp.json().await {
-            Ok(v) => v,
+    for endpoint in load_intake_pool() {
+        let text = match crate::inference_client::complete_prompt(
+            &client,
+            &endpoint,
+            &prompt,
+            256,
+            0.1,
+            vec!["\n\n".to_string()],
+            None,
+        )
+        .await
+        {
+            Ok(t) => t.trim().to_string(),
             Err(_) => continue,
-        };
-        let text = match body["results"][0]["text"].as_str() {
-            Some(t) => t.trim().to_string(),
-            None => continue,
         };
         // Try to parse the LLM output as JSON action.
         let action: serde_json::Value = match serde_json::from_str(&text) {
@@ -1155,6 +1625,8 @@ async fn llm_refine_plan(
                         bbox: None,
                         tool_name: m.get("tool_name").and_then(|v| v.as_str()).map(|s| s.to_string()),
                         tool_args: m.get("tool_args").cloned().unwrap_or(serde_json::json!({})),
+                        depends_on: Vec::new(),
+                        optional: true,
                     };
                     plan.modules.push(module);
                     notes.push("LLM refinement: added module".to_string());
@@ -1224,6 +1696,7 @@ pub async fn execute_mission(scenario: OperatorScenario) -> MissionReport {
                 runtime_seconds: start.elapsed().as_secs_f32(),
                 status: "failed".to_string(),
                 notes: vec![format!("planner: {}", e)],
+                review: None,
             };
         }
     };
@@ -1242,7 +1715,17 @@ pub async fn execute_mission(scenario: OperatorScenario) -> MissionReport {
         notes.push("retool: P100s already clear".to_string());
     }
 
-    let results = dispatch_modules(&plan, &routing).await;
+    let sequential = use_sequential_pipeline(&scenario);
+    notes.push(format!(
+        "dispatch: {}",
+        if sequential { "sequential" } else { "parallel" }
+    ));
+
+    let results = if sequential {
+        dispatch_modules_sequential(&plan, &scenario).await
+    } else {
+        dispatch_modules(&plan, &routing).await
+    };
 
     // Restore is unconditional: every mission ends with a secondary-fleet
     // health pass. Bring back any 1060/1070/P1000 worker that's silent.
@@ -1270,6 +1753,11 @@ pub async fn execute_mission(scenario: OperatorScenario) -> MissionReport {
         )
     });
 
+    let review = polish_mission_with_reviewer(&scenario, &class, &results, &status, &notes).await;
+    if review.is_some() {
+        notes.push("MTP reviewer polish: completed".to_string());
+    }
+
     MissionReport {
         scenario_class: class,
         modules: results,
@@ -1277,6 +1765,60 @@ pub async fn execute_mission(scenario: OperatorScenario) -> MissionReport {
         runtime_seconds: start.elapsed().as_secs_f32(),
         status: status.to_string(),
         notes,
+        review,
+    }
+}
+
+/// Ask the MTP reviewer pool for a short post-mission polish summary.
+async fn polish_mission_with_reviewer(
+    scenario: &OperatorScenario,
+    class: &ScenarioClass,
+    modules: &[ModuleResult],
+    status: &str,
+    notes: &[String],
+) -> Option<String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(45))
+        .build()
+        .ok()?;
+    let endpoint = crate::routing::first_online_llama(&client, &crate::routing::load_mtp_pool())
+        .await?;
+    let module_lines: Vec<String> = modules
+        .iter()
+        .map(|m| {
+            format!(
+                "- {}: {} ({})",
+                m.module_id,
+                m.status,
+                m.data.as_deref().unwrap_or("").chars().take(120).collect::<String>()
+            )
+        })
+        .collect();
+    let prompt = format!(
+        "You are the CESAROPS mission reviewer. In 5-8 bullet points:\n\
+         1) Was the pipeline successful?\n\
+         2) What failed or was skipped?\n\
+         3) Next concrete steps for the operator.\n\n\
+         Scenario: {:?}\nSpec: {:?}\nOverall status: {}\n\nModules:\n{}\n\nNotes:\n{}\n",
+        class,
+        scenario.spec_path,
+        status,
+        module_lines.join("\n"),
+        notes.join("\n")
+    );
+    match crate::inference_client::complete_prompt(
+        &client,
+        &endpoint,
+        &prompt,
+        512,
+        0.2,
+        vec!["\n\n".to_string()],
+        None,
+    )
+    .await
+    {
+        Ok(text) if !text.trim().is_empty() => Some(truncate(&text, 2500)),
+        _ => None,
     }
 }
 

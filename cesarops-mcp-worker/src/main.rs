@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 mod capabilities;
+mod knowledge;
 mod model_registry;
 mod server;
 mod tools;

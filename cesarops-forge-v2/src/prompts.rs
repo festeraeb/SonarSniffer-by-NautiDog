@@ -44,7 +44,7 @@ If you output raw JSON without the tags, it may not be detected.
 5. remember → save what you learned
 
 ## Context:
-- Project root: /codebase/wreckhunter2000-1/
+- Project root: /codebase/repos/wreckhunter2000-1/
 - Hardware: Dual P100 16GB, Dual Xeon Silver 4110, 94GB RAM
 - You are the 35B coder model. An 8B thinker assists with planning.
 - You have FULL filesystem access. Use it. Do not ask the user to do things you can do."#.to_string()
@@ -65,6 +65,34 @@ pub fn format_chatml(system: &str, messages: &[(String, String)], prefill: bool)
     // The translator strips <think> blocks from the final output anyway
 
     prompt
+}
+
+/// Gemma turn format for KoboldCPP.
+pub fn format_gemma(system: &str, messages: &[(String, String)], _prefill: bool) -> String {
+    let mut prompt = format!("<start_of_turn>user\n{}\n<end_of_turn>\n", system);
+    for (role, content) in messages {
+        let turn = if role == "assistant" { "model" } else { "user" };
+        prompt.push_str(&format!(
+            "<start_of_turn>{}\n{}\n<end_of_turn>\n",
+            turn, content
+        ));
+    }
+    prompt.push_str("<start_of_turn>model\n");
+    prompt
+}
+
+/// Dispatch by template name from cluster_config / [[agent]].
+pub fn format_for_template(
+    template: &str,
+    system: &str,
+    messages: &[(String, String)],
+    prefill: bool,
+) -> String {
+    match template {
+        "gemma" => format_gemma(system, messages, prefill),
+        "deepseek-r1" | "deepseek-coder" => format_chatml(system, messages, prefill),
+        _ => format_chatml(system, messages, prefill),
+    }
 }
 
 /// Escalating snark levels for repeated failures.

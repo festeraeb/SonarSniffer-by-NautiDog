@@ -23,7 +23,7 @@ pub async fn execute(name: &str, arguments: &Value, project_root: &Path) -> Stri
         "read_file" => { reset_think_counter(); read_file(arguments, project_root).await },
         "cargo_check" => { reset_think_counter(); cargo_check(arguments, project_root).await },
         "think_harder" => { reset_think_counter(); think_harder(arguments).await },
-        "remember" => { reset_think_counter(); remember(arguments).await },
+        "remember" => { reset_think_counter(); remember(arguments, project_root).await },
         "run_command" => run_command(arguments, project_root).await,
         _ => format!("Unknown tool: {}. Available tools: write_file, read_file, cargo_check, think_harder, remember, run_command", name),
     }
@@ -110,44 +110,97 @@ async fn cargo_check(args: &Value, project_root: &Path) -> String {
     }
 }
 
-/// Search nautivecs knowledge base + web.
+/// Search nautivecs knowledge base + web (same contract as forge-v2).
 async fn think_harder(args: &Value) -> String {
     let query = match args.get("query").and_then(|v| v.as_str()) {
         Some(q) => q,
         None => return "Error: 'query' argument required".to_string(),
     };
-    
-    // Increment counter
+
     let count = THINK_HARDER_COUNT.fetch_add(1, Ordering::SeqCst);
     if count >= THINK_HARDER_LIMIT {
         warn!("think_harder limit reached (count={})", count);
         return "Error: think_harder limit reached".to_string();
     }
-    
+
     info!("think_harder search #{}: {}", count + 1, query);
-    
-    // Since we don't have actual search engine configured in this standalone worker,
-    // we simulate the behavior by returning a structured response.
-    // In production, this would call an external search API or local vector DB.
-    format!("Searched for: '{}'\nNo search engines configured on this worker.\nIn production, results from nautivecs KB and web search would appear here.", query)
+
+    let client = reqwest::Client::new();
+    let mut results = Vec::new();
+
+    if let Ok(resp) = client
+        .post(crate::knowledge::nautivecs_query_url())
+        .json(&serde_json::json!({"query": query, "top_k": 3}))
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+    {
+        if let Ok(body) = resp.text().await {
+            results.push(format!("[nautivecs]: {}", truncate_output(&body, 1500)));
+        }
+    } else {
+        results.push("[nautivecs]: unavailable".to_string());
+    }
+
+    if let Ok(resp) = client
+        .post(crate::knowledge::wso_url())
+        .json(&serde_json::json!({"query": query, "max_results": 3}))
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+    {
+        if let Ok(body) = resp.text().await {
+            results.push(format!("[web search]: {}", truncate_output(&body, 1500)));
+        }
+    }
+
+    if results.is_empty() {
+        "No results from knowledge base or web search.".to_string()
+    } else {
+        results.join("\n\n")
+    }
 }
 
-/// Save a lesson learned.
-async fn remember(args: &Value) -> String {
+/// Save a lesson to research_log and nautivecs /add.
+async fn remember(args: &Value, project_root: &Path) -> String {
     let content = match args.get("content").and_then(|v| v.as_str()) {
         Some(c) => c,
         None => return "Error: 'content' argument required".to_string(),
     };
-    let tags = match args.get("tags").and_then(|v| v.as_str()) {
-        Some(t) => t,
-        None => "general",
+    let tags = args.get("tags").and_then(|v| v.as_str()).unwrap_or("general");
+
+    let log_path = resolve_path("research_log/lessons_learned.md", project_root);
+    if let Some(parent) = log_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    let entry = format!("\n## [{}] {}\n{}\n", tags, chrono_now(), content);
+    let existing = fs::read_to_string(&log_path).unwrap_or_default();
+    let log_ok = fs::write(&log_path, format!("{}{}", existing, entry)).is_ok();
+
+    let client = reqwest::Client::new();
+    let nautivecs_status = match client
+        .post(crate::knowledge::nautivecs_add_url())
+        .json(&serde_json::json!({
+            "text": format!("[{}] {}", tags, content),
+            "tags": tags,
+            "source": "lessons_learned",
+            "file_path": "research_log/lessons_learned.md",
+        }))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => " + indexed in nautivecs".to_string(),
+        Ok(r) => format!(" (nautivecs {})", r.status()),
+        Err(e) => format!(" (nautivecs unavailable: {})", e),
     };
-    
-    info!("Remembering: {} [{}]", content, tags);
-    
-    // In production, persist to a memory/vector store.
-    // For now, just echo back confirmation.
-    format!("Saved lesson: '{}', tags=[{}]", content, tags)
+
+    if log_ok {
+        format!("Remembered (tags: {}){}", tags, nautivecs_status)
+    } else {
+        format!("Error writing {}", log_path.display())
+    }
 }
 
 /// Execute a shell command.

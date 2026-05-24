@@ -8,7 +8,6 @@
 //! Usage: call `run_agent_loop(endpoint_url, user_message, project_root)` and
 //! it handles the full multi-turn tool-calling loop.
 
-use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 use std::path::PathBuf;
 use tokio::process::Command;
@@ -23,31 +22,17 @@ pub struct AgentConfig {
     pub project_root: String,
     pub nautivecs_url: String,
     pub wso_url: String,
+    /// Optional remote MCP worker for tool offload (e.g. http://10.0.0.201:8090).
+    pub mcp_worker_url: Option<String>,
     pub max_tokens: u32,
     pub temperature: f32,
     /// Safe mode: write_file creates duplicates instead of overwriting.
     /// Blocks deletion and modification of existing files.
     pub safe_mode: bool,
-}
-
-#[derive(Serialize)]
-struct GenerateRequest {
-    prompt: String,
-    max_length: u32,
-    temperature: f32,
-    top_p: f32,
-    rep_pen: f32,
-    stop_sequence: Vec<String>,
-}
-
-#[derive(Deserialize)]
-struct GenerateResponse {
-    results: Vec<GenerateResult>,
-}
-
-#[derive(Deserialize)]
-struct GenerateResult {
-    text: String,
+    /// qwen2.5 | gemma | deepseek-r1 | llama3
+    pub chat_template: String,
+    /// Inference engine: None/llama-server → OpenAI API; "koboldcpp" → Kobold generate API.
+    pub engine: Option<String>,
 }
 
 /// The system prompt injected for agent mode. Same tools as forge-v2.
@@ -91,42 +76,35 @@ pub async fn run_agent_loop(config: &AgentConfig, user_message: &str) -> String 
         .unwrap();
 
     let system = agent_system_prompt(&config.project_root);
-    let mut conversation = format!(
-        "<|im_start|>system\n{}<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
-        system, user_message
+    let messages = vec![("user".to_string(), user_message.to_string())];
+    let mut conversation = crate::prompts::format_for_template(
+        &config.chat_template,
+        &system,
+        &messages,
+        true,
     );
 
     for round in 0..MAX_ROUNDS {
         info!("Agent round {}/{}", round + 1, MAX_ROUNDS);
 
-        let req = GenerateRequest {
-            prompt: conversation.clone(),
-            max_length: config.max_tokens,
-            temperature: config.temperature,
-            top_p: 0.95,
-            rep_pen: 1.1,
-            stop_sequence: vec![TOOL_CALL_CLOSE.to_string(), "<|im_end|>".to_string()],
-        };
-
-        let resp = match client
-            .post(format!("{}/api/v1/generate", config.endpoint_url))
-            .json(&req)
-            .send()
-            .await
+        let engine = config.engine.as_deref();
+        let text = match crate::inference_client::complete_prompt(
+            &client,
+            &config.endpoint_url,
+            &conversation,
+            config.max_tokens,
+            config.temperature,
+            vec![TOOL_CALL_CLOSE.to_string(), "<|im_end|>".to_string()],
+            engine,
+        )
+        .await
         {
-            Ok(r) => r,
+            Ok(t) => t,
             Err(e) => {
                 warn!("Agent request failed: {}", e);
-                return format!("[Agent error: endpoint unreachable - {}]", e);
+                return format!("[Agent error: {}]", e);
             }
         };
-
-        let gen_resp: GenerateResponse = match resp.json().await {
-            Ok(r) => r,
-            Err(e) => return format!("[Agent error: bad response - {}]", e),
-        };
-
-        let text = gen_resp.results.first().map(|r| r.text.clone()).unwrap_or_default();
 
         // Check if model produced a tool call
         if let Some(tool_json) = extract_tool_call(&text) {
@@ -140,8 +118,21 @@ pub async fn run_agent_loop(config: &AgentConfig, user_message: &str) -> String 
             // Append the tool call and result to conversation
             conversation.push_str(&text);
             conversation.push_str(TOOL_CALL_CLOSE);
-            conversation.push_str("<|im_end|>\n<|im_start|>user\n<|im_end|>\n<|im_start|>user\n");
-            conversation.push_str(&format!("[Tool Result - Round {}/{}]: {}\nNow continue. Either call another tool or provide your final answer.<|im_end|>\n<|im_start|>assistant\n<|im_end|>\n<|im_start|>assistant\n", round + 1, MAX_ROUNDS, result));
+            let tool_result_msg = format!(
+                "[Tool Result - Round {}/{}]: {}\nNow continue. Either call another tool or provide your final answer.",
+                round + 1, MAX_ROUNDS, result
+            );
+            if config.chat_template == "gemma" {
+                conversation.push_str(&format!(
+                    "<end_of_turn>\n<start_of_turn>user\n{}\n<end_of_turn>\n<start_of_turn>model\n",
+                    tool_result_msg
+                ));
+            } else {
+                conversation.push_str(&format!(
+                    "<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
+                    tool_result_msg
+                ));
+            }
         } else {
             // No tool call — this is the final answer
             return text.trim().to_string();
@@ -192,12 +183,20 @@ fn extract_tool_call(text: &str) -> Option<serde_json::Value> {
 
 /// Execute a tool and return the result string.
 async fn execute_tool(name: &str, args: &serde_json::Value, config: &AgentConfig) -> String {
+    if let Some(ref mcp_base) = config.mcp_worker_url {
+        if !mcp_base.is_empty() && crate::mcp_delegate::is_delegatable_tool(name) {
+            if let Ok(r) = crate::mcp_delegate::execute_on_mcp_at(mcp_base, name, args).await {
+                return format!("[mcp] {}", r);
+            }
+        }
+    }
+
     match name {
         "write_file" => tool_write_file(args, &config.project_root, config.safe_mode).await,
         "read_file" => tool_read_file(args, &config.project_root).await,
         "cargo_check" => tool_cargo_check(args, &config.project_root).await,
         "think_harder" => tool_think_harder(args, config).await,
-        "remember" => tool_remember(args, &config.project_root).await,
+        "remember" => tool_remember(args, &config.project_root, &config.nautivecs_url).await,
         "run_command" => tool_run_command(args, &config.project_root, config.safe_mode).await,
         _ => format!("Unknown tool: '{}'", name),
     }
@@ -289,7 +288,7 @@ async fn tool_think_harder(args: &serde_json::Value, config: &AgentConfig) -> St
     if results.is_empty() { "No results.".to_string() } else { results.join("\n\n") }
 }
 
-async fn tool_remember(args: &serde_json::Value, root: &str) -> String {
+async fn tool_remember(args: &serde_json::Value, root: &str, nautivecs_url: &str) -> String {
     let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
     let tags = args.get("tags").and_then(|v| v.as_str()).unwrap_or("general");
     if content.is_empty() { return "Error: content required".to_string(); }
@@ -300,8 +299,30 @@ async fn tool_remember(args: &serde_json::Value, root: &str) -> String {
     let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs();
     let entry = format!("\n## [{}] {}\n{}\n", tags, ts, content);
     let existing = tokio::fs::read_to_string(&log_path).await.unwrap_or_default();
-    match tokio::fs::write(&log_path, format!("{}{}", existing, entry)).await {
-        Ok(_) => format!("Remembered (tags: {})", tags),
+    let log_result = tokio::fs::write(&log_path, format!("{}{}", existing, entry)).await;
+
+    let base = nautivecs_url.trim_end_matches("/query").trim_end_matches("/search");
+    let add_url = format!("{}/add", base);
+    let client = reqwest::Client::new();
+    let nautivecs_status = match client
+        .post(&add_url)
+        .json(&serde_json::json!({
+            "text": format!("[{}] {}", tags, content),
+            "tags": tags,
+            "source": "lessons_learned",
+            "file_path": "research_log/lessons_learned.md",
+        }))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => " + indexed in nautivecs".to_string(),
+        Ok(r) => format!(" (nautivecs {})", r.status()),
+        Err(e) => format!(" (nautivecs unavailable: {})", e),
+    };
+
+    match log_result {
+        Ok(_) => format!("Remembered (tags: {}){}", tags, nautivecs_status),
         Err(e) => format!("Error: {}", e),
     }
 }

@@ -153,12 +153,18 @@ async fn generate_handler(
 async fn tool_handler(
     State(state): State<AppState>,
     Path(name): Path<String>,
-    req: axum::Json<ToolRequest>,
+    req: axum::Json<serde_json::Value>,
 ) -> (StatusCode, Json<ToolResponse>) {
     info!("Executing tool: {}", name);
-    
-    let result = tools::execute(&name, &req.args, &state.project_root).await;
-    
+
+    let body = req.0.clone();
+    let args = body
+        .get("arguments")
+        .cloned()
+        .unwrap_or(body);
+
+    let result = tools::execute(&name, &args, &state.project_root).await;
+
     (StatusCode::OK, Json(ToolResponse { name, result }))
 }
 

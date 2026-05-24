@@ -13,17 +13,21 @@ mod corrector_preset;
 mod model_scorecard;
 mod fleet_registry;
 mod orchestrator;
+mod routing;
+mod inference_client;
+mod paths;
+mod mcp_delegate;
 
 use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tracing::{info, warn};
 
 #[derive(Clone)]
 pub struct AppState {
     pub conversation: Arc<Mutex<Vec<translator::Message>>>,
-    pub config: Arc<ForgeConfig>,
+    pub config: Arc<RwLock<ForgeConfig>>,
     pub interrupt: Arc<std::sync::atomic::AtomicBool>,
     pub steering: Arc<Mutex<Vec<String>>>,
     /// DII node registry — populated by cesarops-node heartbeats.
@@ -70,14 +74,33 @@ pub struct NodeHeartbeat {
 
 #[derive(Clone)]
 pub struct ForgeConfig {
-    pub coder_url: String,      // 35B on P100s
-    pub thinker_url: String,    // R1 on Xeon DDR4
-    pub corrector_url: String,  // 14B Coder on 1070 (Marvin)
+    pub coder_url: String,
+    pub thinker_url: String,
+    pub corrector_url: String,
     pub nautivecs_url: String,
     pub wso_url: String,
     pub project_root: String,
-    /// P1000 reference validator endpoint (cesarops2:5571)
     pub validator_url: String,
+    /// Active [[agent]] name (e.g. qwen-moe, moe)
+    pub chat_agent: String,
+    /// Prompt template: qwen2.5 | gemma | deepseek-r1 | llama3
+    pub chat_template: String,
+    pub chat_model: String,
+}
+
+impl AppState {
+    /// Reload endpoints from routing_state.json + cluster_config.toml before each chat turn.
+    pub async fn refresh_routing(&self) {
+        let resolved = routing::resolve_endpoints();
+        let mut cfg = self.config.write().await;
+        cfg.coder_url = resolved.coder_url;
+        cfg.thinker_url = resolved.thinker_url;
+        cfg.corrector_url = resolved.corrector_url;
+        cfg.validator_url = resolved.validator_url;
+        cfg.chat_agent = resolved.chat_agent;
+        cfg.chat_template = resolved.chat_template;
+        cfg.chat_model = resolved.chat_model;
+    }
 }
 
 #[derive(Deserialize)]
@@ -107,7 +130,8 @@ async fn send_message(
     Json(req): Json<SendRequest>,
 ) -> Json<SendResponse> {
     info!("User: {}", &req.message[..req.message.len().min(100)]);
-    
+    state.refresh_routing().await;
+
     let result = loop_engine::run(&state, &req.message).await;
     
     info!("Response: {}... (tools: {}, diagnosed: {})",
@@ -204,7 +228,7 @@ async fn launch_preset() -> Json<serde_json::Value> {
     // Stop all existing workers
     let _ = std::process::Command::new("bash")
         .arg("-c")
-        .arg("pkill -f 'cesarops-inference.*--backend' ; pkill -f 'koboldcpp.*--model'")
+        .arg("pkill -f 'cesarops-inference.*--backend' ; pkill -f 'llama-server.*--port' ; pkill -f 'koboldcpp.*--model'")
         .output();
 
     info!("All workers stopped. Launching preset config...");
@@ -219,8 +243,9 @@ async fn launch_preset() -> Json<serde_json::Value> {
     if !gpu0_model.is_empty() {
         let port = 5001;
         let cmd = format!(
-            "nohup /home/cesarops/koboldcpp --model {} --port {} --usevulkan --gpulayers 99 > /tmp/preset_gpu0.log 2>&1 &",
-            gpu0_model, port
+            "nohup {} -m {} --host 0.0.0.0 --port {} -dev CUDA0,CUDA1 -sm layer -ts 50,50 -ngl 99 -c 8192 -t 8 \
+             --spec-type draft-mtp --spec-draft-n-max 2 > /tmp/preset_gpu0.log 2>&1 &",
+            inference_client::LLAMA_SERVER_BIN, gpu0_model, port
         );
         let _ = std::process::Command::new("bash").arg("-c").arg(&cmd).output();
         launched.push(format!("GPU0 ({}): {} on port {}", gpu0_role, gpu0_model.split('/').last().unwrap_or_default(), port));
@@ -354,13 +379,12 @@ async fn mode_cesarops() -> Json<serde_json::Value> {
 
     // 1. Hard-clear the P100 ports. setsid + pkill catches detached koboldcpp
     //    processes that fuser alone would miss.
-    let stop_cmd = "fuser -k 5001/tcp 2>/dev/null ; fuser -k 5002/tcp 2>/dev/null ; \
-                    pkill -f 'koboldcpp.*--port 500[12]' 2>/dev/null ; true";
+    let stop_cmd = inference_client::STOP_P100_INFERENCE;
     let _ = std::process::Command::new("bash").arg("-c").arg(stop_cmd).output();
 
-    // 2. Probe Picasso (P1000 intake brain). Best-effort — we don't auto-start
-    //    remote nodes.
-    let intake_url = "http://10.0.0.129:5571/api/v1/model";
+    // 2. Probe intake brain on cesarops2 (1070 draft). Best-effort — we don't auto-start
+    //    remote nodes; T440 P100s remain fallback.
+    let intake_url = "http://10.0.0.201:5571/v1/models";
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
         .build()
@@ -370,28 +394,27 @@ async fn mode_cesarops() -> Json<serde_json::Value> {
         .unwrap_or(false);
 
     if !intake_online {
-        warn!("CESAROPS mode: Picasso (P1000 intake) at {} not responding. \
-               Intake messages will fall back to scout (cesarops3 1060).", intake_url);
+        warn!("CESAROPS mode: intake at {} not responding — T440 P100 fallback available.", intake_url);
     }
 
-    // 3. Persist mode. main_endpoint is now Picasso (intake brain), NOT a P100.
+    // 3. Persist mode. Intake prefers cesarops2; P100s absorb load if remote down.
     write_active_mode("cesarops", serde_json::json!({
         "primary_role": "wreck_detection",
-        "intake_endpoint": "http://10.0.0.129:5571",
-        "intake_model": "TinyLlama-1.1B-Chat-v1.0-Q4_K_M",
+        "intake_endpoint": "http://10.0.0.201:5571",
+        "intake_model": "Phi-3-mini-4k-instruct-Q4_K_M",
         "intake_online": intake_online,
-        "thinker_endpoint": "http://10.0.0.41:5570",
-        "fallback_intake": "http://10.0.0.41:5570",
+        "thinker_endpoint": "http://10.0.0.201:5200",
+        "fallback_intake": "http://127.0.0.1:5002",
         "p100_status": "cleared_for_tile_compute",
     }));
 
-    info!("CESAROPS mode active. P100s cleared. Intake brain: Picasso ({}).",
-          if intake_online { "online" } else { "OFFLINE — falling back to scout/1060" });
+    info!("CESAROPS mode active. P100s cleared. Intake brain ({}).",
+          if intake_online { "cesarops2 online" } else { "OFFLINE — T440 fallback" });
 
     Json(serde_json::json!({
         "message": format!(
-            "Mode -> CESAROPS. P100s cleared for tile/mag compute. Intake brain: Picasso ({}).",
-            if intake_online { "online" } else { "OFFLINE — fallback to scout" }
+            "Mode -> CESAROPS. P100s cleared for tile/mag compute. Intake: {}.",
+            if intake_online { "cesarops2 online" } else { "offline — T440 fallback" }
         ),
         "mode": "cesarops",
         "intake_online": intake_online,
@@ -465,7 +488,7 @@ async fn mode_coding(Json(body): Json<serde_json::Value>) -> Json<serde_json::Va
         "coder_model": "/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf",
         "reviewer_endpoint": "http://127.0.0.1:5002",
         "reviewer_model": "/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf",
-        "draft_endpoint": "http://10.0.0.129:5571",
+        "draft_endpoint": "http://10.0.0.201:5571",
         "free_one_p100": free_one_p100,
         "pipeline": "coder (Gemma) -> reviewer (Qwen) -> draft (Picasso)",
         "started_workers": started.clone(),
@@ -487,7 +510,7 @@ async fn mode_coding(Json(body): Json<serde_json::Value>) -> Json<serde_json::Va
         "failed": failed,
         "coder_endpoint": "http://127.0.0.1:5001",
         "reviewer_endpoint": "http://127.0.0.1:5002",
-        "draft_endpoint": "http://10.0.0.129:5571",
+        "draft_endpoint": "http://10.0.0.201:5571",
     }))
 }
 
@@ -543,7 +566,7 @@ async fn call_coder_for_code(state: &AppState, task: &str) -> Result<String, Str
     call_endpoint("http://127.0.0.1:5001", &prompt, 8192, 0.3).await
 }
 
-async fn call_reviewer_for_review(state: &AppState, task: &str, code: &str) -> Result<String, String> {
+async fn call_reviewer_for_review(_state: &AppState, task: &str, code: &str) -> Result<String, String> {
     let prompt = format!(
         "<|im_start|>system\nYou are a code reviewer. Find bugs, suggest improvements. \
         Be terse. Bullet points only.\n<|im_end|>\n\
@@ -551,11 +574,8 @@ async fn call_reviewer_for_review(state: &AppState, task: &str, code: &str) -> R
         task,
         if code.len() > 6000 { &code[..6000] } else { code }
     );
-    // Try the 1070 reviewer first; fall back to draft if down
-    match call_endpoint("http://10.0.0.129:5200", &prompt, 2048, 0.2).await {
-        Ok(r) => Ok(r),
-        Err(_) => call_endpoint("http://10.0.0.129:5571", &prompt, 1024, 0.2).await,
-    }
+    let endpoint = routing::resolve_reviewer_endpoint().await;
+    call_endpoint(&endpoint, &prompt, 2048, 0.2).await
 }
 
 async fn call_coder_for_integration(state: &AppState, task: &str, code: &str, review: &str) -> Result<String, String> {
@@ -571,30 +591,16 @@ async fn call_coder_for_integration(state: &AppState, task: &str, code: &str, re
 
 async fn call_endpoint(url: &str, prompt: &str, max_length: u32, temperature: f32) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let payload = serde_json::json!({
-        "prompt": prompt,
-        "max_length": max_length,
-        "temperature": temperature,
-        "top_p": 0.9,
-        "stop_sequence": ["<|im_end|>", "</s>"],
-    });
-    let resp = client
-        .post(format!("{}/api/v1/generate", url))
-        .json(&payload)
-        .timeout(std::time::Duration::from_secs(600))
-        .send()
-        .await
-        .map_err(|e| format!("{}: {}", url, e))?;
-    let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-    let text = body
-        .get("results")
-        .and_then(|r| r.as_array())
-        .and_then(|a| a.first())
-        .and_then(|r| r.get("text"))
-        .and_then(|t| t.as_str())
-        .unwrap_or("")
-        .to_string();
-    Ok(text)
+    inference_client::complete_prompt(
+        &client,
+        url,
+        prompt,
+        max_length,
+        temperature,
+        vec!["<|im_end|>".to_string(), "</s>".to_string()],
+        None,
+    )
+    .await
 }
 
 async fn corrector_connect() -> Json<serde_json::Value> {
@@ -621,28 +627,71 @@ async fn corrector_disconnect() -> Json<serde_json::Value> {
 /// Send a task to any GPU endpoint in agent mode (with tools).
 /// POST /cluster/agent/run { "endpoint": "http://...:5001", "message": "do something" }
 async fn run_agent_task(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
-    let endpoint = body.get("endpoint").and_then(|v| v.as_str()).unwrap_or("");
+    let endpoint_in = body.get("endpoint").and_then(|v| v.as_str()).unwrap_or("");
     let message = body.get("message").and_then(|v| v.as_str()).unwrap_or("");
+    let role = body
+        .get("role")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let use_mtp_pool = endpoint_in.is_empty()
+        || endpoint_in == "mtp"
+        || endpoint_in == "auto-mtp"
+        || role == "mtp"
+        || (role == "reviewer" && endpoint_in.is_empty());
+
+    let endpoint = if message.is_empty() {
+        String::new()
+    } else if use_mtp_pool {
+        let client = reqwest::Client::new();
+        let pool = routing::load_mtp_pool();
+        if let Some(u) = routing::first_online_llama(&client, &pool).await {
+            u
+        } else {
+            routing::resolve_reviewer_endpoint().await
+        }
+    } else {
+        endpoint_in.to_string()
+    };
 
     if endpoint.is_empty() || message.is_empty() {
-        return Json(serde_json::json!({"error": "endpoint and message required"}));
+        return Json(serde_json::json!({
+            "error": "message required; endpoint required unless role=reviewer or endpoint=mtp"
+        }));
     }
 
+    let template = body
+        .get("template")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_else(|| routing::template_for_endpoint(&routing::load_cluster_routing(), &endpoint));
+
+    let engine = body.get("engine").and_then(|v| v.as_str()).map(String::from);
+
+    let mcp_worker_url = std::env::var("MCP_WORKER_URL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .or_else(|| Some("http://127.0.0.1:8090".to_string()));
+
     let config = agent_dispatch::AgentConfig {
-        endpoint_url: endpoint.to_string(),
-        project_root: "/codebase/wreckhunter2000-1".to_string(),
+        endpoint_url: endpoint.clone(),
+        project_root: paths::project_root(),
         nautivecs_url: "http://127.0.0.1:5003/query".to_string(),
         wso_url: "http://127.0.0.1:5010/search".to_string(),
+        mcp_worker_url,
         max_tokens: 12288,
         temperature: 0.4,
         safe_mode: body.get("safe_mode").and_then(|v| v.as_bool()).unwrap_or(false),
+        chat_template: template,
+        engine,
     };
 
     info!("Agent task dispatched to {}: {}...", endpoint, &message[..message.len().min(80)]);
     let result = agent_dispatch::run_agent_loop(&config, message).await;
     info!("Agent task complete: {}...", &result[..result.len().min(100)]);
 
-    Json(serde_json::json!({"response": result}))
+    Json(serde_json::json!({"response": result, "endpoint_used": endpoint}))
 }
 
 // --- Cluster Control API ---
@@ -810,6 +859,21 @@ async fn start_worker(axum::extract::Path(path): axum::extract::Path<String>) ->
             let gpulayers = worker.get("gpulayers").and_then(|v| v.as_integer()).unwrap_or(99);
             let contextsize = worker.get("contextsize").and_then(|v| v.as_integer()).unwrap_or(8192);
             let threads = worker.get("threads").and_then(|v| v.as_integer()).unwrap_or(4);
+            let usecublas = worker.get("usecublas").and_then(|v| v.as_integer()).unwrap_or(0);
+            let ramlayers = worker.get("ramlayers").and_then(|v| v.as_integer()).unwrap_or(0);
+            let tensor_split: Vec<String> = worker
+                .get("tensor_split")
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| {
+                            x.as_integer()
+                                .map(|i| i.to_string())
+                                .or_else(|| x.as_str().map(String::from))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
 
             if model.is_empty() {
                 return Json(serde_json::json!({"error": "No model assigned to this worker."}));
@@ -827,33 +891,56 @@ async fn start_worker(axum::extract::Path(path): axum::extract::Path<String>) ->
             // engine doesn't yet implement) get launched on cesarops-inference
             // and panic with "Buffer size > max buffer size".
             let engine_pin = worker.get("engine").and_then(|v| v.as_str()).unwrap_or("");
+            let backend = worker.get("backend").and_then(|v| v.as_str()).unwrap_or("cuda");
             let native_quants = ["q4_0", "q4_k_m", "q6_k", "q8_0", "f16", "f32", "bf16"];
             let model_lower = model.to_lowercase();
             let use_native = match engine_pin {
                 "cesarops-inference" | "native" | "wgpu" => true,
-                "koboldcpp" => false,
+                "koboldcpp" | "llama-server" | "llama.cpp" => false,
                 _ => native_quants.iter().any(|q| model_lower.contains(q)),
             };
+            let effective = inference_client::effective_worker_engine(engine_pin, use_native);
 
             let cmd = if use_native {
                 format!(
                     "nohup /codebase/repos/wreckhunter2000-1/cesarops-inference/target/release/cesarops-inference --model {} --port {} --backend wgpu --gpu {} > /tmp/worker_{}.log 2>&1 &",
                     model, port, gpu, idx
                 )
-            } else {
-                // koboldcpp fallback. Honor per-worker pin flags so launching
-                // QwenBig doesn't OOM because GemmaBig already auto-spread
-                // across both P100s. setsid + disown so the process survives
-                // the bash wrapper exiting.
+            } else if effective == "koboldcpp" {
+                let mut extra = String::new();
+                if usecublas != 0 {
+                    extra.push_str(&format!(" --usecublas {}", usecublas));
+                }
+                if ramlayers > 0 {
+                    extra.push_str(&format!(" --ramlayers {}", ramlayers));
+                }
+                if !tensor_split.is_empty() {
+                    extra.push_str(" --tensor_split");
+                    for t in &tensor_split {
+                        extra.push(' ');
+                        extra.push_str(t);
+                    }
+                }
                 format!(
                     "setsid /home/cesarops/koboldcpp --model {} --port {} \
                      --usevulkan {} --gpulayers {} --contextsize {} --threads {} \
-                     --quiet --maingpu {} > /tmp/worker_{}.log 2>&1 < /dev/null & disown",
-                    model, port, vulkan_device, gpulayers, contextsize, threads, vulkan_device, idx
+                     --quiet --maingpu {}{} > /tmp/worker_{}.log 2>&1 < /dev/null & disown",
+                    model, port, vulkan_device, gpulayers, contextsize, threads, vulkan_device, extra, idx
+                )
+            } else {
+                inference_client::llama_server_spawn_cmd(
+                    model,
+                    port,
+                    backend,
+                    gpulayers,
+                    contextsize,
+                    threads,
+                    &tensor_split,
+                    idx,
                 )
             };
 
-            let engine = if use_native { "cesarops-inference" } else { "koboldcpp (fallback)" };
+            let engine = effective;
 
             match std::process::Command::new("bash").arg("-c").arg(&cmd).output() {
                 Ok(_) => Json(serde_json::json!({
@@ -902,14 +989,47 @@ async fn stop_worker(axum::extract::Path(path): axum::extract::Path<String>) -> 
 }
 
 async fn start_all_workers() -> Json<serde_json::Value> {
-    // TODO: iterate workers and start each
-    Json(serde_json::json!({"message": "Starting all workers... (use individual start for now)"}))
+    let repo = paths::project_root();
+    let mut started: Vec<String> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+
+    let mcp_bin = format!("{}/cesarops-mcp-worker/target/release/cesarops-mcp-worker", repo);
+    let scripts = [
+        ("p100_cycle", format!("{}/scripts/p100_cycle.sh start", repo)),
+        ("vision_workers", format!(
+            "VISION_MODE=${{VISION_MODE:-cpu}} REPO={} bash {}/scripts/start_vision_workers.sh start",
+            repo, repo
+        )),
+        ("mcp_worker", format!(
+            "MCP_DELEGATE_TOOLS=1 nohup {} --port 8090 --project-root {} \
+             > /tmp/mcp-worker.log 2>&1 &",
+            mcp_bin, repo
+        )),
+    ];
+
+    for (name, cmd) in &scripts {
+        match std::process::Command::new("bash").arg("-c").arg(cmd).output() {
+            Ok(o) if o.status.success() => started.push(name.to_string()),
+            Ok(o) => errors.push(format!(
+                "{}: {}",
+                name,
+                String::from_utf8_lossy(&o.stderr)[..500.min(o.stderr.len())].to_string()
+            )),
+            Err(e) => errors.push(format!("{}: {}", name, e)),
+        }
+    }
+
+    Json(serde_json::json!({
+        "started": started,
+        "errors": errors,
+        "hint": "cesarops2 lab: ssh cesarops@10.0.0.201 bash scripts/cesarops2_research_lab.sh start"
+    }))
 }
 
 async fn stop_all_workers() -> Json<serde_json::Value> {
     let _ = std::process::Command::new("bash")
         .arg("-c")
-        .arg("pkill -f 'cesarops-inference.*--backend wgpu'")
+        .arg("pkill -f 'cesarops-inference.*--backend wgpu' ; pkill -f 'llama-server.*--port' ; pkill -f 'koboldcpp.*--model'")
         .output();
     Json(serde_json::json!({"message": "All GPU workers stopped."}))
 }
@@ -1225,13 +1345,16 @@ async fn get_available_engines() -> Json<serde_json::Value> {
     let mut available: Vec<&str> = Vec::new();
 
     // Check local binaries
+    if std::path::Path::new(inference_client::LLAMA_SERVER_BIN).exists() {
+        available.push("llama-server");
+    }
+    if std::path::Path::new("/home/cesarops/wreckhunter2000-1/cesarops-inference/target/release/cesarops-inference").exists() {
+        available.push("cesarops-inference");
+    }
     if std::path::Path::new("/usr/bin/koboldcpp").exists()
         || std::path::Path::new("/home/cesarops/koboldcpp").exists()
         || std::path::Path::new("/home/cesarops/benchmark/koboldcpp").exists() {
         available.push("koboldcpp");
-    }
-    if std::path::Path::new("/home/cesarops/wreckhunter2000-1/cesarops-inference/target/release/cesarops-inference").exists() {
-        available.push("cesarops-inference");
     }
     // Check ollama
     if reqwest::Client::new()
@@ -1241,12 +1364,11 @@ async fn get_available_engines() -> Json<serde_json::Value> {
         available.push("ollama");
     }
 
-    // Per-node: remote nodes only have koboldcpp (we know this from our setup)
+    // Per-node engines. M2200 (100.110.214.86) keeps Kobold; others default to llama-server.
     let per_node = serde_json::json!({
         "127.0.0.1":       available,
-        "100.102.158.111": ["koboldcpp"],
-        "100.105.77.74":   ["koboldcpp"],
-        "100.110.214.86":  ["koboldcpp"],
+        "10.0.0.201":      ["llama-server", "koboldcpp"],
+        "100.110.214.86":  ["koboldcpp", "llama-server"],
     });
 
     Json(serde_json::json!({ "available": available, "per_node": per_node }))
@@ -1280,7 +1402,7 @@ async fn get_cluster_config_full() -> Json<serde_json::Value> {
                 "role":          t.get("role").and_then(|v| v.as_str()).unwrap_or(""),
                 "node_ip":       t.get("host").and_then(|v| v.as_str()).unwrap_or("127.0.0.1"),
                 "port":          t.get("port").and_then(|v| v.as_integer()).unwrap_or(5001),
-                "engine":        t.get("engine").and_then(|v| v.as_str()).unwrap_or("koboldcpp"),
+                "engine":        t.get("engine").and_then(|v| v.as_str()).unwrap_or("llama-server"),
                 "backend":       t.get("backend").and_then(|v| v.as_str()).unwrap_or("vulkan"),
                 "inject_vectors":t.get("inject_vectors").and_then(|v| v.as_bool()).unwrap_or(true),
                 "memory_pool":   t.get("memory_pool").and_then(|v| v.as_str()).unwrap_or(""),
@@ -1304,6 +1426,144 @@ async fn get_cluster_config_full() -> Json<serde_json::Value> {
         .unwrap_or_default();
 
     Json(serde_json::json!({ "workers": workers, "pools": pools }))
+}
+
+/// GET /cluster/routing — agents, presets, live routing state
+async fn get_routing_status() -> Json<serde_json::Value> {
+    let cluster = routing::load_cluster_routing();
+    let state = routing::load_routing_state();
+    let resolved = routing::resolve_endpoints();
+    let presets: Vec<serde_json::Value> = cluster
+        .presets
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "id": p.id,
+                "name": p.name,
+                "description": p.description,
+                "chat_agent": p.chat_agent,
+                "coder_endpoint": p.coder_endpoint,
+                "workers_start": p.workers_start,
+            })
+        })
+        .collect();
+    let agents: Vec<serde_json::Value> = cluster
+        .agents
+        .iter()
+        .map(|a| {
+            serde_json::json!({
+                "name": a.name,
+                "endpoint": a.endpoint,
+                "hardware": a.hardware,
+                "role": a.role,
+                "model": a.model,
+                "template": a.template,
+            })
+        })
+        .collect();
+    let gpus: Vec<serde_json::Value> = {
+        let content = std::fs::read_to_string(routing::CFG_PATH).unwrap_or_default();
+        let table: toml::Table = content.parse().unwrap_or_default();
+        table
+            .get("gpu")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|g| {
+                        let t = g.as_table()?;
+                        Some(serde_json::json!({
+                            "id": t.get("id")?.as_integer().unwrap_or(0),
+                            "name": t.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                            "vram_mb": t.get("vram_mb").and_then(|v| v.as_integer()).unwrap_or(0),
+                        }))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    Json(serde_json::json!({
+        "agents": agents,
+        "presets": presets,
+        "routing_state": state,
+        "resolved": resolved,
+        "gpus": gpus,
+        "nicknames": cluster.nicknames,
+        "workers": cluster.workers,
+    }))
+}
+
+/// POST /cluster/routing — set chat agent + optional endpoint overrides
+async fn save_routing_state(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let mut state = routing::load_routing_state();
+    if let Some(v) = body.get("chat_agent").and_then(|v| v.as_str()) {
+        state.chat_agent = v.to_string();
+    }
+    for key in [
+        "coder_endpoint",
+        "reviewer_endpoint",
+        "thinker_endpoint",
+        "corrector_endpoint",
+        "draft_endpoint",
+    ] {
+        if let Some(v) = body.get(key).and_then(|v| v.as_str()) {
+            match key {
+                "coder_endpoint" => state.coder_endpoint = v.to_string(),
+                "reviewer_endpoint" => state.reviewer_endpoint = v.to_string(),
+                "thinker_endpoint" => state.thinker_endpoint = v.to_string(),
+                "corrector_endpoint" => state.corrector_endpoint = v.to_string(),
+                "draft_endpoint" => state.draft_endpoint = v.to_string(),
+                _ => {}
+            }
+        }
+    }
+    routing::save_routing_state(&state);
+    Json(serde_json::json!({"message": "Routing saved", "routing_state": state}))
+}
+
+/// POST /cluster/routing/preset/{id} — apply preset, optionally start workers
+async fn apply_routing_preset(
+    axum::extract::Path(preset_id): axum::extract::Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let start_workers = body
+        .get("start_workers")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    let preset = match routing::apply_preset_to_state(&preset_id) {
+        Ok(p) => p,
+        Err(e) => return Json(serde_json::json!({"error": e})),
+    };
+
+    let mut started = Vec::new();
+    let mut failed = Vec::new();
+    if start_workers && !preset.workers_stop.is_empty() {
+        for w in &preset.workers_stop {
+            let url = format!("http://127.0.0.1:9100/cluster/worker/{}/stop", w);
+            let _ = reqwest::Client::new().post(&url).send().await;
+        }
+    }
+    if start_workers {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(8))
+            .build()
+            .unwrap();
+        for w in &preset.workers_start {
+            let url = format!("http://127.0.0.1:9100/cluster/worker/{}/start", w);
+            match client.post(&url).send().await {
+                Ok(r) if r.status().is_success() => started.push(w.clone()),
+                Ok(r) => failed.push(format!("{} (HTTP {})", w, r.status())),
+                Err(e) => failed.push(format!("{} ({})", w, e)),
+            }
+        }
+    }
+
+    Json(serde_json::json!({
+        "message": format!("Applied routing preset '{}'", preset.name),
+        "preset": preset.id,
+        "started": started,
+        "failed": failed,
+    }))
 }
 
 // ── Config persistence helpers ───────────────────────────────────────────────
@@ -1464,8 +1724,8 @@ async fn validate_endpoint(
         .unwrap_or("The quick brown fox jumps over the lazy dog. In Rust, a vector is");
 
     let config = validator::ValidatorConfig {
-        main_endpoint: state.config.coder_url.clone(),
-        ref_endpoint: state.config.validator_url.clone(),
+        main_endpoint: state.config.read().await.coder_url.clone(),
+        ref_endpoint: state.config.read().await.validator_url.clone(),
         n_tokens: 10,
         min_agreement: 0.4,
     };
@@ -1476,28 +1736,29 @@ async fn validate_endpoint(
 
 /// GET /validate/ping — quick liveness check of both main engine and P1000.
 async fn validate_ping(State(state): State<AppState>) -> Json<serde_json::Value> {
-    let main_up = validator::ping(&state.config.coder_url).await;
-    let p1000_up = validator::ping(&state.config.validator_url).await;
+    let cfg = state.config.read().await;
+    let main_up = validator::ping(&cfg.coder_url).await;
+    let p1000_up = validator::ping(&cfg.validator_url).await;
 
     let main_tps = if main_up {
-        validator::benchmark_tps(&state.config.coder_url, 5).await
+        validator::benchmark_tps(&cfg.coder_url, 5).await
     } else {
         None
     };
     let p1000_tps = if p1000_up {
-        validator::benchmark_tps(&state.config.validator_url, 5).await
+        validator::benchmark_tps(&cfg.validator_url, 5).await
     } else {
         None
     };
 
     Json(serde_json::json!({
         "main_engine": {
-            "url": state.config.coder_url,
+            "url": cfg.coder_url,
             "online": main_up,
             "tps": main_tps,
         },
         "p1000_validator": {
-            "url": state.config.validator_url,
+            "url": cfg.validator_url,
             "online": p1000_up,
             "tps": p1000_tps,
         },
@@ -1599,12 +1860,10 @@ async fn ide_exec(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value
     }
 }
 
-/// POST /ide/chat/stream — proxy a generate request to a koboldcpp endpoint
-/// and stream tokens back as SSE (Server-Sent Events).
+/// POST /ide/chat/stream — proxy a completion stream to llama-server (default) or Kobold.
 async fn ide_chat_stream(
     Json(body): Json<serde_json::Value>,
 ) -> axum::response::Response {
-    use axum::response::IntoResponse;
     use axum::body::Body;
 
     let endpoint = body.get("endpoint").and_then(|v| v.as_str())
@@ -1612,15 +1871,30 @@ async fn ide_chat_stream(
     let prompt = body.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
     let max_length = body.get("max_length").and_then(|v| v.as_u64()).unwrap_or(1024);
     let temperature = body.get("temperature").and_then(|v| v.as_f64()).unwrap_or(0.4);
+    let engine = body.get("engine").and_then(|v| v.as_str());
 
-    let url = format!("{}/api/extra/generate/stream", endpoint);
-    let payload = serde_json::json!({
-        "prompt": prompt,
-        "max_length": max_length,
-        "temperature": temperature,
-        "top_p": 0.95,
-        "rep_pen": 1.1,
-    });
+    let (url, payload) = if inference_client::uses_kobold_generate_api(engine) {
+        (
+            format!("{}/api/extra/generate/stream", endpoint.trim_end_matches('/')),
+            serde_json::json!({
+                "prompt": prompt,
+                "max_length": max_length,
+                "temperature": temperature,
+                "top_p": 0.95,
+                "rep_pen": 1.1,
+            }),
+        )
+    } else {
+        (
+            format!("{}/v1/completions", endpoint.trim_end_matches('/')),
+            serde_json::json!({
+                "prompt": prompt,
+                "max_tokens": max_length,
+                "temperature": temperature,
+                "stream": true,
+            }),
+        )
+    };
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
@@ -1639,8 +1913,7 @@ async fn ide_chat_stream(
         }
     };
 
-    // For v1: read full response and forward as SSE. The koboldcpp streaming
-    // endpoint returns newline-delimited JSON tokens. We pass them through.
+    // Read full response and forward as SSE (kobold NDJSON or llama-server chunks).
     let body_bytes = resp.bytes().await.unwrap_or_default();
     let body = Body::from(body_bytes);
 
@@ -1695,23 +1968,116 @@ async fn orchestrator_swap_model(
 
 // ── Webhook Mission Intake ──────────────────────────────────────────────────
 
+fn operator_scenario_from_json(body: &serde_json::Value) -> Result<orchestrator::OperatorScenario, String> {
+    let raw_text = body
+        .get("scenario")
+        .or_else(|| body.get("raw_text"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("satellite mission")
+        .to_string();
+    let priority = body.get("priority").and_then(|v| v.as_u64()).unwrap_or(2) as u8;
+    let bbox: Option<[f64; 4]> = body
+        .get("bbox")
+        .and_then(|v| serde_json::from_value(v.clone()).ok());
+    let days_back = body.get("days_back").and_then(|v| v.as_u64()).map(|d| d as u32);
+    let spec_path = body
+        .get("spec_path")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let knobs = body.get("knobs").cloned();
+    let stages: Option<Vec<String>> = body.get("stages").and_then(|v| {
+        v.as_array().map(|arr| {
+            arr.iter()
+                .filter_map(|s| s.as_str().map(|x| x.to_string()))
+                .collect()
+        })
+    });
+    let mut dry_run = body.get("dry_run").and_then(|v| v.as_bool());
+    if dry_run.is_none() {
+        if let Some(k) = body.get("knobs") {
+            dry_run = k
+                .get("dry_run_download")
+                .and_then(|v| v.as_bool());
+        }
+    }
+    if dry_run.is_none() {
+        if let Some(ref sp) = spec_path {
+            if let Ok(content) = std::fs::read_to_string(sp) {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+                    dry_run = v
+                        .get("knobs")
+                        .and_then(|k| k.get("dry_run_download"))
+                        .and_then(|v| v.as_bool());
+                }
+            }
+        }
+    }
+    let pipeline_mode = body
+        .get("pipeline_mode")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            if spec_path.is_some() {
+                Some("sequential".to_string())
+            } else {
+                None
+            }
+        });
+
+    Ok(orchestrator::OperatorScenario {
+        raw_text,
+        priority,
+        bbox,
+        days_back,
+        spec_path,
+        knobs,
+        stages,
+        dry_run,
+        pipeline_mode,
+    })
+}
+
+/// POST /webhook/satellite — n8n entry: JSON mission spec + optional knob overrides.
+async fn webhook_satellite(
+    State(state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let mut body = body;
+    if body.get("spec_path").is_none() {
+        body["spec_path"] = serde_json::json!(
+            "/codebase/repos/wreckhunter2000-1/pipelines/satellite/missions/straits_known_wreck_validation.json"
+        );
+    }
+    if body.get("scenario").is_none() && body.get("raw_text").is_none() {
+        body["scenario"] = serde_json::json!("straits known wreck satellite validation");
+    }
+    if body.get("bbox").is_none() {
+        body["bbox"] = serde_json::json!([45.6, -85.6, 46.2, -84.3]);
+    }
+    if body.get("dry_run").is_none() {
+        body["dry_run"] = serde_json::json!(true);
+    }
+    body["pipeline_mode"] = serde_json::json!("sequential");
+    body["source"] = serde_json::json!("webhook_satellite");
+    webhook_mission(State(state), Json(body)).await
+}
+
 /// POST /webhook/mission — accept a mission from cesarops.com or any external source.
 /// Returns immediately with a mission_id; execution runs in background.
 async fn webhook_mission(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
-    let scenario_text = match body.get("scenario").and_then(|v| v.as_str()) {
-        Some(s) => s.to_string(),
-        None => return Json(serde_json::json!({"error": "missing 'scenario' field"})),
+    let scenario = match operator_scenario_from_json(&body) {
+        Ok(s) => s,
+        Err(e) => return Json(serde_json::json!({"error": e})),
     };
+    let scenario_text = scenario.raw_text.clone();
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH).unwrap();
     let mission_id = format!("{:016x}", now.as_nanos() & 0xFFFFFFFFFFFFFFFF);
     let source = body.get("source").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-    let priority = body.get("priority").and_then(|v| v.as_u64()).unwrap_or(2) as u8;
-    let bbox: Option<[f64; 4]> = body.get("bbox").and_then(|v| serde_json::from_value(v.clone()).ok());
     let callback_url = body.get("callback_url").and_then(|v| v.as_str()).map(|s| s.to_string());
 
     let record = MissionRecord {
@@ -1738,12 +2104,6 @@ async fn webhook_mission(
     let state_clone = state.clone();
     let mid = mission_id.clone();
     tokio::spawn(async move {
-        let scenario = orchestrator::OperatorScenario {
-            raw_text: scenario_text,
-            priority,
-            bbox,
-            days_back: None,
-        };
         let report = orchestrator::execute_mission(scenario).await;
 
         // Update mission record.
@@ -1791,25 +2151,49 @@ async fn list_missions(State(state): State<AppState>) -> Json<serde_json::Value>
     Json(serde_json::Value::Array(list))
 }
 
+/// GET /webhook/missions/:id — single mission status + report when complete.
+async fn get_mission(
+    State(state): State<AppState>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    let missions = state.missions.lock().await;
+    match missions.iter().find(|m| m.id == id) {
+        Some(m) => Json(serde_json::json!({
+            "id": m.id,
+            "source": m.source,
+            "scenario": m.scenario_text,
+            "status": m.status,
+            "submitted_at": m.submitted_at,
+            "completed_at": m.completed_at,
+            "report": m.report,
+        })),
+        None => Json(serde_json::json!({"error": "mission not found", "id": id})),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter("cesarops_forge_v2=info")
         .init();
 
+    let resolved = routing::resolve_endpoints();
     let config = ForgeConfig {
-        coder_url: "http://127.0.0.1:5001".to_string(),  // Qwen3.6 on P100s
-        thinker_url: "http://127.0.0.1:5557".to_string(),       // DeepSeek-R1 7B on Xeon CPU (thinker)
-        corrector_url: "http://0.0.0.0:0".to_string(), // DISABLED — corrector severed, skip_corrector=true in tuning
+        coder_url: resolved.coder_url.clone(),
+        thinker_url: resolved.thinker_url.clone(),
+        corrector_url: resolved.corrector_url.clone(),
         nautivecs_url: "http://127.0.0.1:5003/query".to_string(),
         wso_url: "http://127.0.0.1:5010/search".to_string(),
-        project_root: "/codebase/wreckhunter2000-1".to_string(),
-        validator_url: "http://100.102.158.111:5571".to_string(), // P1000 TinyLlama — speed+accuracy canary
+        project_root: paths::project_root(),
+        validator_url: resolved.validator_url.clone(),
+        chat_agent: resolved.chat_agent.clone(),
+        chat_template: resolved.chat_template.clone(),
+        chat_model: resolved.chat_model.clone(),
     };
 
     let state = AppState {
         conversation: Arc::new(Mutex::new(Vec::new())),
-        config: Arc::new(config),
+        config: Arc::new(RwLock::new(config)),
         interrupt: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         steering: Arc::new(Mutex::new(Vec::new())),
         node_registry: Arc::new(Mutex::new(std::collections::HashMap::new())),
@@ -1827,7 +2211,9 @@ async fn main() {
         .route("/ide/chat/stream", post(ide_chat_stream))
         // ── Webhook intake ───────────────────────────────────────────────
         .route("/webhook/mission", post(webhook_mission))
+        .route("/webhook/satellite", post(webhook_satellite))
         .route("/webhook/missions", get(list_missions))
+        .route("/webhook/missions/{id}", get(get_mission))
         .route("/health", get(health))
         .route("/send", post(send_message))
         .route("/clear", post(clear))
@@ -1868,6 +2254,8 @@ async fn main() {
         .route("/cluster/engines",                     get(get_available_engines))
         .route("/cluster/memory_pool/create",          post(memory_pool_create))
         .route("/cluster/config/full",                 get(get_cluster_config_full))
+        .route("/cluster/routing",                     get(get_routing_status).post(save_routing_state))
+        .route("/cluster/routing/preset/{id}",         post(apply_routing_preset))
         // ── Mission orchestrator (T9 design / T11 implementation) ─────────
         .route("/orchestrator/probe",   get(orchestrator::orchestrator_probe))
         .route("/orchestrator/plan",    post(orchestrator::orchestrator_plan))
