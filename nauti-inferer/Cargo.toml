@@ -2,19 +2,36 @@
 name = "nauti_inferer"
 version = "4.0.0"
 edition = "2021"
-description = "Distributed inference control plane — DashMap sharded runtime, authenticated workers, cancellable jobs, typed protocols, structured telemetry"
+description = "Distributed inference control plane — scheduler, API, Forge fleet adapters"
 authors = ["CESAROPS"]
 license = "AGPL-3.0"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "nauti-inferer"
+path = "src/main.rs"
+
 [dependencies]
-axum = "0.8"
-tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6", features = ["cors"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-reqwest = { version = "0.12", features = ["json", "stream"] }
+dashmap = "6"
+tokio = { version = "1", features = ["full", "sync"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
+async-stream = "0.3"
+thiserror = "2"
+anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"] }
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 lto = true
