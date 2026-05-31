@@ -1,388 +1,588 @@
-# Cluster Configuration — managed by web UI
-# Anything we can't handle natively falls back to KoboldCPP
+[[agent]]
+endpoint = "http://127.0.0.1:5001"
+hardware = "P100 #1 (T440) — Gemma integrate coder"
+model = "Gemma-4-26B-MoE-IQ4_XS"
+name = "gemma"
+role = "Integrate coder"
+template = "gemma"
+
+[[agent]]
+endpoint = "http://127.0.0.1:5002"
+hardware = "P100 #0 (T440) — R1 reviewer/corrector"
+model = "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M"
+name = "r1-32b"
+role = "Reviewer / corrector / thinker"
+template = "deepseek-r1"
+
+[[agent]]
+endpoint = "http://10.0.0.201:5200"
+hardware = "cesarops2 RTX 2060 — Qwen3.6 MoE"
+model = "Qwen3.6-35B-A3B-MXFP4_MOE"
+name = "c2-qwen-moe"
+role = "Fleet reviewer / heavy reasoner"
+template = "qwen2.5"
+
+[[agent]]
+endpoint = "http://10.0.0.201:5201"
+hardware = "cesarops2 P106 — R1 7B"
+model = "DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M"
+name = "c2-r1-7b"
+role = "Fast thinker / corrector"
+template = "deepseek-r1"
+
+[[agent]]
+endpoint = "http://10.0.0.201:5202"
+hardware = "cesarops2 GTX 1070 — stable endpoint (:5202)"
+model = "Phi-3-mini-4k-instruct-Q4_K_M"
+name = "c2-phi"
+role = "Validator / draft"
+template = "llama3"
+
+[[agent]]
+endpoint = "http://127.0.0.1:5001"
+hardware = "P100 (legacy alias)"
+model = "Qwen3.6-35B-A3B-Q4_K_M"
+name = "qwen-moe"
+role = "Integrate coder (idle when Gemma :5001 up)"
+
+[[agent]]
+endpoint = "http://127.0.0.1:8081"
+hardware = "Cake cluster (T440 RAM + P100#1 VRAM + c2 RTX)"
+model = "Qwen/Qwen2.5-72B-Instruct"
+name = "cake"
+role = "Idle fleet 70B"
+
+[[agent]]
+endpoint = "http://100.72.129.86:5555"
+hardware = "GTX 1070 (cesarops2)"
+model = "14B Coder"
+name = "marvin"
+role = "Corrector/Reviewer"
+
+[[agent]]
+endpoint = "http://100.105.77.74:5570"
+hardware = "GTX 1060 (cesarops3)"
+model = "R1 7B"
+name = "scout"
+role = "Thinker"
+
+[[agent]]
+endpoint = "http://100.110.214.86:5571"
+hardware = "ThinkPad M2200 4GB (Maxwell)"
+model = "TinyLlama-1.1B-Chat-v1.0-Q4_K_M"
+name = "nautik"
+notes = "Windows — launch manually with scripts/launch_laptop_m2200.sh validator"
+role = "Validator/Corrector — TinyLlama when online"
+
+[[agent]]
+backend = "cuda"
+endpoint = "http://100.72.129.86:5571"
+engine = "llama-server"
+hardware = "P1000 (cesarops2)"
+inject_vectors = false
+model = "TinyLlama-1.1B-Chat-v1.0-Q4_K_M"
+name = "picasso"
+role = "Speed+Accuracy Validator — TinyLlama 1.1B Q4_K_M reference canary"
+validator = true
+validator_api = "http://localhost:9100/validate"
+
+[agent.corrector_functions]
+auto_remember = true
+json_fixer = true
+loop_detector = true
+think_harder = false
+translator = true
 
 [bootstrap]
-model = "/codebase/models/qwen2.5-coder-1.5b-instruct-q6_k.gguf"
-port = 5002
-backend = "cpu"
-template = "qwen2.5"
+backend = "remote"
+model = "DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M"
+port = 5201
+template = "deepseek-r1"
+
+[endpoint_pool.cake]
+urls = ["http://127.0.0.1:8081"]
+
+[endpoint_pool.intake]
+urls = [
+    "http://127.0.0.1:5001",
+    "http://127.0.0.1:8081",
+    "http://10.0.0.201:5571",
+    "http://10.0.0.201:5200",
+]
+
+[endpoint_pool.mtp]
+urls = [
+    "http://127.0.0.1:5001",
+    "http://127.0.0.1:5002",
+    "http://10.0.0.201:5200",
+    "http://10.0.0.201:5201",
+    "http://10.0.0.201:5202",
+    "http://127.0.0.1:8081",
+    "http://10.0.0.201:5571",
+]
 
 [fallback]
-# KoboldCPP handles formats we don't support (MXFP4, GGML v1, etc.)
+binary = "/home/cesarops/llama.cpp/build/bin/llama-server"
 enabled = true
-binary = "/home/cesarops/koboldcpp"
+native_quants = [
+    "Q4_0",
+    "Q4_K_M",
+    "Q6_K",
+    "Q8_0",
+    "F16",
+    "F32",
+    "BF16",
+]
 port = 5001
-# Supported native quant types (everything else goes to koboldcpp)
-native_quants = ["Q4_0", "Q4_K_M", "Q6_K", "Q8_0", "F16", "F32", "BF16"]
 
 [[gpu]]
+bus_id = "5E:00.0"
+host = "local"
 id = 0
 name = "P100 #1"
-bus_id = "5E:00.0"
+port_base = 5001
 vram_mb = 16384
-host = "local"
 
 [[gpu]]
+bus_id = "AF:00.0"
+host = "local"
 id = 1
 name = "P100 #2"
-bus_id = "AF:00.0"
+port_base = 5002
 vram_mb = 16384
-host = "local"
 
 [[gpu]]
+cuda_index = 1
+host = "10.0.0.201"
 id = 2
-name = "GTX 1060"
-vram_mb = 6144
-host = "100.105.77.74"
-port_base = 5570
+name = "RTX 2060 SUPER"
+notes = "cesarops2 — llama CUDA0 / thinker MTP :5200"
+port_base = 5200
+vram_mb = 8192
 
-[[worker]]
-name = "Thinker"
-role = "think"
-gpu = 0
-model = "/codebase/models/Qwen2.5-Coder-7B-Instruct-abliterated-Q8_0.gguf"
-port = 5010
-template = "qwen2.5"
-enabled = true
-engine = "koboldcpp"
-backend = "vulkan"
-inject_vectors = true
-memory_pool = ""
+[[gpu]]
+cuda_index = 2
+host = "10.0.0.201"
+id = 3
+name = "GTX 1070"
+notes = "cesarops2 — stable card endpoint :5202"
+port_base = 5202
+vram_mb = 8192
 
-# P100 #0 (port 5001) — Gemma-4-26B-MoE IQ4_XS — big hitter #1
-[[worker]]
-name = "GemmaBig"
-role = "code"
-gpu = 0
-model = "/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf"
-port = 5001
-template = "gemma"
-enabled = true
-engine = "koboldcpp"
-backend = "vulkan"
-inject_vectors = true
-memory_pool = ""
-# Launch flags — match what koboldcpp needs for this exact P100 setup.
-# vulkan_device pins which Vulkan adapter koboldcpp picks (Pascal needs explicit).
-# gpulayers=999 = full offload (Gemma-4-26B-MoE fits in 16 GB IQ4_XS).
-vulkan_device = 0
-gpulayers = 999
-contextsize = 8192
-threads = 4
+[[gpu]]
+cuda_index = 0
+host = "10.0.0.201"
+id = 5
+name = "P106-100"
+notes = "cesarops2 — P106-100 4GB :5201 R1 7B"
+port_base = 5201
+vram_mb = 4096
 
-# P100 #1 (port 5002) — Qwen3.6-35B-A3B Q4_K_M — big hitter #2 (partial offload)
-[[worker]]
-name = "QwenBig"
-role = "code"
-gpu = 1
-model = "/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf"
-port = 5002
-template = "qwen2.5"
-enabled = true
-engine = "koboldcpp"
-backend = "vulkan"
-inject_vectors = true
-memory_pool = ""
-# Qwen3.6-35B-A3B at Q4_K_M is ~21 GB — only 32 layers fit on a 16 GB P100,
-# the rest spill to CPU/RAM. Pinned to vulkan_device 1 to stay off P100 #0.
-vulkan_device = 1
-gpulayers = 32
-contextsize = 8192
-threads = 4
+[[gpu]]
+host = "100.110.214.86"
+id = 4
+name = "Quadro M2200"
+notes = "Nautik9 laptop — koboldcpp; start on Windows host"
+port_base = 5571
+vram_mb = 4096
 
-# cesarops2 GTX 1070 — DISABLED for today
-# DeepSeek-Coder-V2-Lite (the only ~7B model on this box) uses MLA attention
-# whose KV cache won't fit 8GB at any reasonable context length.
-# Phi-3-mini Q4 (2.3GB) is on cesarops3 — could be copied over later.
-[[worker]]
-name = "Marvin"
-role = "code"
-gpu = 0
-model = "/mnt/storage/models/DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf"
-port = 5200
-template = "deepseek-coder"
-host = "10.0.0.129"
-enabled = false
-engine = "koboldcpp"
-backend = "cuda"
-inject_vectors = true
-memory_pool = ""
+[inference]
+chat_completion_endpoints = [
+    "http://127.0.0.1:5001",
+    "http://127.0.0.1:5002",
+    "http://10.0.0.201:5200",
+    "http://10.0.0.201:5201",
+    "http://10.0.0.201:5202",
+]
+merge_reasoning_content = true
+use_chat_completions = true
 
-# cesarops2 P1000 — TinyLlama validator (already running)
-[[worker]]
-name = "Picasso"
-role = "validate"
-gpu = 1
-model = "/mnt/storage/models/TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf"
-port = 5571
-template = "tinyllama"
-host = "10.0.0.129"
-enabled = true
-engine = "koboldcpp"
-backend = "cuda"
-inject_vectors = false
-memory_pool = ""
+[[known_nodes]]
+gpu = "2x P100 16GB"
+ip = "127.0.0.1"
+name = "T440 (local)"
+ports = [
+    5001,
+    5002,
+    5010,
+    5011,
+    8081,
+    8090,
+    10130,
+    10131,
+]
 
-# cesarops3 P106-100 — DeepSeek-R1-7B (just switched CPU→CUDA)
-[[worker]]
-name = "Scout"
-role = "think"
-gpu = 0
-model = "/home/cesarops/DeepSeek-R1-7B-Q4_K_M.gguf"
-port = 5100
-template = "deepseek-r1"
-host = "10.0.0.41"
-enabled = true
-engine = "koboldcpp"
-backend = "cuda"
-inject_vectors = true
-memory_pool = ""
+[[known_nodes]]
+alt_ip = "100.72.129.86"
+gpu = "RTX 2060 SUPER + GTX 1070 + P106"
+ip = "10.0.0.201"
+name = "Cesarops2 (ML350e)"
+notes = "LAN 10.0.0.201 / Tailscale 100.72.129.86 (cesarops2-1; retire stale 100.102.158.111 in admin) — :5200=2060, :5201=P106, :5202=1070"
+ports = [
+    5200,
+    5201,
+    5202,
+    5570,
+    5572,
+    5599,
+]
+
+[[known_nodes]]
+gpu = "GTX 1060 6GB"
+ip = "100.105.77.74"
+name = "Cesarops3 (1060)"
+ports = [5570]
+
+[[known_nodes]]
+gpu = "Quadro M2200 4GB (Maxwell CUDA 5.0)"
+ip = "100.110.214.86"
+name = "Nautik9 ThinkPad (M2200)"
+notes = "Windows — needs koboldcpp launched manually via scripts/launch_laptop_m2200.sh"
+ports = [
+    5571,
+    5572,
+]
+
+[mcp_stack]
+context7_url = "http://127.0.0.1:3737"
+crawl4ai_url = "http://127.0.0.1:11235"
+engine_agnostic = true
+llm_engine_preferred = "llama.cpp"
+mcp_stack_mode = "optional"
+mcp_worker_url = "http://127.0.0.1:8090"
+openmemory_url = "http://127.0.0.1:8765"
+playwright_mcp_url = "http://127.0.0.1:8931"
+qdrant_url = "http://127.0.0.1:6333"
+searxng_url = "http://127.0.0.1:8888"
+
+[[memory_pool]]
+members = ["CakeFleet"]
+name = "cake"
+
+[[memory_pool]]
+members = [
+    "GemmaIntegrate",
+    "R1Reviewer",
+]
+name = "integrate"
 
 [models_dir]
 path = "/codebase/models"
 
-# Nodes to poll for availability (Tailscale IPs)
-# The forge probes these on /health every 30s to see who's online
-[[known_nodes]]
-name = "T440 (local)"
-ip = "127.0.0.1"
-gpu = "2x P100 16GB"
-ports = [5001, 5002, 5010]
+[monitoring]
+netdata_cesarops2_url = "http://10.0.0.201:19999"
+netdata_tailscale_url = "http://t440-p100.tail08b03a.ts.net:19999"
+netdata_url = "http://127.0.0.1:19999"
 
-[[known_nodes]]
-name = "Cesarops2 (1070 + P1000)"
-ip = "10.0.0.129"
-gpu = "GTX 1070 8GB + Quadro P1000 4GB"
-ports = [5200, 5571]
-notes = "LAN. 5200=DeepSeek-Coder-V2-Lite on 1070, 5571=TinyLlama validator on P1000. Always-on."
+[nicknames]
+bootstrap = "http://10.0.0.201:5201"
+cake = "http://127.0.0.1:8081"
+coder = "http://127.0.0.1:5001"
+corrector = "http://127.0.0.1:5002"
+integrate = "http://127.0.0.1:5001"
+mcp-local = "http://127.0.0.1:8090"
+r1 = "http://127.0.0.1:5002"
+r1-cpu = "http://127.0.0.1:5557"
+scout = "http://100.110.214.86:5002"
+thinker = "http://100.105.77.74:5570"
 
-[[known_nodes]]
-name = "Cesarops3 (P106-100)"
-ip = "10.0.0.41"
-gpu = "P106-100 6GB (Pascal mining card, no display)"
-ports = [5100]
-notes = "LAN. 5100=DeepSeek-R1-7B (CUDA). Always-on."
+[orchestration]
+n8n_fleet_url = "http://127.0.0.1:5678/webhook/fleet-ops"
+n8n_pamp_url = "http://127.0.0.1:5678/webhook/pamp-route"
+pamp_shadow = true
+tools_backend = "n8n"
+n8n_tool_url = "http://127.0.0.1:5678/webhook/tool-route"
 
-[[known_nodes]]
-name = "Nautik9 ThinkPad (M2200)"
-ip = "100.110.214.86"
-gpu = "Quadro M2200 4GB (Maxwell CUDA 5.0)"
-ports = [5571, 5572]
-notes = "Windows — needs koboldcpp launched manually via scripts/launch_laptop_m2200.sh"
-
-# Agent nicknames — human-friendly names mapped to endpoints
-# Use these in the forge chat: "ask scout to review this" or "delegate to marvin"
-[[agent]]
-name = "moe"
-endpoint = "http://127.0.0.1:5001"
-hardware = "P100 #0 (T440)"
-role = "Big coder — Gemma-4-MoE"
-model = "Gemma-4-26B-MoE-IQ4_XS"
-
-[[agent]]
-name = "qwen-moe"
-endpoint = "http://127.0.0.1:5002"
-hardware = "P100 #1 (T440)"
-role = "Big coder — Qwen3.6 MoE"
-model = "Qwen3.6-35B-A3B-Q4_K_M"
-
-[[agent]]
-name = "marvin"
-endpoint = "http://10.0.0.129:5200"
-hardware = "GTX 1070 (cesarops2 LAN)"
-role = "Rust specialist / Corrector"
-model = "FortyTwo-Rust-14B-Q6_K"
-
-[[agent]]
-name = "scout"
-endpoint = "http://10.0.0.41:5570"
-hardware = "GTX 1060 (cesarops3 LAN)"
-role = "Thinker — runs through forge tools"
-model = "TBD (7B-14B)"
-
-[[agent]]
-name = "nautik"
-endpoint = "http://100.110.214.86:5571"
-hardware = "ThinkPad M2200 (mobile, Tailscale)"
-role = "M2200 mobile — Tailscale only because mobile"
-model = "TinyLlama-1.1B-Chat-v1.0-Q4_K_M"
-notes = "Tailscale because laptop is mobile. LAN IP changes."
-
-[[agent]]
-name = "picasso"
-endpoint = "http://10.0.0.129:5571"
-hardware = "P1000 (cesarops2 LAN)"
-role = "Draft/Validator — speculative decode partner"
-model = "TinyLlama-1.1B-Chat-v1.0-Q4_K_M"
-validator = true
-validator_api = "http://localhost:9100/validate"
-engine = "koboldcpp"
-backend = "cuda"
-inject_vectors = false
-corrector_functions = { json_fixer = true, loop_detector = true, translator = true, think_harder = false, auto_remember = true }
+[roles]
+bootstrap = "http://10.0.0.201:5201"
+coder = "http://10.0.0.201:5200"
+coding = "http://10.0.0.201:5200"
+corrector = "http://10.0.0.201:5202"
+general = "http://10.0.0.201:5200"
+idle = "http://127.0.0.1:8081"
+reviewer = "http://10.0.0.201:5202"
+reviewer_moe = "http://10.0.0.201:5200"
+thinker = "http://10.0.0.201:5200"
+thinker_fast = "http://10.0.0.201:5201"
+validator = "http://10.0.0.201:5202"
+validator_phi = "http://10.0.0.201:5202"
 
 [routing]
 default_mode = "auto"
 
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://127.0.0.1:5001"
+corrector_endpoint = "http://127.0.0.1:5002"
+description = "Gemma :5001 codes; R1-32B :5002 reviews/corrects (dual P100)"
+draft_endpoint = "http://127.0.0.1:5002"
+fleet_action = ""
+fleet_node = "t440"
+id = "p100-gemma-r1"
+name = "P100 Gemma coder + R1 validator"
+parallel_dual_grade = false
+reviewer_endpoint = "http://127.0.0.1:5002"
+thinker_endpoint = "http://127.0.0.1:5002"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://127.0.0.1:5001"
+corrector_endpoint = "http://10.0.0.201:5571"
+description = "Gemma T440 codes; c2 MoE :5200 reviews; thinker on :5002; c2 :5571 handles draft/corrector"
+draft_endpoint = "http://10.0.0.201:5571"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "cesarops-geo-fleet"
+name = "CESAROPS geo fleet (graded handoff)"
+parallel_dual_grade = true
+parallel_dual_grade_rounds = [
+    1,
+    3,
+]
+reviewer_endpoint = "http://10.0.0.201:5200"
+thinker_endpoint = "http://127.0.0.1:5002"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://127.0.0.1:5001"
+corrector_endpoint = "http://127.0.0.1:5002"
+description = "Gemma codes; R1-32B parallel-reviews + grades (no c2 required)"
+draft_endpoint = "http://127.0.0.1:5002"
+fleet_action = ""
+fleet_node = "t440"
+id = "cesarops-geo-local"
+name = "CESAROPS geo local (T440 only graded)"
+parallel_dual_grade = true
+parallel_dual_grade_rounds = [
+    1,
+    3,
+]
+reviewer_endpoint = "http://127.0.0.1:5002"
+thinker_endpoint = "http://127.0.0.1:5002"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://127.0.0.1:5001"
+corrector_endpoint = "http://10.0.0.201:5200"
+description = "Gemma :5001 only; cesarops2 MTP for review (when :5002 down)"
+draft_endpoint = "http://10.0.0.201:5571"
+fleet_action = ""
+fleet_node = ""
+id = "p100-integrate"
+name = "P100 integrate (Gemma :5001, remote review)"
+reviewer_endpoint = "http://10.0.0.201:5571"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "cake_fleet_70b"
+chat_agent = "cake"
+coder_endpoint = "http://127.0.0.1:5001"
+corrector_endpoint = "http://10.0.0.201:5200"
+description = "Cake 72B :8081 (P100#1 in VRAM pool); Gemma :5001 for coding"
+draft_endpoint = "http://10.0.0.201:5571"
+fleet_action = ""
+fleet_node = ""
+id = "cake-fleet"
+name = "Cake fleet 70B (:8081)"
+reviewer_endpoint = "http://10.0.0.201:5571"
+thinker_endpoint = "http://127.0.0.1:8081"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "pamp_moe_test"
+chat_agent = "c2-qwen-moe"
+coder_endpoint = "http://10.0.0.201:5200"
+corrector_endpoint = "http://10.0.0.201:5202"
+description = "Predictive Async MoE — c2 live topology (5200 thinker/coder + 5202 validator/corrector); needs n8n /webhook/pamp-route"
+draft_endpoint = "http://10.0.0.201:5202"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "pamp-moe-predict"
+name = "PAMP MoE predictor (n8n)"
+reviewer_endpoint = "http://10.0.0.201:5202"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+chat_agent = "qwen-moe"
+coder_endpoint = "http://10.0.0.201:5200"
+corrector_endpoint = "http://10.0.0.201:5202"
+description = "Live c2 edge: 5200 coder+thinker and 5202 reviewer+corrector+draft; no 5571 dependency"
+draft_endpoint = "http://10.0.0.201:5202"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "c2-edge-default"
+name = "C2 edge — NautiInferer base"
+reviewer_endpoint = "http://10.0.0.201:5202"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+chat_agent = "picasso"
+coder_endpoint = "http://127.0.0.1:5001"
+corrector_endpoint = "http://10.0.0.201:5200"
+description = "Restore T440-style routing (P100 coder + c2 MTP); use when edge layout fails"
+draft_endpoint = "http://10.0.0.201:5571"
+fleet_action = ""
+fleet_node = "t440"
+id = "t440-conductor-backup"
+name = "T440 conductor backup"
+reviewer_endpoint = "http://10.0.0.201:5571"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
 [tuning]
-# How many think-only rounds before declaring the model stuck
-max_think_rounds = 50
-# Main generation timeout in seconds
+corrector_hard_repeat_cap = 6
+corrector_llm_loop_judge = true
+corrector_think_only_after = 8
+corrector_tool_fix = false
 generation_timeout_secs = 1200
-# Thinker preflight timeout in seconds
-thinker_timeout_secs = 60
-# Max tokens for main generation
 max_generation_tokens = 16384
-# Starting temperature
-temperature = 0.4
-# Disable corrector for heavy tasks (set true to skip correction pass)
+max_think_rounds = 24
 skip_corrector = false
+temperature = 0.4000000059604645
+thinker_timeout_secs = 60
 
-# Worker nicknames — human-friendly names mapped to endpoints
-[nicknames]
-coder = "http://127.0.0.1:5001"           # Gemma-4-MoE on P100#0
-qwen = "http://127.0.0.1:5002"            # Qwen3.6-35B on P100#1
-thinker = "http://10.0.0.41:5570"         # cesarops3 1060 LAN
-corrector = "http://10.0.0.129:5200"      # cesarops2 1070 LAN — FortyTwo-Rust
-draft = "http://10.0.0.129:5571"          # cesarops2 P1000 LAN — speculative draft
-nautik = "http://100.110.214.86:5571"     # M2200 (Tailscale, mobile)
-bootstrap = "http://127.0.0.1:5002"
-r1-cpu = "http://127.0.0.1:5557"
-mcp-local = "http://127.0.0.1:8090"
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 0
+host = "local"
+inject_vectors = true
+memory_pool = ""
+model = "/codebase/models/Qwopus3.5-9B-Coder-MTP-Q4_K_M.gguf"
+name = "gpu0-idle"
+port = 5001
+role = "idle"
+template = "qwen2.5"
 
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 1
+host = "local"
+inject_vectors = true
+memory_pool = ""
+model = "/codebase/models/DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q2_K.gguf"
+name = "gpu1-idle"
+port = 5002
+role = "idle"
+template = "qwen2.5"
 
-# ── Corrector Presets ────────────────────────────────────────────────────────
-# Per-model behavior profiles. Selected automatically based on model name match,
-# or manually via [[worker]] corrector_preset = "name" override.
-#
-# Escalation ladder (consistent across all presets):
-#   Round 1 (suggest) — ASK: "I see you're thinking a lot. Have you tried tool X?"
-#   Round 2 (demand)  — REQUIRE ACK: "You must answer: did X help or do you have a next action?"
-#   Round 3 (reboot)  — HARD RESET: keep only original task, inject lesson to nautivecs
-#
-# Tunables per preset:
-#   think_tolerance     — how many rounds of pure thinking before flagging (R1/Qwen3 think a lot)
-#   loop_threshold      — same-tool repetition count before escalation starts
-#   suggest_after       — round at which corrector suggests think_harder/wso_search
-#   demand_ack_after    — round at which corrector demands explicit acknowledgment
-#   reboot_after        — round at which we hard-reset the conversation
-#   wso_auto            — let n8n auto-fire WSO web search if model stalls
-#   vector_inject       — pull nautivecs context into corrector prompts
-#   correction_strength — "light" | "medium" | "heavy" (controls how aggressive the fixer is)
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 0
+host = "127.0.0.1"
+inject_vectors = true
+memory_pool = "integrate"
+model = ""
+name = "R1Reviewer"
+notes = "P100#0 :5002 — R1-32B Q4_K_M reviewer/corrector (--fit on)"
+port = 5002
+role = "idle"
+template = "deepseek-r1"
 
-[corrector_preset.qwen3_thinking]
-# For Qwen3.6, R1 — these models reason a lot natively, give them rope
-think_tolerance     = 10
-loop_threshold      = 6
-suggest_after       = 6
-demand_ack_after    = 8
-reboot_after        = 12
-wso_auto            = true
-vector_inject       = true
-correction_strength = "light"
-description         = "Reasoning-heavy models. Patient, suggests web search early, demands ack only after extensive thinking."
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "cake"
+gpu = 1
+host = "127.0.0.1"
+inject_vectors = false
+memory_pool = "cake"
+model = ""
+name = "CakeFleet"
+notes = "disabled while GemmaIntegrate uses P100#1 — re-enable when Cake idle"
+port = 8081
+role = "idle"
+template = "qwen2.5"
 
-[corrector_preset.qwen_coder]
-# Qwen2.5-Coder family — terse, direct. Flag loops fast.
-think_tolerance     = 4
-loop_threshold      = 3
-suggest_after       = 3
-demand_ack_after    = 5
-reboot_after        = 7
-wso_auto            = true
-vector_inject       = true
-correction_strength = "medium"
-description         = "Direct coders. Less tolerance for thinking spirals, fast loop detection."
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 0
+inject_vectors = true
+memory_pool = ""
+model = ""
+name = "Thinker"
+port = 5010
+role = "idle"
+template = "qwen2.5"
 
-[corrector_preset.gemma]
-# Gemma 4 — produces plausible but buggy WGSL. Heavy translator, light loop detector.
-think_tolerance     = 5
-loop_threshold      = 4
-suggest_after       = 3
-demand_ack_after    = 5
-reboot_after        = 8
-wso_auto            = true
-vector_inject       = true
-correction_strength = "heavy"
-description         = "Plausible-but-buggy outputs. Heavy WGSL translation, vector inject critical."
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 1
+inject_vectors = true
+memory_pool = ""
+model = ""
+name = "Coder"
+port = 5011
+role = "idle"
+template = "qwen2.5"
 
-[corrector_preset.deepseek_coder]
-# DeepSeek-Coder family — tight code, sometimes hallucinates imports
-think_tolerance     = 5
-loop_threshold      = 3
-suggest_after       = 4
-demand_ack_after    = 6
-reboot_after        = 8
-wso_auto            = true
-vector_inject       = true
-correction_strength = "medium"
+[[worker]]
+backend = "cuda"
+corrector_functions = ""
+enabled = false
+engine = "llama-server"
+gpu = 2
+host = "10.0.0.201"
+inject_vectors = true
+memory_pool = ""
+model = ""
+name = "RTX2060"
+node_ip = "10.0.0.201"
+port = 5200
+role = "idle"
+template = "qwen2.5"
 
-[corrector_preset.phi]
-# Phi-3 mini — small, drifts fast. All corrections on, low thresholds.
-think_tolerance     = 3
-loop_threshold      = 2
-suggest_after       = 2
-demand_ack_after    = 3
-reboot_after        = 5
-wso_auto            = true
-vector_inject       = true
-correction_strength = "heavy"
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 3
+host = "10.0.0.201"
+inject_vectors = true
+memory_pool = ""
+model = ""
+name = "GTX1070"
+port = 5202
+role = "idle"
+template = "qwen2.5"
 
-[corrector_preset.tiny_canary]
-# TinyLlama — only used as validator/corrector itself. Don't apply correction logic.
-think_tolerance     = 0
-loop_threshold      = 0
-suggest_after       = 0
-demand_ack_after    = 0
-reboot_after        = 0
-wso_auto            = false
-vector_inject       = false
-correction_strength = "none"
-description         = "Validator/corrector role only. No correction applied to its outputs."
-
-[corrector_preset.fortytwo_rust]
-# Fortytwo_Strand-Rust-Coder-14B — Rust-specialized
-think_tolerance     = 4
-loop_threshold      = 3
-suggest_after       = 3
-demand_ack_after    = 5
-reboot_after        = 7
-wso_auto            = true
-vector_inject       = true
-correction_strength = "medium"
-description         = "Rust specialist. Trust output, but verify with cargo build."
-
-# ── Auto-detection rules ─────────────────────────────────────────────────────
-# Model name → preset mapping. First match wins.
-[[corrector_preset_match]]
-pattern = "qwen3.6|qwen3-|deepseek-r1"
-preset  = "qwen3_thinking"
-
-[[corrector_preset_match]]
-pattern = "qwen2.5-coder|qwen2.5-Coder"
-preset  = "qwen_coder"
-
-[[corrector_preset_match]]
-pattern = "gemma"
-preset  = "gemma"
-
-[[corrector_preset_match]]
-pattern = "deepseek-coder"
-preset  = "deepseek_coder"
-
-[[corrector_preset_match]]
-pattern = "phi-3|phi3"
-preset  = "phi"
-
-[[corrector_preset_match]]
-pattern = "tinyllama|TinyLlama"
-preset  = "tiny_canary"
-
-[[corrector_preset_match]]
-pattern = "fortytwo|Fortytwo|rust-coder"
-preset  = "fortytwo_rust"
-
-# Default if no pattern matches
-[[corrector_preset_match]]
-pattern = ".*"
-preset  = "qwen_coder"
+[[worker]]
+backend = "cuda"
+enabled = false
+engine = "llama-server"
+gpu = 4
+host = "100.110.214.86"
+inject_vectors = true
+memory_pool = ""
+model = ""
+name = "M2200"
+port = 5571
+role = "idle"
+template = "qwen2.5"
