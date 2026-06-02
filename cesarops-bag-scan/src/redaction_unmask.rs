@@ -22,8 +22,8 @@
 
 use crate::geo::GeoTransformer;
 use crate::grid::{
-    binary_dilate, binary_erode, component_pixels, connected_components, gradient_magnitude,
-    percentile, NODATA_THRESH,
+    binary_dilate, binary_erode, component_pixels, connected_components, dilate_component,
+    gradient_magnitude, percentile, NODATA_THRESH,
 };
 use crate::types::{BagInfo, Knobs, MaskedRegion, RedactionSignature, M_TO_FT};
 use ndarray::Array2;
@@ -243,18 +243,15 @@ fn detect_flattened_zones(
 
         // Ring check: surroundings must have NORMAL variance (>=15% of global),
         // else it's just open flat bottom, not masking.
-        let mut comp_mask = Array2::<bool>::from_elem((rows, cols), false);
-        for &(r, c) in &pixels {
-            comp_mask[[r, c]] = true;
-        }
+        // Windowed: dilate only this component (bbox+reach), not the full grid.
         let dilate_iter = window_px.max(3);
-        let dilated = binary_dilate(&comp_mask, dilate_iter);
+        let comp_set: std::collections::HashSet<(usize, usize)> =
+            pixels.iter().copied().collect();
+        let dilated = dilate_component(&pixels, dilate_iter, rows, cols);
         let mut ring_vals = Vec::new();
-        for r in 0..rows {
-            for c in 0..cols {
-                if dilated[[r, c]] && !comp_mask[[r, c]] && elevation[[r, c]].is_finite() {
-                    ring_vals.push(elevation[[r, c]]);
-                }
+        for &(r, c) in &dilated {
+            if !comp_set.contains(&(r, c)) && elevation[[r, c]].is_finite() {
+                ring_vals.push(elevation[[r, c]]);
             }
         }
         if ring_vals.len() < 20 {
@@ -394,11 +391,8 @@ fn restore_preview(elevation: &Array2<f64>, pixels: &[(usize, usize)]) -> Restor
     }
 
     // Ring = dilation(mask, 5) minus mask, intersect valid.
-    let mut comp_mask = Array2::<bool>::from_elem((rows, cols), false);
-    for &(r, c) in pixels {
-        comp_mask[[r, c]] = true;
-    }
-    let ring_dilated = binary_dilate(&comp_mask, 5);
+    // Windowed: dilate only this component, not the full grid.
+    let ring_dilated = crate::grid::dilate_component(pixels, 5, rows, cols);
 
     let mut ring_vals = Vec::new();
     let mut surround_pts: Vec<(f64, f64, f64)> = Vec::new(); // (r, c, val) valid & !mask
@@ -412,7 +406,7 @@ fn restore_preview(elevation: &Array2<f64>, pixels: &[(usize, usize)]) -> Restor
                 continue;
             }
             surround_pts.push((r as f64, c as f64, v));
-            if ring_dilated[[r, c]] {
+            if ring_dilated.contains(&(r, c)) {
                 ring_vals.push(v);
             }
         }
@@ -445,11 +439,29 @@ fn restore_preview(elevation: &Array2<f64>, pixels: &[(usize, usize)]) -> Restor
     }
 
     // Nearest-neighbour interpolation of masked interior, then median.
-    let mut restored_vals = Vec::new();
-    for &(mr, mc) in pixels {
+    //
+    // We only need the MEDIAN of the restored values (it feeds depth_anomaly),
+    // so an exact per-pixel NN over the full interior is wasteful: a large flat
+    // mask gives O(mask_px * surround_px) ~ billions of ops. Subsample both
+    // sides to a bounded cap — the median is statistically unchanged.
+    const MAX_SAMPLE: usize = 256;
+    let mask_sample: Vec<(usize, usize)> = if pixels.len() > MAX_SAMPLE {
+        let stride = pixels.len() / MAX_SAMPLE;
+        pixels.iter().step_by(stride.max(1)).copied().collect()
+    } else {
+        pixels.to_vec()
+    };
+    let surr_sample: Vec<(f64, f64, f64)> = if surround_pts.len() > MAX_SAMPLE {
+        let stride = surround_pts.len() / MAX_SAMPLE;
+        surround_pts.iter().step_by(stride.max(1)).copied().collect()
+    } else {
+        surround_pts.clone()
+    };
+    let mut restored_vals = Vec::with_capacity(mask_sample.len());
+    for &(mr, mc) in &mask_sample {
         let mut best = f64::INFINITY;
         let mut best_val = surr_depth;
-        for &(pr, pc, pv) in &surround_pts {
+        for &(pr, pc, pv) in &surr_sample {
             let d = (pr - mr as f64) * (pr - mr as f64) + (pc - mc as f64) * (pc - mc as f64);
             if d < best {
                 best = d;
@@ -559,12 +571,8 @@ pub fn detect_masked_regions_uncertainty(
         let c_min = pixels.iter().map(|p| p.1).min().unwrap();
         let c_max = pixels.iter().map(|p| p.1).max().unwrap();
 
-        let mut comp_mask = Array2::<bool>::from_elem((rows, cols), false);
-        for &(r, c) in &pixels {
-            comp_mask[[r, c]] = true;
-        }
-        let eroded = binary_erode(&comp_mask, knobs.mask_erosion_px);
-        let interior_count = eroded.iter().filter(|&&v| v).count();
+        // Windowed erosion interior count (bbox-confined, not full grid).
+        let interior_count = crate::grid::erode_component_interior_count(&pixels, knobs.mask_erosion_px);
         if interior_count < 5 {
             continue;
         }

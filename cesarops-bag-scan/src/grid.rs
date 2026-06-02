@@ -63,6 +63,127 @@ pub fn binary_dilate(mask: &Array2<bool>, iterations: usize) -> Array2<bool> {
     current
 }
 
+/// Pixel-bbox of a component: (r_min, r_max, c_min, c_max).
+pub fn pixels_bbox(pixels: &[(usize, usize)]) -> (usize, usize, usize, usize) {
+    let r_min = pixels.iter().map(|p| p.0).min().unwrap_or(0);
+    let r_max = pixels.iter().map(|p| p.0).max().unwrap_or(0);
+    let c_min = pixels.iter().map(|p| p.1).min().unwrap_or(0);
+    let c_max = pixels.iter().map(|p| p.1).max().unwrap_or(0);
+    (r_min, r_max, c_min, c_max)
+}
+
+/// Windowed 4-connected dilation of a single component.
+///
+/// Functionally identical to `binary_dilate` of a full-grid mask that is true
+/// only on `pixels`, but the work is confined to the component bbox grown by
+/// `iterations` (+1 guard) in each direction instead of the whole raster. The
+/// returned set contains every (row, col) that the full-grid dilation would
+/// mark true. This is the scalability fix for per-region morphology: cost is
+/// O(window_area * iterations) rather than O(grid_area * iterations).
+///
+/// `rows`/`cols` are the full-grid bounds used to clamp the window.
+pub fn dilate_component(
+    pixels: &[(usize, usize)],
+    iterations: usize,
+    rows: usize,
+    cols: usize,
+) -> std::collections::HashSet<(usize, usize)> {
+    use std::collections::HashSet;
+    let mut set: HashSet<(usize, usize)> = pixels.iter().copied().collect();
+    if iterations == 0 || set.is_empty() {
+        return set;
+    }
+    let (r0, r1, c0, c1) = pixels_bbox(pixels);
+    // Local window grown by the dilation reach, clamped to the grid.
+    let wr0 = r0.saturating_sub(iterations + 1);
+    let wr1 = (r1 + iterations + 1).min(rows.saturating_sub(1));
+    let wc0 = c0.saturating_sub(iterations + 1);
+    let wc1 = (c1 + iterations + 1).min(cols.saturating_sub(1));
+    let lh = wr1 - wr0 + 1;
+    let lw = wc1 - wc0 + 1;
+
+    // Local boolean buffer.
+    let idx = |r: usize, c: usize| (r - wr0) * lw + (c - wc0);
+    let mut cur = vec![false; lh * lw];
+    for &(r, c) in pixels {
+        cur[idx(r, c)] = true;
+    }
+    let mut prev = cur.clone();
+    for _ in 0..iterations {
+        prev.copy_from_slice(&cur);
+        for lr in 0..lh {
+            for lc in 0..lw {
+                let i = lr * lw + lc;
+                if prev[i] {
+                    continue;
+                }
+                let up = lr > 0 && prev[i - lw];
+                let down = lr + 1 < lh && prev[i + lw];
+                let left = lc > 0 && prev[i - 1];
+                let right = lc + 1 < lw && prev[i + 1];
+                if up || down || left || right {
+                    cur[i] = true;
+                }
+            }
+        }
+    }
+
+    let mut out = HashSet::new();
+    for lr in 0..lh {
+        for lc in 0..lw {
+            if cur[lr * lw + lc] {
+                out.insert((wr0 + lr, wc0 + lc));
+            }
+        }
+    }
+    out
+}
+
+/// Windowed erosion of a single component: returns the count of interior pixels
+/// that survive `iterations` of 4-connected erosion. Equivalent to running
+/// `binary_erode` on the component's own mask but confined to its bbox.
+pub fn erode_component_interior_count(pixels: &[(usize, usize)], iterations: usize) -> usize {
+    if pixels.is_empty() {
+        return 0;
+    }
+    if iterations == 0 {
+        return pixels.len();
+    }
+    let (r0, r1, c0, c1) = pixels_bbox(pixels);
+    // Pad by 1 so the bbox border erodes correctly (outside = background).
+    let wr0 = r0.saturating_sub(1);
+    let wc0 = c0.saturating_sub(1);
+    let lh = (r1 - r0) + 3;
+    let lw = (c1 - c0) + 3;
+    let idx = |r: usize, c: usize| (r - wr0) * lw + (c - wc0);
+    let mut cur = vec![false; lh * lw];
+    for &(r, c) in pixels {
+        cur[idx(r, c)] = true;
+    }
+    let mut prev = cur.clone();
+    for _ in 0..iterations {
+        prev.copy_from_slice(&cur);
+        for lr in 0..lh {
+            for lc in 0..lw {
+                let i = lr * lw + lc;
+                if !prev[i] {
+                    continue;
+                }
+                let keep = lr > 0
+                    && prev[i - lw]
+                    && lr + 1 < lh
+                    && prev[i + lw]
+                    && lc > 0
+                    && prev[i - 1]
+                    && lc + 1 < lw
+                    && prev[i + 1];
+                cur[i] = keep;
+            }
+        }
+    }
+    cur.iter().filter(|&&v| v).count()
+}
+
 /// Connected component labelling via 8-connected BFS flood fill.
 /// Lifted from `bag_mesh.rs::connected_components`.
 ///
