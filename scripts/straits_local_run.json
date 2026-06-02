@@ -1,0 +1,19 @@
+{
+  "mission_id": "straits_local_2024",
+  "target_name": "Straits of Mackinac wreck search (local tiles)",
+  "bbox": [45.70, -84.95, 45.92, -84.55],
+  "days_back": 365,
+  "stages": ["target_known", "poc_aoi", "temporal_stack", "report"],
+  "knobs": {
+    "max_cloud": 20.0,
+    "min_score": 0.3,
+    "use_local_scenes": true
+  },
+  "paths": {
+    "download_dir": "/home/cesarops/wreckhunter2000-1/data/straits_optical_clear/sentinel2_aws",
+    "chip_cache_dir": "/data/cesarops/satellite_data/chip_cache",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/straits_local_2024",
+    "known_wrecks_json": "/home/cesarops/wreckhunter2000-1/scripts/known_wrecks_straits.json"
+  },
+  "gt_wreck_names": ["Cedarville", "Elva", "William Young", "M. Stalker", "unknown_barge_arch_rock"]
+}

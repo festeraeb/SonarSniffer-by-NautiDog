@@ -231,3 +231,46 @@ The following laptop dump files need a sub-agent to read and verify before impor
 - Wire as an optional satellite stage (e.g. `bathy_map`) gated by a knob; feed its drop-off/relief output as one more concept signal into fusion::SignalBundle (NOT an automatic wreck call).
 **Cross-link:** pairs with the BAG uncertainty-unmask reconstruction (bag-scan `--unmask`) — both rebuild a hidden/derived depth surface; keep export formats compatible so they overlay in the same viewer.
 **Status:** NOTED — not yet implemented. Build after BAG unmask engine lands.
+
+
+### B1.1 — Multi-band satellite-derived bathymetry (SDB) application to the masked target
+**Context (added 2026-06-02 during live Straits run):**
+The masked target E of Elva (primary hyp: Robert Burns, 126ft wood barquentine)
+sits at **113ft peak / 145ft floor (34m / 44m), 32ft relief**, per BAG unmask.
+
+**Physics reality check — SDB depth limit:**
+- Stumpf/Lyzenga log-ratio SDB (`log(B02)/log(B03)`) works to ~2-3× Secchi depth.
+- Straits Secchi ~8-12m → SDB bottom detection ~20-30m max.
+- **34m (113ft) is at/beyond the SDB limit — do NOT expect direct bottom
+  reflectance off the hull.** A naive "depth from reflectance on the wreck"
+  will fail at this depth. State this honestly in any output; do not overclaim.
+
+**Where SDB IS useful for this target (build these into bathymetry_map.rs):**
+1. **Shoal mapping** — the wreck sits on an elevated feature; map the shallower
+   flanks (<30m) that ARE visible, to characterize the shoal it rests on.
+2. **Plume/clarity column signal** — the detection is the water-column
+   disturbance (cold-sink on steel; physical-obstruction clarity/current on
+   WOOD) that rises toward the thermocline and reads optically at ~180ft
+   APPARENT depth in blue-green. SDB band-ratio tracks this column turbidity
+   change even when the true bottom is invisible. This is the real signal for
+   a deep wood wreck — NOT bottom reflectance.
+3. **Calibration via shallow known wrecks** — Elva and the diveable preserve
+   wrecks (<30m) give control points to fit the SDB depth model (offset+gain),
+   same approach used for the coordinate-offset correction.
+
+**Material-awareness (from user, 2026-06-02):**
+- Thermal cold/heat-sink signature is strong on STEEL, weak on WOOD.
+- Wood wrecks still produce a signature via PHYSICAL OBSTRUCTION: zebra-clarity
+  (sediment trap / biofouling / bottom-reflectance break), current-driven
+  surface glint modulation, and shadow/texture.
+- → Fusion should weight concepts by suspected hull material: down-weight
+  thermal for wood targets, up-weight clarity + glint.
+
+### B1.2 — NEW concept gap: blue-green glint / current-roughness detector
+The Straits have strong currents. A 32ft-relief intact hull perturbs the flow,
+modulating surface roughness → sun-glint pattern change, visible in blue-green.
+Existing `concept_shadow_roughness` uses NIR (B08) which does NOT penetrate
+water — useless for a deep target. **Build a blue-green (B02/B03) surface
+glint / current-roughness concept** for non-thermal (wood) wreck detection.
+This is the detector that should carry the Burns-type targets. Cross-link to
+drift.rs current fields.

@@ -401,3 +401,106 @@ mod tests {
         assert!(res.is_err(), "garbage bytes must return Err, not NaN placeholder");
     }
 }
+
+// ── Local GeoTIFF band loader (for on-disk Sentinel-2 tiles) ─────────────────
+
+/// Decode a local single-band Sentinel-2 GeoTIFF into an `Array2<f32>` windowed
+/// to `bbox` and resampled to `target_size_px`, applying the same DN→reflectance
+/// scaling as `download_cog_chip`. Uses GDAL (handles full tiled COGs the pure-
+/// Rust `image` decoder chokes on) and the dataset geotransform for an exact
+/// CRS-aware window read.
+///
+/// This is the offline path: run the optical pipeline on tiles already pulled
+/// to disk (no STAC query / network).
+pub fn decode_local_band(
+    path: &std::path::Path,
+    bbox: &BBox,
+    target_size_px: usize,
+) -> anyhow::Result<ndarray::Array2<f32>> {
+    use gdal::Dataset;
+    let ds = Dataset::open(path)?;
+    let (full_w, full_h) = ds.raster_size();
+    let gt = ds.geo_transform()?; // [ox, px, 0, oy, 0, py] in the tile's CRS
+
+    // Project the bbox lat/lon corners into the tile CRS to get a pixel window.
+    // Sentinel-2 AWS tiles are UTM; reproject WGS84 bbox → tile SRS.
+    let win = bbox_to_pixel_window(&ds, &gt, full_w, full_h, bbox).unwrap_or((0, 0, full_w, full_h));
+    let (wx, wy, ww, wh) = win;
+    if ww == 0 || wh == 0 {
+        anyhow::bail!("empty window for bbox in {}", path.display());
+    }
+
+    let band = ds.rasterband(1)?;
+    let buf = band.read_as::<f32>((wx as isize, wy as isize), (ww, wh), (ww, wh), None)?;
+    let samples: Vec<f32> = buf.data().to_vec();
+
+    // Resample window → target chip.
+    let mut resampled = resample_bilinear(&samples, ww, wh, target_size_px, target_size_px);
+
+    // DN→reflectance scaling (mirror decode_tiff_band).
+    let nanmax = resampled.iter().copied().filter(|v| v.is_finite()).fold(f32::NEG_INFINITY, f32::max);
+    if nanmax > 1e4 {
+        for v in resampled.iter_mut() {
+            *v /= 10_000.0;
+        }
+    }
+    for v in resampled.iter_mut() {
+        if !(*v > 0.0) {
+            *v = f32::NAN;
+        }
+    }
+    Ok(ndarray::Array2::from_shape_vec((target_size_px, target_size_px), resampled)?)
+}
+
+/// Compute a pixel window (x, y, w, h) in the dataset for a WGS84 bbox,
+/// reprojecting the bbox corners into the dataset CRS via OSR.
+fn bbox_to_pixel_window(
+    ds: &gdal::Dataset,
+    gt: &[f64; 6],
+    full_w: usize,
+    full_h: usize,
+    bbox: &BBox,
+) -> Option<(usize, usize, usize, usize)> {
+    use gdal::spatial_ref::{AxisMappingStrategy, CoordTransform, SpatialRef};
+    let dst = ds.spatial_ref().ok()?;
+    let mut src = SpatialRef::from_epsg(4326).ok()?;
+    src.set_axis_mapping_strategy(AxisMappingStrategy::TraditionalGisOrder);
+    let mut dstm = dst;
+    dstm.set_axis_mapping_strategy(AxisMappingStrategy::TraditionalGisOrder);
+    let ct = CoordTransform::new(&src, &dstm).ok()?;
+
+    // Reproject the 4 bbox corners (lon,lat) → tile CRS.
+    let mut xs = [bbox.lon_min, bbox.lon_max, bbox.lon_min, bbox.lon_max];
+    let mut ys = [bbox.lat_min, bbox.lat_min, bbox.lat_max, bbox.lat_max];
+    let mut zs: [f64; 0] = [];
+    ct.transform_coords(&mut xs, &mut ys, &mut zs).ok()?;
+
+    // Map projected (x,y) → pixel via inverse affine (axis-aligned assumption).
+    let px = gt[1];
+    let py = gt[5];
+    if px == 0.0 || py == 0.0 {
+        return None;
+    }
+    let to_pix = |x: f64, y: f64| -> (f64, f64) {
+        (((x - gt[0]) / px), ((y - gt[3]) / py))
+    };
+    let mut col_min = f64::INFINITY;
+    let mut col_max = f64::NEG_INFINITY;
+    let mut row_min = f64::INFINITY;
+    let mut row_max = f64::NEG_INFINITY;
+    for i in 0..4 {
+        let (c, r) = to_pix(xs[i], ys[i]);
+        col_min = col_min.min(c);
+        col_max = col_max.max(c);
+        row_min = row_min.min(r);
+        row_max = row_max.max(r);
+    }
+    let cx0 = col_min.floor().max(0.0) as usize;
+    let cy0 = row_min.floor().max(0.0) as usize;
+    let cx1 = (col_max.ceil() as usize).min(full_w);
+    let cy1 = (row_max.ceil() as usize).min(full_h);
+    if cx1 <= cx0 || cy1 <= cy0 {
+        return None;
+    }
+    Some((cx0, cy0, cx1 - cx0, cy1 - cy0))
+}
