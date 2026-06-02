@@ -59,16 +59,20 @@ PRODUCT_PRESETS: dict[str, dict[str, list[str]]] = {
     "detect": {
         "subdirs": ["BAG", "TIFF", "MBAB", "DR", "GEODAS", "Bottom_Samples"],
         "exts": [".bag", ".tif", ".tiff", ".pdf", ".xml", ".gz", ".ascii", ".zip"],
+        # Ellipsoid-datum BAGs detect identically to LWD; keep only LWD.
+        "exclude": ["Ellipsoid"],
     },
     # Bathymetry only (smallest footprint).
     "bag": {
         "subdirs": ["BAG"],
         "exts": [".bag"],
+        "exclude": ["Ellipsoid"],
     },
     # Bathy + backscatter image (fast first-pass pair), no metadata.
     "imagery": {
         "subdirs": ["BAG", "TIFF", "MBAB"],
         "exts": [".bag", ".tif", ".tiff"],
+        "exclude": ["Ellipsoid"],
     },
 }
 
@@ -169,6 +173,18 @@ def ext_ok(name: str, allowed: set[str]) -> bool:
     return any(lower.endswith(ext) for ext in allowed)
 
 
+def name_not_excluded(name: str, exclude_substrings: list[str]) -> bool:
+    """True if the filename contains none of the case-insensitive substrings.
+
+    Used to drop redundant products like the ellipsoid-datum BAGs (LWD and
+    Ellipsoid produce identical detections, so we keep only LWD).
+    """
+    if not exclude_substrings:
+        return True
+    lower = name.lower()
+    return not any(sub.lower() in lower for sub in exclude_substrings)
+
+
 def prefix_ok(rel: str, prefixes: list[str]) -> bool:
     if not prefixes:
         return True
@@ -202,8 +218,10 @@ def crawl(
     metadata_jsonl: Path,
     manifest_tsv: Path,
     include_subdir: set[str] | None = None,
+    exclude_name: list[str] | None = None,
 ) -> list[dict]:
     include_subdir = include_subdir or set()
+    exclude_name = exclude_name or []
     stack = [urljoin(base_url, r) for r in roots]
     seen = set()
     files: list[dict] = []
@@ -244,6 +262,8 @@ def crawl(
                 if not subdir_ok(rel, include_subdir):
                     continue
                 if not ext_ok(it.name, include_ext):
+                    continue
+                if not name_not_excluded(it.name, exclude_name):
                     continue
                 files.append(
                     {
@@ -340,6 +360,14 @@ def main() -> int:
         "'bag' = bathymetry only; 'imagery' = bathy+backscatter. "
         "Explicit --download-ext / --include-subdir override the preset.",
     )
+    ap.add_argument(
+        "--exclude-name",
+        action="append",
+        default=[],
+        help="Skip files whose name contains this case-insensitive substring "
+        "(repeatable). Presets default to excluding 'Ellipsoid' (duplicate of "
+        "LWD-datum BAGs). Passing any --exclude-name overrides the preset list.",
+    )
     ap.add_argument("--metadata-only", action="store_true", help="Crawl index + write metadata only")
     ap.add_argument("--output-root", default=str(DEFAULT_OUT))
     ap.add_argument(
@@ -360,15 +388,19 @@ def main() -> int:
     # as "unset" so a preset can fill it in.
     ext_overridden = args.download_ext != [".bag"]
     subdir_overridden = bool(args.include_subdir)
+    exclude_overridden = bool(args.exclude_name)
     if args.products:
         preset = PRODUCT_PRESETS[args.products]
         if not ext_overridden:
             args.download_ext = list(preset["exts"])
         if not subdir_overridden:
             args.include_subdir = list(preset["subdirs"])
+        if not exclude_overridden:
+            args.exclude_name = list(preset.get("exclude", []))
 
     include_ext = {e.lower() if e.startswith(".") else f".{e.lower()}" for e in args.download_ext}
     include_subdir = {s.strip().upper() for s in args.include_subdir if s.strip()}
+    exclude_name = [s.strip() for s in args.exclude_name if s.strip()]
 
     out = Path(args.output_root)
     out.mkdir(parents=True, exist_ok=True)
@@ -431,6 +463,7 @@ def main() -> int:
         metadata_jsonl=metadata_jsonl,
         manifest_tsv=manifest_tsv,
         include_subdir=include_subdir,
+        exclude_name=exclude_name,
     )
     print(f"[crawl] matched files={len(files)} metadata={metadata_jsonl} manifest={manifest_tsv}")
 
@@ -441,6 +474,7 @@ def main() -> int:
         "download_ext": sorted(include_ext),
         "include_subdir": sorted(include_subdir),
         "products_preset": args.products,
+        "exclude_name": exclude_name,
         "matched_files": len(files),
         "downloaded_files": 0,
         "downloaded_bytes": 0,

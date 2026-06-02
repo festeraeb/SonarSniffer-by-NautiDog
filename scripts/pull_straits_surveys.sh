@@ -59,6 +59,12 @@ for s in "${SURVEYS[@]}"; do
       | grep -vE '^(/|https?:|mailto:|\?)' | grep -vE '/$')
     [[ ${#files[@]} -eq 0 ]] && { log "(no files in $s/$d)"; continue; }
     for f in "${files[@]}"; do
+      # Skip ellipsoid-datum BAGs: LWD (chart datum) and Ellipsoid produce
+      # identical detections, so keep only LWD and avoid the duplicate volume.
+      if [[ "${SKIP_ELLIPSOID:-1}" == "1" && "$f" == *Ellipsoid* ]]; then
+        log "skip  $f (ellipsoid dup; keeping LWD)"
+        continue
+      fi
       if dl "$BASE/$s/$d/$f" "$OUT/$s/$d/$f"; then
         total_ok=$((total_ok+1))
       else
