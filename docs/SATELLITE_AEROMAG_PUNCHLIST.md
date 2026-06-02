@@ -209,3 +209,25 @@ The following laptop dump files need a sub-agent to read and verify before impor
 - `daily_satellite_pull.py` (304 lines) — verify cron logic, check for hardcoded paths
 - `rossa_satellite_timing.py` (199 lines) — verify generalizability beyond Rossa case
 - `mag_pipeline_stage.py` (bag processor version) — diff against live `wrecks_api/stages/mag_pipeline_stage.py`
+
+
+---
+
+## PART X — Port experimental bathymetry mapper into satellite (NEW 2026-06-02)
+
+### B1 — MED: Port bathymetry_mapper.py into cesarops-satellite (Rust)
+**Source:** `recovery/laptopdump/cesarops_core/src/cesarops/bathymetry_mapper.py` (Phase 11.2, experimental, recovered intact from laptop dump).
+**Goal:** Experimental multi-band / multi-angle bathymetric mapping from satellite passes — reconstruct a wreck/seafloor depth surface by combining the depth proxies derived from different Sentinel-2/Landsat bands and the differing solar/view geometry across the multi-date stack. User: "I can map the wrecks from the different bands and angles the satellites passed over."
+**What the Python does (preserve these capabilities):**
+- `BathymetryMapper`: grid-based interpolation from scattered (lat,lon,depth) trackpoints (scipy `griddata` linear/cubic/nearest; NN fallback).
+- `compute_slope()` (np.gradient magnitude), `compute_curvature()` (sum of 2nd derivatives) — detect drop-offs / ridges.
+- `find_drop_offs(slope_threshold)` — connected steep regions (scipy.ndimage.label).
+- `generate_contours()` — depth contours at intervals.
+- Exporters: GeoTIFF, KML, NetCDF, GeoJSON. Depth color map shallow→deep.
+**Rust port plan:**
+- New module `cesarops-satellite/src/bathymetry_map.rs`.
+- Input = the per-band depth proxies the satellite pipeline already computes (Secchi/log-ratio depth from blue/green, plus the multi-date stack). Each scene/band/angle contributes scattered depth estimates → fuse into one grid.
+- Reuse the windowed interpolation + gradient helpers; export GeoTIFF via the `image`/`tiff` crate already used in chip.rs; KML/GeoJSON as plain text writers.
+- Wire as an optional satellite stage (e.g. `bathy_map`) gated by a knob; feed its drop-off/relief output as one more concept signal into fusion::SignalBundle (NOT an automatic wreck call).
+**Cross-link:** pairs with the BAG uncertainty-unmask reconstruction (bag-scan `--unmask`) — both rebuild a hidden/derived depth surface; keep export formats compatible so they overlay in the same viewer.
+**Status:** NOTED — not yet implemented. Build after BAG unmask engine lands.

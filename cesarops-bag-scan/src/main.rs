@@ -12,6 +12,7 @@
 use clap::Parser;
 use cesarops_bag_scan::pipeline;
 use cesarops_bag_scan::types::{Knobs, Stage};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -54,6 +55,11 @@ struct Args {
     /// Compact (non-pretty) JSON output.
     #[arg(long)]
     compact: bool,
+
+    /// Reconstruct + export georeferenced rasters (recon/diff/hillshade GeoTIFF)
+    /// for each masked region into this directory. Implies the redaction stage.
+    #[arg(long, value_name = "DIR")]
+    unmask: Option<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -81,7 +87,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Resolve stages.
-    let stages: Vec<Stage> = match &args.stages {
+    let mut stages: Vec<Stage> = match &args.stages {
         Some(s) => {
             let parsed: Vec<Stage> = s
                 .split(',')
@@ -97,6 +103,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => Stage::all(),
     };
 
+    // --unmask implies the redaction stage (it needs masked regions to rebuild).
+    if args.unmask.is_some() && !stages.contains(&Stage::Redaction) {
+        stages.push(Stage::Redaction);
+    }
+
     let path = match &args.path {
         Some(p) => p,
         None => {
@@ -104,7 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(2);
         }
     };
-    let report = pipeline::run(path, &knobs, &stages)?;
+    let report = pipeline::run_with_unmask(path, &knobs, &stages, args.unmask.as_deref())?;
 
     let json = if args.compact {
         serde_json::to_string(&report)?

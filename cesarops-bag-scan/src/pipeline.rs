@@ -35,6 +35,17 @@ pub fn run(
     knobs: &Knobs,
     stages: &[Stage],
 ) -> Result<MissionReport, Box<dyn std::error::Error>> {
+    run_with_unmask(path, knobs, stages, None)
+}
+
+/// As [`run`], but when `unmask_dir` is `Some`, reconstruct and export
+/// georeferenced rasters (recon/diff/hillshade GeoTIFF) for each masked region.
+pub fn run_with_unmask(
+    path: &str,
+    knobs: &Knobs,
+    stages: &[Stage],
+    unmask_dir: Option<&std::path::Path>,
+) -> Result<MissionReport, Box<dyn std::error::Error>> {
     let start = Instant::now();
     let want = |s: Stage| stages.contains(&s);
 
@@ -91,6 +102,27 @@ pub fn run(
         }
         redaction_unmask::fusion_rescore_regions(&elevation, uncertainty.as_ref(), &mut regions, knobs);
         info!("Redaction stage: {} masked regions", regions.len());
+
+        // Optional unmask reconstruction + georeferenced export.
+        if let Some(dir) = unmask_dir {
+            let recons = crate::unmask::unmask_regions(
+                path,
+                &elevation,
+                uncertainty.as_ref(),
+                &regions,
+                &info,
+                &geo,
+                knobs,
+                Some(dir),
+            );
+            let relief = recons.iter().filter(|r| r.relief_applied).count();
+            info!(
+                "Unmask: reconstructed {} regions ({} with uncertainty relief) -> {}",
+                recons.len(),
+                relief,
+                dir.display()
+            );
+        }
 
         for (i, region) in regions.iter().enumerate() {
             detections.push(masked_region_to_detection(region, i));

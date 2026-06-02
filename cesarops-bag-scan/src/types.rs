@@ -184,6 +184,35 @@ pub struct Knobs {
     /// Radius in cells used for boundary-ring sampling around masked regions.
     pub tpu_ring_px: usize,
 
+    // ── Unmask reconstruction (visual rebuild of hidden surface) ──
+    /// Margin (cells) around a masked region's bbox for the reconstruction window.
+    pub unmask_margin_px: usize,
+    /// IDW distance power for the baseline fill (2.0 = inverse-square).
+    pub unmask_idw_power: f64,
+    /// Cap on donor points sampled for IDW (keeps cost bounded on big windows).
+    pub unmask_max_donors: usize,
+    /// Apply uncertainty-guided relief on top of the IDW baseline.
+    pub unmask_uncertainty_relief: bool,
+    /// Relief budget as a multiple of donor-depth std (meters at 1 sigma).
+    pub unmask_relief_gain: f64,
+    /// Hillshade sun azimuth (deg from north, clockwise).
+    pub unmask_sun_az_deg: f64,
+    /// Hillshade sun altitude (deg above horizon).
+    pub unmask_sun_alt_deg: f64,
+    /// Max long-side (ft) of a region to attempt unmask reconstruction on.
+    /// Larger regions are coverage-edge / whole-tile artifacts, not hides.
+    pub unmask_max_region_ft: f64,
+    /// Probe threshold: (tpu_boundary + band2_ghost) / 2 must exceed this
+    /// for auto-reconstruction. Below this = skip (or flag for optional rebuild).
+    pub unmask_probe_threshold: f64,
+    /// Depth-anomaly threshold (ft): if a region's restored depth anomaly
+    /// exceeds this absolute value, treat as object-evidence regardless of
+    /// the uncertainty probe score.
+    pub unmask_anomaly_threshold_ft: f64,
+    /// Force reconstruction of ALL masked regions (including oversized /
+    /// probe-failing). Set via `--knobs '{"unmask_force_all":true}'`.
+    pub unmask_force_all: bool,
+
     // ── Dedup ──
     /// Spatial dedup merge radius, meters (`SpatialDeduplicator.merge_radius_m = 200`).
     pub merge_radius_m: f64,
@@ -226,6 +255,18 @@ impl Default for Knobs {
             curvelet_proxy_weight: 0.15,
             band2_ghost_weight: 0.35,
             tpu_ring_px: 4,
+
+            unmask_margin_px: 30,
+            unmask_idw_power: 2.0,
+            unmask_max_donors: 512,
+            unmask_uncertainty_relief: true,
+            unmask_relief_gain: 1.0,
+            unmask_sun_az_deg: 315.0,
+            unmask_sun_alt_deg: 45.0,
+            unmask_max_region_ft: 2000.0,
+            unmask_probe_threshold: 0.25,
+            unmask_anomaly_threshold_ft: 3.0,
+            unmask_force_all: false,
 
             merge_radius_m: 200.0,
 

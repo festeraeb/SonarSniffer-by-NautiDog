@@ -89,7 +89,7 @@ pub fn dilate_component(
     cols: usize,
 ) -> std::collections::HashSet<(usize, usize)> {
     use std::collections::HashSet;
-    let mut set: HashSet<(usize, usize)> = pixels.iter().copied().collect();
+    let set: HashSet<(usize, usize)> = pixels.iter().copied().collect();
     if iterations == 0 || set.is_empty() {
         return set;
     }

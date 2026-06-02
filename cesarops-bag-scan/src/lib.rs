@@ -11,6 +11,7 @@
 //!   * [`geo`]              — WGS84 reprojection (gdal OSR)
 //!   * [`anomaly`]          — physical wreck (height-above-floor) detection
 //!   * [`redaction_unmask`] — redaction/masking signature detection (marquee IP)
+//!   * [`unmask`]           — uncertainty-guided reconstruction + visual export
 //!   * [`orientation`]      — PCA heading/length/width + compass bearing
 //!   * [`dedup`]            — spatial deduplication
 //!   * [`pipeline`]         — stage orchestration A->G
@@ -21,6 +22,7 @@ pub mod bag_io;
 pub mod geo;
 pub mod anomaly;
 pub mod redaction_unmask;
+pub mod unmask;
 pub mod orientation;
 pub mod dedup;
 pub mod pipeline;
