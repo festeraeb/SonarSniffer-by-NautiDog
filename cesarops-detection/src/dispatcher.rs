@@ -156,11 +156,12 @@ pub async fn get_scan_status(
 /// List all worker nodes and their status
 pub async fn list_workers(State(state): State<Arc<AppState>>) -> Json<Value> {
     let (scout, validator, jitter) = state.pipeline.check_workers().await;
+    let (scout_ep, val_ep, jitter_ep) = state.pipeline.worker_endpoints().await;
     Json(json!({
         "workers": [
-            {"name": "Scout (1060)", "model": "Florence-2-large", "host": "cesarops3:5570", "online": scout},
-            {"name": "Validator (P1000)", "model": "Moondream2", "host": "cesarops2:5571", "online": validator},
-            {"name": "Jitter (TPU)", "model": "TFLite jitter", "host": "tpu-vm:8080", "online": jitter},
+            {"name": "Scout", "model": "Florence-2 / CPU sim", "host": scout_ep, "online": scout},
+            {"name": "Validator", "model": "Moondream2 / CPU sim", "host": val_ep, "online": validator},
+            {"name": "Jitter", "model": "TPU / CPU sim", "host": jitter_ep, "online": jitter},
         ]
     }))
 }

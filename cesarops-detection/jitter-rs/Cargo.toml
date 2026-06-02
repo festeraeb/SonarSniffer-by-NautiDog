@@ -1,0 +1,38 @@
+[package]
+name = "jitter-rs"
+version = "0.1.0"
+edition = "2021"
+description = "CESAROPS Lock-3 jitter/thermal analyst — pure-Rust inference with heterogeneous accelerator cross-validation"
+
+# Standalone crate — kept out of the root workspace because it tracks newer
+# axum/tokio than the root cesarops-adaptive package (matches sovereign-cloud).
+[workspace]
+
+[dependencies]
+tokio = { version = "1.43", features = ["full"] }
+axum = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+
+# Pure-Rust ONNX inference (CPU). No C/C++ deps.
+tract-onnx = "0.23"
+
+# HTTP client for remote accelerator validators (e.g. Coral worker on ML350e).
+reqwest = { version = "0.12", features = ["json"] }
+async-trait = "0.1"
+
+[features]
+default = []
+# GPU primary path (wgpu compute) — opt-in, large dep tree.
+gpu = []
+# Coral Edge TPU validator (links libedgetpu.so, needs /dev/apex_* or USB Coral).
+edgetpu = []
+# Movidius NCS2 validator (links OpenVINO 2022.3 C API w/ MYRIAD plugin).
+movidius = []
+
+[[bin]]
+name = "jitter-rs"
+path = "src/main.rs"

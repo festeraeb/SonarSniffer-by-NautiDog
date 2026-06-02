@@ -1,0 +1,17 @@
+{
+  "thinker": "http://127.0.0.1:5200",
+  "coders": {
+    "P100-Gemma-MoE": {
+      "url": "http://10.0.0.61:5001",
+      "model": "Gemma-4-26B-MoE-IQ4_XS.gguf"
+    },
+    "P100-Qwen36": {
+      "url": "http://10.0.0.61:5002",
+      "model": "Qwen3.6-35B-A3B-Q4_K_M.gguf"
+    },
+    "1070-Qwen25-Coder7B": {
+      "url": "http://127.0.0.1:5202",
+      "model": "gemma-4-E4B-it-Q4_K_M.gguf"
+    }
+  }
+}

@@ -15,6 +15,10 @@ use std::path::{Path, PathBuf};
 
 use zip::write::SimpleFileOptions;
 
+/// Google Earth ground-overlay strip size (low values look blurry when draped).
+const KMZ_OVERLAY_WIDTH: u32 = 1024;
+const KMZ_OVERLAY_MAX_HEIGHT: u32 = 512;
+
 /// Progress callback for pipeline stages. Receives (step_description, percent_complete).
 /// When running under Tauri, this emits events to the frontend.
 /// When running headless/CLI, this can be a no-op or print to stderr.
@@ -110,6 +114,9 @@ pub struct PipelineOptions {
     /// Per-channel alignment overrides (flip / invert). If empty, auto-detect is used.
     #[serde(default)]
     pub channel_alignments: Vec<crate::channel_alignment::ChannelAlignment>,
+    /// Highlight extra sonar payload bytes in magenta on waterfall PNGs (debug only).
+    #[serde(default)]
+    pub show_payload_debug_overlay: bool,
     // ── Curvelet denoising ────────────────────────────────────────────────
     /// Nadir (center-gap) handling for the stitched sidescan mosaic.
     /// "stitch" = close the gap, "fill" = paint with downscan if available, "raw" = leave transparent.
@@ -189,6 +196,7 @@ impl Default for PipelineOptions {
             detection_sensitivity: 3.0,
             detection_clutter: 0.0,
             channel_alignments: Vec::new(),
+            show_payload_debug_overlay: false,
             nadir_mode: "stitch".to_string(),
             curvelet_denoise: false,
             curvelet_auto: true,
@@ -264,6 +272,7 @@ pub fn build_outputs(
             options.curvelet_denoise,
             options.curvelet_threshold,
             &denoised_cache,
+            options.show_payload_debug_overlay,
         )?);
     }
 
@@ -471,6 +480,27 @@ pub fn build_outputs(
                 details: format!("ERROR: {e:#}"),
             }),
         }
+    }
+
+    if options.video {
+        emit_progress(progress, "Rendering enhanced waterfall video...", 92);
+        let video_result = crate::video::run_video_export(parsed, &output_dir);
+        let details = if let Some(ref path) = video_result.output_path {
+            format!("{} · {}", video_result.status, path)
+        } else {
+            video_result.status.clone()
+        };
+        artifacts.push(OutputArtifact {
+            kind: if video_result.output_path.is_some() {
+                "video".to_string()
+            } else {
+                "video_error".to_string()
+            },
+            path: video_result
+                .output_path
+                .unwrap_or_else(|| output_dir.join("sonar_waterfall_enhanced.mp4").display().to_string()),
+            details,
+        });
     }
 
     if options.web_viewer {
@@ -1881,8 +1911,9 @@ fn render_stitched_overlay_strip(
     }
     // Blend the nadir seam: remove the hard port/star edge, correct level mismatch.
     if has_both {
-        // ~14px per side; small since strips are only 256px wide.
-        blend_nadir_seam(&mut strip, half_w, 14);
+        // Nadir blend scales with strip width (wider KMZ strips need a wider seam zone).
+        let seam_half = (half_w / 18).clamp(8, 32);
+        blend_nadir_seam(&mut strip, half_w, seam_half);
     }
     strip
 }
@@ -2940,6 +2971,7 @@ fn write_waterfall_per_channel(
     denoise: bool,
     denoise_threshold: f32,
     denoised_cache: &BTreeMap<u32, GrayImage>,
+    show_payload_debug_overlay: bool,
 ) -> Result<Vec<OutputArtifact>> {
     let channels = pings_by_channel(parsed);
     let mut arts = Vec::new();
@@ -2972,8 +3004,16 @@ fn write_waterfall_per_channel(
             let raw = render_gray(&render_pings, WATERFALL_MAX_W, WATERFALL_MAX_H);
             (raw, 0.0_f32)
         };
-        let (img_rgb, payload_rows, payload_max_delta) =
-            overlay_extra_payload_magenta(&img, &render_pings);
+        let (img_rgb, payload_rows, payload_max_delta) = if show_payload_debug_overlay {
+            overlay_extra_payload_magenta(&img, &render_pings)
+        } else {
+            let mut rgb: RgbImage = ImageBuffer::new(img.width(), img.height());
+            for (x, y, px) in img.enumerate_pixels() {
+                let g = px.0[0];
+                rgb.put_pixel(x, y, Rgb([g, g, g]));
+            }
+            (rgb, 0, 0)
+        };
         let fname = format!("waterfall_ch{ch}.png");
         let path = output_dir.join(&fname);
         let denoise_tag = if denoise {
@@ -3701,10 +3741,14 @@ fn write_kmz(
         .map(|&(s, e)| segment_swath_half_m(&guide_pings[s..e], &guide_offsets[s..e]))
         .collect();
 
-    let mut overlay_kml_parts = Vec::new();
-    let mut png_entries: Vec<(String, Vec<u8>)> = Vec::new();
-
     let boundaries = compute_shared_boundaries(&guide_segments, &seg_swath_half_m);
+
+    struct KmzSegment {
+        strip: image::RgbImage,
+        corners: [(f64, f64); 4],
+        idx: usize,
+    }
+    let mut segments: Vec<KmzSegment> = Vec::new();
 
     // Build a mapping from guide-segment index ranges to the other channel's pings
     // by matching on timestamp proximity
@@ -3768,8 +3812,10 @@ fn write_kmz(
             (sl_lon, sl_lat), // top-left     = start-port
         ];
 
-        let seg_w = 256u32;
-        let seg_h = (seg_guide.len() as u32).min(256).max(1);
+        let seg_w = KMZ_OVERLAY_WIDTH;
+        let seg_h = (seg_guide.len() as u32)
+            .min(KMZ_OVERLAY_MAX_HEIGHT)
+            .max(1);
 
         // Find matching pings in the other channel by timestamp range
         let ts_start = seg_guide.first().map(|p| p.timestamp_ms).unwrap_or(0);
@@ -3803,14 +3849,37 @@ fn write_kmz(
             global_star_norm.as_ref(),
         );
 
-        // Light feathering for KMZ: just enough to soften segment seams in
-        // Google Earth without creating visible gaps.
-        let rgba_strip = apply_alpha_feathering(&strip, 0.04, 0.02);
+        segments.push(KmzSegment {
+            strip,
+            corners,
+            idx: seg_idx,
+        });
+    }
 
-        let png_name = format!("seg_{:04}.webp", seg_idx);
-        if let Ok(bytes) = encode_webp_rgba(&rgba_strip) {
-            // drawOrder increases with segment index so later passes (rescans)
-            // paint over earlier ones, showing the most recent/best data.
+    if segments.is_empty() {
+        return Ok(false);
+    }
+
+    // Along-track registration: satellite-style NCC on overlap bands between strips.
+    {
+        let cfg = crate::overlay_align::AlignConfig::default();
+        for i in 1..segments.len() {
+            let (left, right) = segments.split_at_mut(i);
+            crate::overlay_align::align_strip_pair(&left[i - 1].strip, &mut right[0].strip, &cfg);
+        }
+    }
+
+    let mut overlay_kml_parts = Vec::new();
+    let mut png_entries: Vec<(String, Vec<u8>)> = Vec::new();
+
+    for seg in &segments {
+        let strip = crate::overlay_align::mask_dropout_rows(&seg.strip);
+        // Light edge feather only — heavy Y feather softens detail in Google Earth.
+        let rgba_strip = apply_alpha_feathering(&strip, 0.03, 0.04);
+
+        // Lossless PNG for GE sharpness (WebP from image crate is often lossy).
+        let png_name = format!("seg_{:04}.png", seg.idx);
+        if let Ok(bytes) = encode_png_rgba(&rgba_strip) {
             overlay_kml_parts.push(format!(
                 "  <GroundOverlay>\
                 \n    <name>Segment {}</name>\
@@ -3823,15 +3892,21 @@ fn write_kmz(
                 \n      <coordinates>{:.7},{:.7},0 {:.7},{:.7},0 {:.7},{:.7},0 {:.7},{:.7},0</coordinates>\
                 \n    </gx:LatLonQuad>\
                 \n  </GroundOverlay>",
-                seg_idx, seg_idx + 1, png_name,
-                corners[0].0, corners[0].1,  // lower-left
-                corners[1].0, corners[1].1,  // lower-right
-                corners[2].0, corners[2].1,  // upper-right
-                corners[3].0, corners[3].1,  // upper-left
+                seg.idx,
+                seg.idx + 1,
+                png_name,
+                seg.corners[0].0,
+                seg.corners[0].1,
+                seg.corners[1].0,
+                seg.corners[1].1,
+                seg.corners[2].0,
+                seg.corners[2].1,
+                seg.corners[3].0,
+                seg.corners[3].1,
             ));
             png_entries.push((png_name, bytes));
-        } else if let Ok(bytes) = encode_png_rgba(&rgba_strip) {
-            let png_name = format!("seg_{:04}.png", seg_idx);
+        } else if let Ok(bytes) = encode_webp_rgba(&rgba_strip) {
+            let webp_name = format!("seg_{:04}.webp", seg.idx);
             overlay_kml_parts.push(format!(
                 "  <GroundOverlay>\
                 \n    <name>Segment {}</name>\
@@ -3844,13 +3919,19 @@ fn write_kmz(
                 \n      <coordinates>{:.7},{:.7},0 {:.7},{:.7},0 {:.7},{:.7},0 {:.7},{:.7},0</coordinates>\
                 \n    </gx:LatLonQuad>\
                 \n  </GroundOverlay>",
-                seg_idx, seg_idx + 1, png_name,
-                corners[0].0, corners[0].1,
-                corners[1].0, corners[1].1,
-                corners[2].0, corners[2].1,
-                corners[3].0, corners[3].1,
+                seg.idx,
+                seg.idx + 1,
+                webp_name,
+                seg.corners[0].0,
+                seg.corners[0].1,
+                seg.corners[1].0,
+                seg.corners[1].1,
+                seg.corners[2].0,
+                seg.corners[2].1,
+                seg.corners[3].0,
+                seg.corners[3].1,
             ));
-            png_entries.push((png_name, bytes));
+            png_entries.push((webp_name, bytes));
         }
     }
 
@@ -4628,9 +4709,14 @@ fn generate_viewer_sonar_overlays(
     let sonar_dir = viewer_dir.join("sonar");
     fs::create_dir_all(&sonar_dir).context("create viewer sonar dir")?;
 
-    let mut result = Vec::new();
-
     let boundaries = compute_shared_boundaries(&guide_segments, &seg_swath_half_m);
+
+    struct ViewerSegment {
+        strip: image::RgbImage,
+        corners: [(f64, f64); 4],
+        idx: usize,
+    }
+    let mut segments: Vec<ViewerSegment> = Vec::new();
 
     let other_pings: &Vec<&Ping> = if star_pings.len() >= port_pings.len() {
         &port_pings
@@ -4710,37 +4796,54 @@ fn generate_viewer_sonar_overlays(
             global_star_norm_v.as_ref(),
         );
 
-        // Viewer image sources don't overlap-composite — skip heavy feathering
-        // to avoid visible gaps.  Only fade near-black pixels to transparent.
-        let mut rgba_strip = apply_alpha_feathering(&strip, 0.0, 0.0);
+        segments.push(ViewerSegment {
+            strip,
+            corners: [
+                (el_lon, el_lat),
+                (er_lon, er_lat),
+                (sr_lon, sr_lat),
+                (sl_lon, sl_lat),
+            ],
+            idx: seg_idx,
+        });
+    }
 
-        // MapLibre requires image coordinates in clockwise order (NW, NE, SE, SW),
-        // otherwise WebGL backface-culls the overlay. By flipping vertically,
-        // Image Top = End (North), Image Bottom = Start (South).
+    {
+        let cfg = crate::overlay_align::AlignConfig::default();
+        for i in 1..segments.len() {
+            let (left, right) = segments.split_at_mut(i);
+            crate::overlay_align::align_strip_pair(&left[i - 1].strip, &mut right[0].strip, &cfg);
+        }
+    }
+
+    let mut result = Vec::new();
+    for seg in &segments {
+        let strip = crate::overlay_align::mask_dropout_rows(&seg.strip);
+        let mut rgba_strip = apply_alpha_feathering(&strip, 0.0, 0.0);
         image::imageops::flip_vertical_in_place(&mut rgba_strip);
 
-        let png_name = format!("seg_{:04}.webp", seg_idx);
+        let png_name = format!("seg_{:04}.webp", seg.idx);
         if let Ok(bytes) = encode_webp_rgba(&rgba_strip) {
             let _ = fs::write(sonar_dir.join(&png_name), &bytes);
             result.push(serde_json::json!({
                 "url": format!("sonar/{png_name}"),
                 "coordinates": [
-                    [el_lon, el_lat],
-                    [er_lon, er_lat],
-                    [sr_lon, sr_lat],
-                    [sl_lon, sl_lat],
+                    [seg.corners[0].0, seg.corners[0].1],
+                    [seg.corners[1].0, seg.corners[1].1],
+                    [seg.corners[2].0, seg.corners[2].1],
+                    [seg.corners[3].0, seg.corners[3].1],
                 ]
             }));
         } else if let Ok(bytes) = encode_png_rgba(&rgba_strip) {
-            let png_name = format!("seg_{:04}.png", seg_idx);
+            let png_name = format!("seg_{:04}.png", seg.idx);
             let _ = fs::write(sonar_dir.join(&png_name), &bytes);
             result.push(serde_json::json!({
                 "url": format!("sonar/{png_name}"),
                 "coordinates": [
-                    [el_lon, el_lat],
-                    [er_lon, er_lat],
-                    [sr_lon, sr_lat],
-                    [sl_lon, sl_lat],
+                    [seg.corners[0].0, seg.corners[0].1],
+                    [seg.corners[1].0, seg.corners[1].1],
+                    [seg.corners[2].0, seg.corners[2].1],
+                    [seg.corners[3].0, seg.corners[3].1],
                 ]
             }));
         }

@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "description": "Single fleet control plane — paths, services, n8n, jobs, pipelines per host role.",
+  "paths": {
+    "repo_candidates": [
+      "/data/codebase/repos/wreckhunter2000-1",
+      "/mnt/t440/codebase/repos/wreckhunter2000-1",
+      "/mnt/t440/repo",
+      "/codebase/repos/wreckhunter2000-1"
+    ],
+    "models": "/mnt/t440/models",
+    "catalog_dir": "var/fleet-catalog",
+    "fleet_jobs": "var/fleet-jobs",
+    "n8n_user_folder_candidates": [
+      "/mnt/t440/data/n8n_data",
+      "/data/n8n_data"
+    ],
+    "n8n_install_candidates": [
+      "/mnt/t440/data/n8n",
+      "/data/n8n"
+    ]
+  },
+  "unified": {
+    "enabled_mark": "~/.cache/cesarops/fleet-unified",
+    "bootstrap": "scripts/fleet_unified_up.sh",
+    "forge_preset": "dual-coder-zaya",
+    "c2_llm_layout": "scripts/cesarops2_unified_layout.sh",
+    "mcp_stack": "cesarops-forge-v2/scripts/mcp-stack-up.sh",
+    "t440_lan": "10.0.0.61",
+    "n8n_primary": "http://10.0.0.61:5678",
+    "n8n_local_bridge": "http://127.0.0.1:5678"
+  },
+  "hosts": {
+    "cesarops2": {
+      "lan": "10.0.0.201",
+      "roles": ["forge_primary", "llm_compute", "fleet_jobs", "unified_operator"],
+      "forge_url": "http://127.0.0.1:9100",
+      "n8n_url": "http://10.0.0.61:5678",
+      "n8n_url_fallback": "http://127.0.0.1:5678",
+      "llm_layout": "scripts/cesarops2_unified_layout.sh",
+      "systemd_timers": [
+        "cesarops-fleet-job-runner-c2.timer",
+        "cesarops-fleet-job-runner-t440.timer"
+      ]
+    },
+    "t440": {
+      "lan": "10.0.0.61",
+      "roles": ["n8n_primary", "p100_llm", "nfs_catalog"],
+      "forge_url_recovery_only": "http://10.0.0.61:9100",
+      "n8n_url": "http://127.0.0.1:5678",
+      "llm_layout": "scripts/p100_gemma_r1_dual.sh",
+      "systemd_timers": [
+        "cesarops-fleet-job-runner.timer",
+        "cesarops-n8n-watchdog.timer"
+      ]
+    }
+  },
+  "services": {
+    "forge": {
+      "port": 9100,
+      "health": "/forge/status",
+      "start": "start_forge.sh",
+      "host": "cesarops2",
+      "config": "cesarops-forge-v2/cluster_config.toml"
+    },
+    "n8n": {
+      "port": 5678,
+      "health": "/healthz",
+      "start": "scripts/start_n8n.sh",
+      "import": "scripts/import_n8n_health_workflows.sh",
+      "activate": "scripts/n8n_activate_fleet_workflows.sh",
+      "host": "t440",
+      "note": "Primary on T440; c2 runs same NFS DB as bridge when T440 host is down"
+    },
+    "mcp_stack": {
+      "start": "cesarops-forge-v2/scripts/mcp-stack-up.sh",
+      "context7": "http://127.0.0.1:3737",
+      "crawl4ai": "http://127.0.0.1:11235",
+      "openmemory": "http://127.0.0.1:8765",
+      "mcp_worker": "http://127.0.0.1:8090",
+      "host": "cesarops2"
+    },
+    "nautivecs": {
+      "port": 5003,
+      "health": "/health",
+      "host": "t440"
+    },
+    "jitter_rs": {
+      "port": 8180,
+      "health": "/health",
+      "start": "scripts/t440-start-jitter-rs.sh",
+      "nomad": "infra/nomad/jobs/t440-movidius-jitter.nomad.hcl",
+      "host": "t440",
+      "note": "Lock-3 primary inference (Rust tract/heuristic); Movidius + remote Coral vote"
+    },
+    "coral_jitter_validator": {
+      "port": 8190,
+      "health": "/health",
+      "start": "cesarops-detection/jitter-rs/scripts/start_coral_jitter_worker.sh",
+      "host": "cesarops2",
+      "note": "HTTP validator sidecar for jitter-rs; not on the Rust primary path"
+    }
+  },
+  "llm_slots": {
+    "cesarops2": [
+      {"port": 5200, "gpu": "RTX", "role": "draft", "model_hint": "Qwen3.6-MoE-or-Gemma-E4B"},
+      {"port": 5203, "gpu": "1070", "role": "thinker", "model_hint": "ZAYA1-8B"},
+      {"port": 5201, "gpu": "P106", "role": "pamp_optional", "optional": true}
+    ],
+    "t440": [
+      {"port": 5001, "gpu": "P100-0", "role": "gemma_coder"},
+      {"port": 5002, "gpu": "P100-1", "role": "r1_thinker"},
+      {"port": 5010, "gpu": "cpu", "role": "polisher"}
+    ]
+  },
+  "n8n": {
+    "webhooks": {
+      "fleet-ops": "missions/n8n_fleet_ops_dispatch.json",
+      "tool-route": "n8n_moe_tool_router.json",
+      "llm-translate": "missions/n8n_llm_output_translator.json",
+      "pamp-route": "missions/n8n_predictive_async_moe.json",
+      "prompt-tuner-initial": "missions/n8n_prompt_tuner_worker.json",
+      "prompt-tuner-failed": "missions/n8n_prompt_tuner_worker.json"
+    },
+    "workflow_families": [
+      "Fleet Ops Dispatch",
+      "Fleet Route Health",
+      "Forge Health",
+      "MoE Tool Call Router",
+      "LLM Output Translator (MXFP4 MoE)",
+      "Predictive Async MoE",
+      "Prompt Tuner Worker"
+    ]
+  },
+  "pipelines": {
+    "catalog": "scripts/fleet_file_catalog.sh",
+    "catalog_config": "config/fleet_catalog_roots.json",
+    "mission_profiles": "config/unified_pipeline_profiles.json",
+    "mission_resolver": "scripts/unified_pipeline_worker_bee.py",
+    "rs_summarize": "scripts/fleet_rs_llm_summarize.sh",
+    "gpu_slot_watchdog": "scripts/gpu_slot_watchdog.sh",
+    "mission_watchdog": "scripts/mission_service_watchdog.sh"
+  },
+  "fleet_jobs": {
+    "runner": "scripts/fleet-job-runner.sh",
+    "dispatch": "scripts/fleet-n8n-dispatch.sh"
+  }
+}

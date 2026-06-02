@@ -2,6 +2,32 @@
 //!
 //! Emits binary SPIR-V words from our shader IR.
 //! Eliminates GLSL compiler unpredictability and vendor differences.
+//!
+//! ──────────────────────────────────────────────────────────────────────
+//! HONEST STATUS
+//!
+//! What this currently emits: SPIR-V header + a handful of OpFAdd/OpFMul
+//! word pairs. It is not a full IRBuilder. It cannot represent a complete
+//! shader module on its own (no type table, no entry point decoration,
+//! no capability declarations, no decoration tables).
+//!
+//! What it does NOT yet model that the cooperative-matrix guidance asked
+//! for:
+//!   - cooperative matrix type class (no `OpTypeCooperativeMatrixKHR`)
+//!   - load/store/mul-add helpers
+//!   - capability auto-injection (`CooperativeMatrixKHR`,
+//!     `SPV_KHR_cooperative_matrix`)
+//!   - memory-class legality enforcement (no rule preventing
+//!     `coopmat` in a uniform/SSBO/shared pointer)
+//!
+//! Real cooperative-matrix shaders we ship today live in `shaders/*.glsl`
+//! and are compiled by `glslc`, then loaded via
+//! `wgpu::ShaderSource::SpirV`. Naga (wgpu 24) does not yet accept
+//! `OpTypeCooperativeMatrixKHR` from front-end code, which means a
+//! native IRBuilder path here would have to skip naga validation and
+//! patch the binary directly — that's the right work to do, but it's a
+//! standalone project, not a five-line addition to this file.
+//! ──────────────────────────────────────────────────────────────────────
 
 pub struct SpirvBuilder {
     pub words: Vec<u32>,

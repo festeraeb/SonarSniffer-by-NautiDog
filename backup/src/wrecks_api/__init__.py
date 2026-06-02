@@ -1,1 +1,0 @@
-# wrecks_api package

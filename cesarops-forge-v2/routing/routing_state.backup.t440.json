@@ -1,0 +1,8 @@
+{
+  "chat_agent": "picasso",
+  "coder_endpoint": "http://127.0.0.1:5001",
+  "reviewer_endpoint": "http://10.0.0.201:5571",
+  "thinker_endpoint": "http://10.0.0.201:5200",
+  "corrector_endpoint": "http://10.0.0.201:5200",
+  "draft_endpoint": "http://10.0.0.201:5571"
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CESARops — open maritime search and rescue. Community-led drift analysis and shipwreck discovery on the Great Lakes.">
+  <title>CESARops | Maritime Search &amp; Rescue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">⚓</div>
+      <span>CESARops</span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html" class="active">Home</a>
+      <a href="wrecks.html">Wreck DB</a>
+      <a href="mission-control/index.html">Mission Control</a>
+    </nav>
+  </header>
+
+  <main class="hero">
+    <h1>Find them. Pin them. Free for all.</h1>
+    <p class="lead">
+      CESARops is an open-source maritime search and rescue platform built after the Coast Guard
+      would not run back-drift analysis on evidence from the <em>Rosa</em> — Charlie Brown case.
+      Shipwreck hunting is the art; bringing people home is the mission.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="wrecks.html">Browse wreck database</a>
+      <a class="btn btn-ghost" href="tools.html?pw=8106940539">Fleet health monitor</a>
+      <a class="btn btn-ghost" href="mission-control/index.html">Mission Control</a>
+      <a class="btn btn-ghost" href="https://app.cesarops.org" target="_blank" rel="noopener">App (T440)</a>
+    </div>
+  </main>
+
+  <h2 class="section-title">What we build</h2>
+  <section class="grid">
+    <article class="card">
+      <h3>Drift &amp; satellite stack</h3>
+      <p>Rust/Vulkan engine with nauticuvs filters — sediment plume subtraction, thermal shimmer detection, navigation-grade coordinate fusion when VRAM allows full-stack runs.</p>
+    </article>
+    <article class="card">
+      <h3>Triple-lock detection</h3>
+      <p>Scout, validator, and jitter workers cross-check tiles before Forge orchestrates the next move. Cluster degrades gracefully when augment nodes drop offline.</p>
+    </article>
+    <article class="card">
+      <h3>Great Lakes STEM</h3>
+      <p>Youth-built drifters broadcasting live telemetry into the validation stack — hands-on engineering feeding real current data for Line 5 and SAR missions.</p>
+    </article>
+    <article class="card">
+      <h3>Always free for SAR</h3>
+      <p>Commercial lanes (SonarSniffer, industrial monitoring) fund compute. The wreck hunt and missing-person stack stays open and community-led.</p>
+    </article>
+  </section>
+
+  <h2 class="section-title">Cluster at a glance</h2>
+  <section class="grid">
+    <article class="card">
+      <h3>T440 — primary</h3>
+      <ul>
+        <li>2× Tesla P100 · Forge :9100</li>
+        <li>LLM pool :5001 / :5002</li>
+        <li>LAN <code>10.0.0.61</code></li>
+      </ul>
+    </article>
+    <article class="card">
+      <h3>cesarops2 — augment</h3>
+      <ul>
+        <li>RTX 2060 :5200 · GTX 1070 :5571</li>
+        <li>Detection :5580 · Tools :8090</li>
+        <li>LAN <code>10.0.0.201</code> / <code>.200</code></li>
+      </ul>
+    </article>
+    <article class="card">
+      <h3>Public edge</h3>
+      <ul>
+        <li><a href="https://app.cesarops.org">app.cesarops.org</a></li>
+        <li><a href="https://api.cesarops.org">api.cesarops.org</a></li>
+      </ul>
+    </article>
+  </section>
+
+  <p class="note">Hosted on IONOS · <code>/wh2000/</code> · Deploy with <code>python scripts/deploy_web.py --ionos</code></p>
+
+  <footer>
+    <p>NautiDog Sailing · CESARops · Saving lives with abandoned GPUs</p>
+    <p style="margin-top:0.5rem">Work in progress — hobby, not a job. Built for Rosa.</p>
+  </footer>
+</body>
+</html>

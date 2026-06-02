@@ -1,0 +1,1502 @@
+{
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.gitignore": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "db1cbf2f357938d36612f71e66446c8d2c4f5fac20f89637aaa98b84b021288b"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.gitignore-tauri": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7e960ff1510d187cad7c39c6d3e370da5cbcfe6dc9ee5b93862646f01bf26589"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/app-icon.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "0488eb230329d5bad7f777abc71f5e5686700068eb94233bb9743a850ca007f1"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/azure_config.template.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "ad65e85e19a63828ace5ebe312c32574777b30b28218836eaf947241c8bc66e8"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/build-installer.ps1": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b9347761b033e96861c20cfa9b905342308911c8b42c2393621e3c07f5dce9d8"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/docker-compose.yml": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "08eb51684214cca028052e11394d53787786a538468a307900936a3ecfaaaf0f"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/Dockerfile": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e0dab27ceedf7b8303c13b5beb37e9c0b976621f46c27c97dddc2235f70dfc05"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/index.html": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "3a9267541c09269f4b741a9526ce11b16e1ee07399c0bd8c66d83fe03889d827"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/launch-wayfinder.bat": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "78fd68e4ff3ca6dac467e23f249700ff1473f42c420a80d2b396b131ed7bdab2"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/main.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "c3a27ecae50b387944014161cdf29913f10398514d951b28bdce406dc6b7e04f"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/package-lock.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "d595000174a100347967440a650963ac943186de59d1c2b503e2183f3b4eb82d"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/package.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "480a19475b52c18e88c09b169b78f568cb9cbca72afd8e8eec2423872ed1898b"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/README.md": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "bd5d9e343a379f976ae57ad43ae293078a2df3889e4a91df00160860bb134317"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/requirements.txt": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "a31558f0cb8f6c41de54a95df05571fc2721f4e627b4cfe33ec5172a56f6a761"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/setup-windows.ps1": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "ced3b4cab25157524454bc525b12ddbe27bac7ba6d5f233d1572c3acd4b26152"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/setup.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "0d998eb57ae47f3121bba9bcb50581c89a4c38a217c66f25a2f2f92fb925b043"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/tsconfig.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "11ff30358690aa8732affb4eac192346356e4c7e30d12c045229d3816906c74a"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/vite.config.ts": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "6d0f4a66f9d80255949a34aabe055a2d349720a948e01cdab68cc46a70ba6a79"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/wayfinder-menu.bat": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4f8f1cedab33e07b2d85b0fb6cad72239e82b98be13b564cd759a3b7e42c1329"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.wayfinder_index/clusters.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "b5542bdbed80cb5094165ebaf473e5d86722639e5001bfc0fbeefb7355326b09"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.wayfinder_index/embeddings.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "2d8bab296eeb004c587f989be60b19fb61b6f6cd4af0eea351a5236d12907654"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.wayfinder_index/embedding_progress.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "e37e5f3dd8912fe8ac373ae2480aaedec05e8115e169f1233115b4dd0afc8f96"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.wayfinder_index/error_log.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "e6c8039bc37e2e3d98d04de4abf9059f7146c2a947cc331384ae6975af6a649a"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.wayfinder_index/index.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "0c42abe2d125575d759be0661cbf87397e9f0b0001fdc0a2db857b699d00c5d8"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/.wayfinder_index/provider_config.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "3118e8b42cce3bd554ba8c6d6bb258ebb0a62061f4558976e1f372a56e455900"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/cli.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "c8b919cadad0b10a41ffc05375c2a01378d58cfebaed5457599740348875c9fd"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/clustering.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "5d04406e183066c651006af7f27f8ff6d123b00ed060d75b185e1c5a86413eb7"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/embeddings.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "8032981fd04115a9ce38259d97485a31085a941bd6c6af519af7eff45c580585"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/scanner.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "a9273d774dd50dbf707527e5f36cfebab1e80237adbfc900d4cc4d208375ccae"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/search.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "8cca91b9867d643d4787631173b2fd4dbeb3b024620bbe84c509f02cccdb6a29"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/tauri_bridge.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "9a1399a9dddab38b99936743eeb0d220604bfdd2680709ff9dc270e9e53bdf05"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/timeline.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "08c8641b80618800270d20dff8240a764b4b56c1a6a581ece252dd4bddea5dd1"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/__init__.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "f20bba32e0d3fb1944ce7a48104849e1f614a46adc33d241d78933e27a4d4adf"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/learning/adaptive_coach.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "4c6941b29364884c310247b3945d53ab80a00bae1b5ad1ca7f801316a6650648"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/learning/behavior_tracker.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "8d819827a88475391bef845b085b0c76e828f62ee16c629c3eb687cb58e30056"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/learning/difficulty_detector.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "f7b703a2fd6b2f21d5ddcc8a5210020c5bea11232d4979aef12606d8620260cd"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/learning/suggestion_engine.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "b79defea00c899b3c51cd8c08173b6d8c57a647cb4db02a4ccf1beb2ac43a3bc"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/md_scanner/learning/__init__.py": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "d51f95f375430f885b7c2d0ea0e5b30510685782f384e33ce587dd93f8124fff"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/App.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "d73412463c112d5a6e680161d2addab2cfbe84e8c2817b3490a3a9a1384141c1"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/main.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "b3b71b4efac3965d8ffb9af266cc0d9246b1ea35365c8449a2dccd40acf38971"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/types.ts": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "696217a78a413f2167092610dfdc38125f840a49d44ce0e95a8edeb8fcc07771"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/ClusterPanel.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "3110971bde0773a4a37f5e45b41c029570a1999bb8881e5bc4fe72cd52aa4c64"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/EmbedPanel.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "896bb75c14c356637b077998612e9e238b6380f9e4864c2deea3db00e8cd2768"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/GitAssistant.css": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "0b3fd4dba67c0d8e47b6f1521e4feb2975975c978abeb906f3cdbbe5e43a72e3"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/GitAssistant.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "36a4e99e12f90e08187f9a3b759d0ab964c2e697b86797a00d69ab12fb8788b7"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/index.ts": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "cfeb57c196b76f1db6abecaf493a6f26cd5a94336f186bab2376342a948521b6"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/LearningModeApp.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "f1ae05f26f241c1778a794b18b0501858301449915d9be787d99ac7199ce4b49"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/ScanPanel.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "5582861ab039786dc4c7829091f95636b2594cde093801126bcd59480d7acb65"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/SearchPanel.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "854fb2e8f6937132fd3771a7d0d3afdda16ad8dce49f3d5c38da8f79dc5f4070"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/StatsPanel.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "e05c63b6699d707f118b0eeaf4861bcb05463d9e469a072fad0950871d33d6e4"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/components/TimelinePanel.tsx": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "2194ecef0498e73211f02173ae28e5e7946e05f747a62047bcefe160d66dee9b"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/hooks/useDevice.ts": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "dc7cf3060992d23737e1215af1fb342849b2c7170ac62e1653b762e069e12415"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/hooks/useTauri.ts": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "c2d1d200c640dc6438971b89b77a4bb5038be19a03f0390b2edcee949a3c62c3"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/services/tauri.ts": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "fd5df42cb754cb24a92767012a92ae117a883cdfedf884a9a87a349ace3fd3f9"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/styles/app.css": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b32519edbccd7b0f7f60d1bd4e9f44960778bf6e7ee93e4dfe45f259f50672ee"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/styles/global.css": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "69fc266eb77e7cd6eeb55014bdeea0a837fd8c6c61d40254b0cf6738bfa94b60"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/styles/learning-mode.css": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "6ecd3c1d3361cfe8df63c53ab60d3ba62b2815eda58f9de1a101af0a0c809f06"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src/styles/panels.css": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "237b26cb4425ce2e127eca342e1be8610659bd27825204479bf54a2bc2d38590"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/build.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "4ae2333b11623039cc115e29b696e7ff5cdfcd5b7d628280ddf48fa733e6418d"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/Cargo.lock": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "9261076367243eaab96c87e6dca6d952d95bded31678be067325c22b9e0b8ded"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/Cargo.toml": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "fa25b4bc4c62965438ea0c6213b77a8458fa1f229e6ce2248c867b89b71fb252"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/tauri.conf.json": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "26be4ca5544d16f11662e482c3a11be465fcbe47a46fbe9a42fe1cde996abe5e"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/128x128.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8f371a3f05071bed11465a093a575af45f2310920579c3142e7d69140e1daec9"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/128x128@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "eb3898d8dad7f70fd2d874fc7d762e19baf73e9f145722ec0df543e9b6330121"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/32x32.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "6eb7dcdec651432b791aea719f3ad6c2cea75f1fe3a73136afe03781e907f348"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/64x64.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "96163630e89be6ed0a828280fd3374c00f87e791ebffb32b0b441cc182d0714e"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/icon.icns": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "56e8149d0e9741c0303d1e88218a7ad16a28b433feb9cc3442fe7b02b5945ca9"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/icon.ico": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "539ee9fc53182b4b117db7b0c2e74e30da8ae84d42e4988936b82cfa71637caa"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/icon.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8ec4e0fe8a7841285ba518efba0845be682c4752fe42f36e732451f8e502e6d3"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square107x107Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "9b00613ace20e0c71ab91a62ace3b15ea37f50121ba0ffe9b10b3f60464bf708"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square142x142Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "10a61255accb56eccfa438e17de7b0d61f58b84fc53bc9b51e1cdae9e4a659a6"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square150x150Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "43cc8b3df74182b207ee6af2ff972af3b08a9cf5d56d962abb4ab783042f0e34"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square284x284Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "9b089ceae7c9033ea6ca642fec5f6e80e96479ad20251eda33342ef0f1fc4214"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square30x30Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b0a136eba0c578c52555e9c993351a4a0b1bf2ea903855cb28ba5399288ed7ca"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square310x310Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4095496ae0b5c91a73269103395c5423fa93c003840d8ff4e3866cc56fec9c2f"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square44x44Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "256a38c76fcf21a48a81598f59a7bb617d94f29698d56f63f7ed5e9611507355"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square71x71Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e4e1f22a4f311bf557797745ce0aa7797c16094d06f82ef8d4ac79507200494e"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/Square89x89Logo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "f6be12b855f25b34cd644ade426c2a7ef7364e0f3804fa52422d022bd057eabe"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/StoreLogo.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8228a8d386749d8e3f2e7b60715e1e4691b3ebe29c07b728aace32207e3fb693"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-anydpi-v26/ic_launcher.xml": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7fe18cc0bcab884b6cd485758b8e5b3665737390fb8a35dabd37149aae83e1ee"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-hdpi/ic_launcher.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d907c81c5c9f10654372e07bf72956ba11958a242d14541c5d1108809fa3fb34"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-hdpi/ic_launcher_foreground.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2872b4b1bb841914d5ef595b284136a1d3013a28bf7a7a918f9ff4866e582e90"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-hdpi/ic_launcher_round.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5b44a23ece89b51f0ad02bcbe7c1c642cc9dcdef665cdbbf502a62754b345242"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-mdpi/ic_launcher.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "90e0cd08f04feac8819e052e2357672c211b3a099ca922099b438f5320d358c5"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-mdpi/ic_launcher_foreground.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "affadb206b8334fb74d68145fd9998d3f73b276b042308f214235c72b06d17e4"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-mdpi/ic_launcher_round.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2f9e67c6cbbfb29d467d9e9b138b0defd492486b899b2654f848aa25c4975df5"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xhdpi/ic_launcher.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "925fc4cdb350e3ec7dc465821cf00ce51994b8b00b77d51d88efd619f81ac266"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xhdpi/ic_launcher_foreground.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5601e53a53ac0fa7e555cc855b48e5436e49f732a7501031cbaad9182f0df002"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xhdpi/ic_launcher_round.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5068d92c41fa7879d6af160483b94b7e0ccd9dcf4a6c637a6820dff6d9e4e7e0"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xxhdpi/ic_launcher.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "367e1f6b16b5b8fc02cc1aca9f0ac8a56a6fa5dab06dac09c1fe26a31686be81"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xxhdpi/ic_launcher_foreground.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1cdd620fa2acd3f63432b680afa8729fab816dd1d29eea93f82d6b1eeef272c4"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xxhdpi/ic_launcher_round.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "22df2245b563ea77b542ea98742b956596badf1517d2ad8d0cfdd03e1447d333"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d93fb073baee0648ce6b51af919d779b9af8e1e8412bd41cbec6dcce73ca785f"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher_foreground.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c8831faec09ee7f2d58bee30b1e480b8e7de9915bb34274bd08636227f6eed91"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "55a290318ec3f25258b9a514e5627c39426b535f44b1c1be73cdcc4fb3e632ba"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/android/values/ic_launcher_background.xml": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "388946bbba99e5a1b91750343f8dbdfd11692d51afb8ba5ea28d7e5ad13b4d79"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-20x20@1x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a961ff5ea8e3e5f94352a9ce08b2dd2fa6bf692c48177785d6c92c3a4b20b821"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-20x20@2x-1.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a7ff22ca9c08daeaf40670a833d7f7d85af92ced6d3faec7423c1664fd41bc28"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-20x20@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a7ff22ca9c08daeaf40670a833d7f7d85af92ced6d3faec7423c1664fd41bc28"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-20x20@3x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2f6264a5063f61d453b9c7a38684799903432ddc5a2be61c43b06a1855f1ef4d"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-29x29@1x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b16048055480370acf36bf555a69a22f0863735471923bff39e447a36916f6f6"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-29x29@2x-1.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "56bba54aee9eb211aeff4ba305bbc0696bb145fd4bb30e7215ce8f25bd738e36"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-29x29@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "56bba54aee9eb211aeff4ba305bbc0696bb145fd4bb30e7215ce8f25bd738e36"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-29x29@3x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d5b30f62b25d776543fc1f3ca5bd4130494d8e3a8163c9589fde1b0583422a8b"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-40x40@1x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a7ff22ca9c08daeaf40670a833d7f7d85af92ced6d3faec7423c1664fd41bc28"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-40x40@2x-1.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "97b18ad094c76ecb97892741af0d38d9085f7f344d5977ec611e427bacfe75fa"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-40x40@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "97b18ad094c76ecb97892741af0d38d9085f7f344d5977ec611e427bacfe75fa"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-40x40@3x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "604e67941975d6225e56a4dd35697edc9fd8f3ea6603d904c0e21883d57cf041"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-512@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1c5627bc3228e71e820e558c6738cffc97208f3061a6fb7c8e070f210ff7ac5a"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-60x60@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "604e67941975d6225e56a4dd35697edc9fd8f3ea6603d904c0e21883d57cf041"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-60x60@3x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a7ed0ed25c2f20265396d82c98c4ab141dd912b540e2a2985851bff54cd0ddb8"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-76x76@1x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "eb872cd9d912ecf664d55dd9e642bbdbc94845700555022a79d30e957643f935"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-76x76@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b1243f89969ac6008bed44f508f6ad76c9e5126611711c792e7ec992937b980f"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/icons/ios/AppIcon-83.5x83.5@2x.png": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7b4ed00285fb6800adefe590e0b450ae98377a55f36cb6512be293fd6be96728"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/commands.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "3a77c0ebdaee8363ca51275525ff951b11564e31380f1163f76de74f79a3407e"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/file_intelligence.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "ca15b1d745a9d7c16181316f43f7696d160288a20fcfbf88bce72a80cc4788de"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/file_watcher.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "3a302edd819636dc92b70b8454a435103670ac625df748032ef00c47db03f4bd"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/git_assistant.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "85c771cfb221e6d0e427e337b486590b8d354c08c04adb3b1a9c77bf248d1931"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/lib.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "22c415c3a94657daba8e103df53e6ac79aae6629c0b7c62aff38e98ee8f12bc0"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/main.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "3ca860f334028c2cb4051d4c23c310f119eeabab63af882bd506a88215d8328a"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/pattern_database.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "e019a564ec84d4034525bc008b8917417619f06f8ed56cc5ecf15688257f59b4"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/state.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "7bb233e669572d9f81fdc394d1fb7d63f9890716150abb5d6590af898eb8bf99"
+  },
+  "/mnt/t440/data/laptopdump/temp-md-scanner/src-tauri/src/handlers/mod.rs": {
+    "category": "REVIEW_HEURISTIC_OK",
+    "confidence": 0.5,
+    "sha256": "395736c6400c9cb4ddcd112612514dd156791aeb00707c45a10c29a90e1bb0b4"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/.gitignore": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2613789a6806cf3f80538ba824b310729d62c8ba4fc0f956afcdbcfa595af270"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/sonarsniffer_overlay.exe": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "26baa491426d973dc251e0364713682faf401b4b13ed7da6df913fa7258d7675"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/soundtiles.exe": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2f5d67cfa01aa047174229dac6f08c16e5f71a69f7756335e8addfbc2b720d15"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/000a1de6": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "af8fb32e88e7a57f556eb8a4537dbd7c877b365f12254169fe105b396f3cf85e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/00882a38": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "852dac65e2483a266c0317e7860fca52a8463426c1b371294f0be0620ac3d666"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0109f9e8": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8ed8b8ca7d9c0988dee794c6cbddcb31ab8007b89b3abc2b50ac2854b0e04296"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/012e069a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a3a73f55772dbf8eee111bf7397942d64dab9c5353c574f8b1c35501814dbbd2"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0160f8b0": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "ff5cb0fde2e0703d966c7f4f0d7558b697699529eb9588a49a7af7ec7855806f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/01f25b65": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1882c1b981617a37ad4f3be051d6c3eee5a27ffd3452445327329016f0d307e7"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/02167de3": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "95eb37bafdd34942c1b020042233af26be73172641af10810e8aa88e7c8671b6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0274927e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7f25375845c8af161a82f263279bfe27b43b402bded215e9047421623073aa2e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/02920bf0": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "14c7862e6d9186659c16487e6dd1ee5e8b457367dde1e2e1ce548050e3b4c95d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/02ba21b7": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7012fbfa4d36a046e38007dec2e61a711d34296f5c343ec405d90e75317ec133"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/02ef889f": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2a6a4435ec2348009b8464573804807dce0f7f629e7c59c8cf2033f31628f254"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0339c7f3": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "522cf0bef8cc4ad9d4188993b8c2f4cfaca91f026fb813efcb83670ee2229fea"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/03defe90": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1dddd3d7b7e3010f49b84da8a8fe1e9d560fec83c58504301b6f0a2a7339463c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/045b1dc4": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7ae9aff2931d0cf24629fc02c798818e0ee05fe943004361a175c35fc5726052"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/04a0cca9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "eac4c05b0f32d28fe236599e4a20936c04a6e5767fe7ce705aa9d9ce4a6f3ae6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/052768c8": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b65d00782d8e989b0d60de0e864a03910eea46eecb7b51383e5c962e34be50c9"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/05330103": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e20a280cbe7d3bc4b758e09b9076de115e1557f4d37cd5461ba2b1b1aa427589"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0539658f": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "048a25f1ecfd3da64f1e29cd87c5b41379b42d64ecc89e846cc50b7a2ac8e902"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/05543129": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d17ca4de78d5c2b6fee1fd0870aa8166665342ab0a7dcd12c3caa94504e73e83"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/056407a9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "6700b3a3c118fe301577b361df0edbeea16bc62a79235726213f62c39c13cdff"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/05b084d7": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2151c0ebd3bdbc93e95115e2b15395e6228243980455c70b2060db115cfaae28"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/05b95c81": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "dc78ba0483a5a9c47d6d43216c4d8fc174a36222453941733563840c98af798b"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/05d80b8c": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7aa617df79f0af7cb3d8b3418c264563764e6fc1080cea3161e60f133fe68c12"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/05db83cf": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "751e3de5b67a6b8046bf454cc1d243f2be92bfb30b8cb40dca56c0bf4b52fdcd"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0608c51b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "733cdeaf4c547e74776aec486d879c92270c05234c3c990b058f68bb23f40dd9"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/063eef3a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "be44fd82c1a44add497c0ede2b7d532ab31c231e9d63799d5c4af630199db6e3"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/065a10d9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "fe31361dbeafa3cc7848a8aef2091bdeb246de3ebbd58cb4a7524af22eb05358"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0676873a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5cb7a278c92864b2c6726b311bcd8e1e85ed5b5509a360f690f283e318fca22e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0742f03e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4ab367740b45cd363d27d6e6e1b14cd5829bd8caba4b9da644191e3eea575caf"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0768162b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "eee331244d7b3e07045a30582cd418a373269595d8c0dff182e8f2cc5892240c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0778b960": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "439670e1f6a242c73d825eae9907ff15472bafe4151d4a69fe47f9d5d5d1dfba"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/07d0ddc0": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b25af09d2e3a1437b31b358788d778428db1e28830de6fa3c64c68f7547fbfdb"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/08211eb2": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "f9a82c2df5b1f4ce3ca00696ae2294717e7d77d1c00369156b121da98b2cc8ae"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/08f84914": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "aa39ef204d91c636a0d3098a2f566a97ca6aab92433c8dd670061bb59c6e9b2a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/090dbd98": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d6b10f8b5b2fc575ad47be78d63938d805b550a70f012531f2f45cc5a436f226"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/09ff3335": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d6a162cfd46a03c6683195ac6112c3a45cac0d6b405f10df946888f327b63f70"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0aaed951": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "bc51a9d2b9ac477606f1e59473e1c760e8f5deeca39aacbb6f4861826eb8e735"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0b127124": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "cba03b2e8fbca3d6e0c2d193ae04c351ef4d721467c9c4a378184e0fdf295a65"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0b4d326d": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "65ef21bd1a7ea81427cb378849623d6988bb01001a5f1b4e9efb927a7cccaee1"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0bb3328e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e41dfac148d3272563e4aec75a6b9c8f6db9bc03a97a801fb8ac1ca397437984"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0bc3f6bd": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "253ad23ae61f9f6dd42961a06f49db8a4d8c27ba10db66b5a456d1014cab3dd2"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0bcfa675": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "874c50def8c698398008527d91ed9af78aba70e1e9d87322a87298967051ae4a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0c32d7f8": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "db77b5897fb9301be1ac0ccc0f9b12c158ef6dedf0318f0706d61292504f3295"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0c33d3b3": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4f1f63b844feb2754f3cc43d4c743ed26f66aa78570332d7f63c1c201d47728d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0c641507": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a618e4e72e63c10ead6606999f2f3120e7ed809c695f1a47705cf0539735f0d7"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0c946ecc": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "572042175c8901862bb4e65eedadfa41b48702ebda1c37a650cc37e459c1bfb3"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0d17afb7": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c1b987b6ceaaa4cf822fdc4b75ae171671d83fc0af02bcba79a69ea2c98326e0"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0d3e04e9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "dc6179a71fd78a79659696ee99ed906ba8460e76e4a7871c9e955e86fb6ff347"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0dc02503": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8a9821caca236ce5a66bf5bcdb2580a550d6ce25e6b07e77a4fda5fbcdc54c52"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0df3de94": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "63cc25aa606df188cc590255b78593bdb35e165bcbe6ab26a53f9c36a344600c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0df68674": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4d1a5ffc87b177fdaea0eaf28d54a4063dc4c7f0c3dd5619db27a96d63eda89c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0e3c9f66": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5efbeb3b9206ee5b38b7bb03f03b3602db5fc7d18c2b349f865d3f31dd2ba7ab"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0e41bec3": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "554752e29342ba4e327c4bd280efb362b0a5d6b5bbe31b44534f458e76887428"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0e4a69f0": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "26a5207269308de00ce59da938a2f3cb8918eb677a05c2ed004d93f825a7d65e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0e799b89": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "bb74b4142e1f87eabd27c0b1a37c75f4f462abe0a7fcd2d336435bf3c11f4cca"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0eb175b4": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "0ef2002f03ad0ebfd566e516fabaf17cf298a5ef9611e8a88e6b35d30e55cbd2"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0ebda592": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2f0c4906fdeb75deca2f8dc5a8a506aed065a4522b43b6c2afb251ddec279ae3"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0ebed47d": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "139da6c0b400620f022c6e56766134b300b2134a0b05114632d7bd07ad2e3ed3"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/0f44aab6": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "96b0565cf789ef42af7d27ea8b2709c6e06322b00ef145e6cc31302112497773"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/106cdcf7": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a21dd4a3e4a9ce5c4d2552077f040718e4a5df89bbe96311a9d4f6d24fafa0ff"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/10cb14e2": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "addd6e2ab990274d841705db3016a0c56be26b522c434e255110f73ac66314b0"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/10d12405": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b329e2261a6e0c2ef3408680791f084d1d53de7e96033191970721d3bf81fbf9"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/10d2ce13": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "3ac5b41eb8ddbba2baba3cde4da343e1a4f025b3488e649ec2f63ea20941c145"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/11ca6000": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e5e11ee950f97007fbd863b98e99d46b6fe647374e63afecb25123e55c4a16c0"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/11d80439": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "44cc4dd9acfba27ca444305c0ef8220cf0d86abe4236d4f9e829c7136f21f30e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/11e0bcf8": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "12a95794295cc75590e97546b6df8f595f4f6c3a3e962255023b59f9cb6cbc3f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/128ffeb6": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "41630969e661f781dea2cb49443c21b0a815b04fe8410185ca450f58ee34f82b"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/13372559": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "af811f05d38d658bd52408db7248257ef2d06765ff8db2e0668e1fe547dc402f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/133aee2d": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "136b31faf3b12fbd9311332cf910681943eb545b364d18d0ad09e688910db1e6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/138070dc": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c05024726bfb83f4566980b4f59cf004f51bd415303906a3ad6dab6d295476e5"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/13fbcebc": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b23bdf296c68837f1346247a8dd0680e5225e774d50bb83ddd62baf766010950"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1425bd90": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "89732f12f4dbdba487b7f49c4cc8beeff22d6168f5856ed270615b7af866b128"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/14345a1b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "303444a53609cbc8b88170e25a89a61c76dd71102fd61ee1a5ea16564abb6c14"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/146a9f6e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1496e724f18af67511495c96c9e11a9e5e95b29aa33566cf1233a8cafd2c77e7"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/146e4379": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "f251b3bbe76d66d6c6c2f0e2ab29d1aa5634bd3c597abe42d9b174d9f2c21816"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/149c4644": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "3ea5593879500b220819bed6d5130d8e659c9f95b226fdd4deefa61ef8fbaf03"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/14ccad5c": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "83bad2aac06774069d85f548e6ddb2223907e2acdfc70cd07ba7c55bcf04cdf6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1520be33": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "fc1e7cd2f30d294d1deed86f77f8a187a2c923eced261f69f8907c9d38bc6cfa"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/153e5ac5": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "ffae3260bca3b56a666a0714fc9b71789a88f6bf9c98c46b9bd890ba90b14dbb"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/15462195": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "671264a65cc9ca73d0d6422d8496caf1bca9d6cc0e3ac1be25f526a19217adf1"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/160a9b96": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "f187bda4aae65ecbcaeff455cc916d12810a690f3bddf613c8b00ea31810f034"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/163becca": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "90dcf1f0d5219b9a60aa1243848beb42422a95ce6961a796b1b79914119f563c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/164e3e5e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2369a4655f01dd1878dfa540bc87164680dfcff58473a005fd22e5b9af976f22"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1652bc7b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "0747474bef5550a6bd5a2af411819033878668b94dc252441dd2a9cd9f9d0d73"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/166529bf": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "11164800799adb3e9a5d128c86c39812019698fe4ba4e893c15910cec8cf316a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/16766a0a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4da1090b57782f17011301ca2049554b8d4e3d02f654327bc99ed6ccf4c1f3a9"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/169023f9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "487d56301b2e3a3e523452ec4a0ddd42abe856e6afece5cca22fb4f40e8ecab1"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/16ad1cbf": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "70eafc41cfe4a7c0402ad653fe9a7385d1527b826d805ac6befcd8a878ff4d90"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/179d2560": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "88e49adebf70c149bb73584915d2c14e39cb9a7179ea6d4a5ca16bb2b55632ff"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/180ffd29": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "479366155896411a029b5c5a36b81f76d11253655fb44ef307b419d351212af3"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/181ce608": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "9a6b5c6f5b78f351d96cdc5767182227384c1431c732c65ef3071fe9e4917b2c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/18258350": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "cad6d8a38b478a631991a4de04385c3870d56e709df1e193efe77770571464ad"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/18b9b488": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "9830de4d1b4cc31897a158058c788ce10c889604a3249ecb3d0dac22492003e8"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/18e1b172": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "da05fd2b5db04154a1874b6b56e5889566cdf51047c7bdd4ce6f6e890a5ba412"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/18ed1e1b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e9595fbc494419daa301d028c8dfe96ac73fb335c625f8975284f2f2414cc83a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/19f2808a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e0ca5185d44c27f5ab4ea4a242130816a7c4b89a629d0bf84bc558e2f96e086e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1a5e8e8d": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c2f5d4f78d5fc43f150328a9f2a4494d022cb2ada05e42fbea4941e376aacada"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ab72981": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a1be91268c7ef81f9bfce2d1a82a179c200c19acd067ab78d478a9abb6d275c3"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ac56db9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b1822e18014600c32791a997e257ef65fe389cc66c5d241b20c07a27a0b1f0aa"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ae8c72c": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d3a039930eaa7ec976f221d040dbdcd7dbda3d14de7905a0c423358300646ba4"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1aeabc57": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c8c313738538e3fd829c10ef5ffe0337743fa48af104f3c999db3fe7caeac092"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1b93bf09": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "45e6bce82a68772041fc6c78d8eba71234c9a6610362ddbd80c1bede7d5f1b2a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ba48359": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "170d052463517391756e26f66539a6f70170e68f2714a110687d2f4fd2f4128d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1be2b9da": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b29ba6b1d2258e66725b441e03ddc3ea27e0da0c338d6207c22e1382e180012d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1bffe019": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "504d28f903c4ed5d3988fde2a2e9c60ed23dc588a88b30bb07581bbe57e49b9b"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1c1f2259": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "973d9566358ce7d263d5979fbb7535f65554966a9382cc3714e306ec50fb5a75"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1c469ae5": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c79f51b711d7a296e68ca8e0fc8650d4c78bcbaf39b19334200154643e10edbc"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1c475633": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8dd37d840d1a47581c08b94c8468ce6467385c9239752a3363e0cced5c4a392c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ce766d7": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4ebd8bac3a7f2667a14e3cfed83159fc14eb4776b80f2a2c6fceb8d14184d2c8"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1d3456f6": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "79f4cf172f3a10ee1a5eaa207128d348d0b84c7c2a8a74d6f0b5118ae360c1dc"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1d663bac": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8fd889f4af5cc89dd21e0f4c249197ce7181f122908c887db64832665dc9ccab"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1d762387": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4da8fc3eff7aca591a137e07d5bc1d1e98de1bb768c9ef56173696f245684b63"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1e01f894": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "0bbb3b2ef792a219eb9497d04b37dbf34dd32a6c23c00c39eb69b28722cb3072"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1e8da686": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1e462801eafa750d4161f308c0e0334dc2ddfb390d97b8a95aab650a8b93ddf4"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ee1f213": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a834f2c959a259ad76fcc7bf168bfa5e1cfc5835028c7cf4590d16a2d63e0e93"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ee5b179": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "69c6519cdaf8b707d6434b7510709a92a9ff66dfbe1bd25b1976b5b038d230b8"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1ee92b1a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "2f915499018d298df8580d938eb2ccae56731b6a9da3ceb0780c8dff8c53ba85"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1f30f809": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5778a7d59c279a83711f29145b7443c5604b7814e823b51d3f90fbd59392d151"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1f5d4d6e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "5012fe98ab8f5baf03c0aa28289437bb5b1d846ea3d865d8b1448e85f43cbcef"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1f652552": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a7f84bb767b1faeffefbc2f2ade9f1ed845ef08c6e8ffb83af8a8a2edca9d936"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1fb8f4f3": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "24264b0b8c5e5bb4927bb8df4f1086c1abec7c9084b39cc026f6192ba9bf63a5"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1fc63101": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4b99eb486017df38a00c38bc773ee322e05df70f69fbdc126cdf9a6fe4e3265d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/1fe241a5": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "10d52e4f74437b7a71aa61d10bfa5e5c3f530dc936adf0f5542d0f8d3f12d9c5"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/200bac84": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a39dfd2409401a3acfc07a020a47b1e79ddd872bdc10cd94a309e9a5123d35b4"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/205c8d02": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "f12198b44eb737c06bf28d7a05d145b23cac9cee727f9832f86504a6e2786bc6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/209a3c71": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "582a48d9a1ef3879889c5ff3e56516e814633edf1c5a3dc3e208bb1e0192e36a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/209c2099": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b6dae12315ac37a494871eb01f80e905e9a4a6486c02bed6ae6448aa909a371c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2131725a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "47043cc92540a0436c5a38fe5e0bfb2fbf8b14f633f2dc1d95c6b5ca1889a258"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/21b54864": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "740344e11fb274ee18f860587d2b8d38688c9f879850fd3e29aa19dbaa2294ce"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/21d5cee9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "267cfe8de59da42579dadf3ca117b724f3da6e597d807216a7110a89dae5b58d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/222d1c3b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "e68adf97a733ea85b11c87c128483a5c21a467532c6cf1f2312221ad6c3bd329"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2244673c": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4d9776e6d382b6584d4d4e905f6b08f9765734c1ff03e1026f0805dc30b701e2"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2293afa1": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "1152edad5d613c70711ea20317eaeba214161183c9f7f31510320304b3443355"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/22a11d19": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "bf4ed3a23f877d1bd42922736ba3518dc73a3b6a918c0901c43833f9a95fdd50"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/22b266a3": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a9192db8c8da73b15bce0533eeebf58b9186af9d20a915c5cca72abdf6c54a1e"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/22d1fe93": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "578517a40a072fa63bf0f83ae5eb6552fcda500eec4d35b54bdd5a2429c79e43"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/22d2135e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "63c868689503c394e93ec9537154d3805dd6229c37c1f7e6ce9d967978dccf3b"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/22eb12e4": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "7f9151ee5aea8856fb1760ad8fb427b5cfd92f594ab09607cdc7e8b3ca9e1bec"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2346b12a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "6f37ba54f9a349c9a55e0b07ac5d282a8637dd382ba25816e077d8cedc6bccd5"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2370f05c": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "68325ce86ecc128edb4bfd5afa6ca8acd17069c1fe94573ec0c5d3700c06eca2"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/23be0144": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a819b21480014d61b4e612e93340f56b9c65097868f2e18dec0480462c2366fc"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/23fba0a5": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "bdda083d761d369d40930e16bf6d4e484e878b57c7e3149342c707359f834a6c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/24011fb1": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "56dfb27c727c02205fd7c32b1c8cdebfdf73cc147a97b58da3f3585e9a996db6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/24257e21": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "fdf139aacde4ede97f33cb72fce4773bd18240e8b4469bf50c39af3713176480"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2434bc16": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "8298bce980f8cff7e35967a712480a839b4a6f21021a7fb4cd22254f19467712"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/24992b98": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "985f5b7257cb1dcb89769008399192fdf13e0e83f43f01d57ef23868ae74e36f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/253ca67b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b3dc525a018a40e281aef45e3da8fb69907157106e3d8942f92a4b5a7aa4cef2"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2572a0cb": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "194d957fce094ff761d8b6fcfabb555f0227ac4a5c47a3245c9b5632f49cfc0b"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/25956228": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "ed9e9a84803f512ef4ed6ff399123ad37ac177660f24286f7cc2d9d809ea282d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/26601362": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "d20b8d46ee4a2e0f07afacdcd272552910bbee3a0c7ee3edc9f10b6288379428"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2671108a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "ba244e75fb6b99f8764aabb71bec11cf04402ca3489f9094f7aa225922dcb54f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/26a4bf43": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "af341f93fc3cea5b6bd7fc0951a7ea228e1666777986d911d249e7911742cd8a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/26e9e42e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "97dc7a09c0f5c4061571409927eda7f91102f4249bd9ad681d273bfc97a06aa1"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2757c161": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "73a7157c7172dd8599266e0ce7de935f89154868e70dc43d0aff211af33008e7"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/27b053db": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "579ade1a8b1abab585f54ca84352be6de8e333f82baaeb12471da7c8ff572808"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/27f2aa55": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "a1e3e2e661ee1c35f9f771b82ce89e59201e292ed770a4ca6606ba633b72f08f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2808c8c2": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b4f646a00e85a25deede30dd82943c4b29914b0bc1cd9a2d1dd15843f47d0ec6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2826837f": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "400caa06eb54c94a854be994289f217d355c610a61c40a073cc355490fd59285"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/282982b9": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "46be519965490f33136cf945ae6f7b7307e1743043baf01ae3ccf4517a71ce76"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2888347a": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "c0ddbe639c597c34b5ceedb7bd4e392a23c028a821035c4bd5bc877ab508af8a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/288b64fa": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "4fbff0123f934406b0c610e6412e0f8782804b776e08122fc630672b14625b8a"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2898560b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "3835fd2504fdc3e4ba0df843d1684d91320fdae56b74083148d340124feaf388"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/28a61c69": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "9cf4d94f13d407bbf43e330e4fcc4a73fe9caf3a276b8c233758ab4c80904cc1"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/28bf955f": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "878f6c341f7fc199a2ba0be2b9315014c3895a4f9d58e05d063f773208bb500d"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2935769d": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "b9bdf3bbdd415643ef0011465ab82b33b9a6e49ec4fed7f81d67224fec07f6fc"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/29565188": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "20e0b307d42dbf789ee318b2d7a03758e6ce5d3339d78ee1d32c1c0853aaa920"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/29e1fa99": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "930e6940a898395af9151eefbbf57d6841ba69f586465f58866730762395caf4"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2a0970b8": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "f8251b36b359e6ee774d2001e5f19565ee7a6f13e18463df3e19798381888cc1"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2a19084e": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "71e931730a7e6b851c666fc45b33cde440692294444f92022c904b1444bd2d07"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2a59bb66": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "bfc86d19bf0cf856a01e3f31e610a08e3dea1bccbfa532f51527bacc9162341f"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2a7d16e8": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "3e147b31fc4769d3fa9be5c7725236b57cf0040c8b13360a9d9e4ea843448e8c"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2ad947de": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "bf4c6791c4e094dfdfd591f5b7528e723f135cff084e363043c91e7a8be9ebf6"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2ae13c45": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "85a0744aa3ff4eaa9bdb40756b51a762521f90969780c36e2f527b7ed7d022e9"
+  },
+  "/mnt/t440/data/laptopdump/sonarsniffer-temp/node-compile-cache/v24.14.1-x64-cf738c9d/2b0f4b6b": {
+    "category": "BINARY_OR_LARGE_SKIP",
+    "confidence": 1.0,
+    "sha256": "14e65e56e393b7d449d094b1c5b5b640d81b3a6e0bcfb2de314e9fffda09ad3e"
+  }
+}

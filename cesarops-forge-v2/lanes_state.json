@@ -1,0 +1,7 @@
+{
+  "lane_roles": {
+    "lane-c": "idle",
+    "lane-b": "idle",
+    "lane-a": "idle"
+  }
+}

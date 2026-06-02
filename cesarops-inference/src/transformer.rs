@@ -11,7 +11,7 @@ use crate::gpu_context::GpuContext;
 use crate::kv_cache::KvCache;
 use crate::loader::ModelWeights;
 use crate::matmul;
-use crate::weight_cache::WeightCache;
+use crate::weight_cache::{GpuWeightCache, WeightCache};
 
 pub struct TransformerConfig {
     pub vocab_size: usize,
@@ -30,12 +30,13 @@ pub struct TransformerDecoder {
     pub config: TransformerConfig,
     pub arena: Arc<InferenceArena>,
     pub weight_cache: Option<Arc<WeightCache>>,
+    pub gpu_weights: Option<Arc<GpuWeightCache>>,
     pub gpu: Option<Arc<GpuContext>>,
 }
 
 impl TransformerDecoder {
     pub fn new(config: TransformerConfig, arena: Arc<InferenceArena>) -> Self {
-        Self { config, arena, weight_cache: None, gpu: None }
+        Self { config, arena, weight_cache: None, gpu_weights: None, gpu: None }
     }
 
     pub fn with_weight_cache(mut self, cache: Arc<WeightCache>) -> Self {
@@ -43,9 +44,46 @@ impl TransformerDecoder {
         self
     }
 
+    pub fn with_gpu_weights(mut self, gw: Arc<GpuWeightCache>) -> Self {
+        self.gpu_weights = Some(gw);
+        self
+    }
+
     pub fn with_gpu(mut self, gpu: Arc<GpuContext>) -> Self {
         self.gpu = Some(gpu);
         self
+    }
+
+    /// Matmul that uses GPU-resident weights when available. Avoids re-uploading
+    /// weight tensors per call. Falls back to CPU dequant + GPU/CPU matmul.
+    fn do_matmul_named(&self, a: &[f32], name: &str, m: usize, k: usize, n: usize, expected_elements: usize) -> Vec<f32> {
+        if let Some(ref gw) = self.gpu_weights {
+            if let Some(out) = gw.matmul_with_cached_weight(a, name, m, k, n) {
+                return out;
+            }
+        }
+        // Fallback: dequant from CPU cache and run matmul
+        let b_t = self.load_tensor_f32_owned(name, expected_elements);
+        if let Some(ref gpu) = self.gpu {
+            gpu.matmul_gpu(a, &b_t, m, k, n)
+        } else {
+            matmul::matmul_f32_transposed_b(a, &b_t, m, k, n)
+        }
+    }
+
+    fn load_tensor_f32_owned(&self, name: &str, expected_elements: usize) -> Vec<f32> {
+        if let Some(ref cache) = self.weight_cache {
+            if let Some(data) = cache.get(name) {
+                if data.len() >= expected_elements {
+                    return data[..expected_elements].to_vec();
+                } else {
+                    let mut v = data.to_vec();
+                    v.resize(expected_elements, 0.0);
+                    return v;
+                }
+            }
+        }
+        vec![0.0f32; expected_elements]
     }
 
     /// Matmul dispatch — uses GPU if available, otherwise CPU
@@ -93,16 +131,13 @@ impl TransformerDecoder {
             // which computes input[1,k] × weight^T → output[1,n]
 
             let q_name = format!("blk.{}.attn_q.weight", layer_idx);
-            let q_weight = self.load_tensor_f32(weights, &q_name, q_dim * h);
-            let mut q = self.do_matmul(hidden_state, &q_weight, 1, h, q_dim);
+            let mut q = self.do_matmul_named(hidden_state, &q_name, 1, h, q_dim, q_dim * h);
 
             let k_name = format!("blk.{}.attn_k.weight", layer_idx);
-            let k_weight = self.load_tensor_f32(weights, &k_name, kv_dim * h);
-            let mut k = self.do_matmul(hidden_state, &k_weight, 1, h, kv_dim);
+            let mut k = self.do_matmul_named(hidden_state, &k_name, 1, h, kv_dim, kv_dim * h);
 
             let v_name = format!("blk.{}.attn_v.weight", layer_idx);
-            let v_weight = self.load_tensor_f32(weights, &v_name, kv_dim * h);
-            let mut v = self.do_matmul(hidden_state, &v_weight, 1, h, kv_dim);
+            let mut v = self.do_matmul_named(hidden_state, &v_name, 1, h, kv_dim, kv_dim * h);
 
             // --- Apply Q/K/V Attention Biases (Qwen2.5 requires these) ---
             let q_bias_name = format!("blk.{}.attn_q.bias", layer_idx);
@@ -183,8 +218,7 @@ impl TransformerDecoder {
 
             // --- O projection ---
             let o_name = format!("blk.{}.attn_output.weight", layer_idx);
-            let o_weight = self.load_tensor_f32(weights, &o_name, h * q_dim);
-            let o_out = self.do_matmul(&attn_output, &o_weight, 1, q_dim, h);
+            let o_out = self.do_matmul_named(&attn_output, &o_name, 1, q_dim, h, h * q_dim);
 
             // Add residual
             for i in 0..h {
@@ -214,12 +248,8 @@ impl TransformerDecoder {
                 }
             }
 
-            let gate_weight = self.load_tensor_f32(weights, &gate_name, inter * h);
-            let gate = self.do_matmul(hidden_state, &gate_weight, 1, h, inter);
-
-            let up_weight = self.load_tensor_f32(weights, &up_name, inter * h);
-            let up = self.do_matmul(hidden_state, &up_weight, 1, h, inter);
-
+            let gate = self.do_matmul_named(hidden_state, &gate_name, 1, h, inter, inter * h);
+            let up = self.do_matmul_named(hidden_state, &up_name, 1, h, inter, inter * h);
             // SwiGLU: silu(gate) * up
             let mut ffn_hidden = vec![0.0f32; inter];
             for i in 0..inter {
@@ -228,8 +258,7 @@ impl TransformerDecoder {
                 ffn_hidden[i] = silu * up[i];
             }
 
-            let down_weight = self.load_tensor_f32(weights, &down_name, h * inter);
-            let down_out = self.do_matmul(&ffn_hidden, &down_weight, 1, inter, h);
+            let down_out = self.do_matmul_named(&ffn_hidden, &down_name, 1, inter, h, h * inter);
 
             // Add residual
             for i in 0..h {
@@ -242,8 +271,22 @@ impl TransformerDecoder {
         rmsnorm_f32(hidden_state, &final_norm, self.config.rms_norm_eps as f32);
 
         // --- LM Head ---
-        let lm_head = self.load_tensor_f32(weights, "output.weight", self.config.vocab_size * h);
-        self.do_matmul(hidden_state, &lm_head, 1, h, self.config.vocab_size)
+        let vocab = self.config.vocab_size;
+        // Try output.weight first; some models tie to token_embd.weight.
+        if let Some(ref gw) = self.gpu_weights {
+            if gw.get_buffer("output.weight").is_some() {
+                if let Some(out) = gw.matmul_with_cached_weight(hidden_state, "output.weight", 1, h, vocab) {
+                    return out;
+                }
+            }
+            if gw.get_buffer("token_embd.weight").is_some() {
+                if let Some(out) = gw.matmul_with_cached_weight(hidden_state, "token_embd.weight", 1, h, vocab) {
+                    return out;
+                }
+            }
+        }
+        let lm_head = self.load_tensor_f32(weights, "output.weight", vocab * h);
+        self.do_matmul(hidden_state, &lm_head, 1, h, vocab)
     }
 
     fn load_tensor_f32(&self, weights: &ModelWeights, name: &str, expected_elements: usize) -> Vec<f32> {

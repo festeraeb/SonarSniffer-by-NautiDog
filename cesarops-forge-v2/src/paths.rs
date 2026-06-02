@@ -1,26 +1,57 @@
-//! Canonical filesystem paths for forge (override via env on each node).
+//! Resolve Forge data paths (deploy dir vs local repo copy).
 
-pub const DEFAULT_PROJECT_ROOT: &str = "/codebase/repos/wreckhunter2000-1";
-pub const DEFAULT_FORGE_V2_DIR: &str = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2";
+const DEPLOY_FORGE: &str = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2";
+const LOCAL_FORGE: &str = "/home/cesarops/cesarops_push";
 
-pub fn project_root() -> String {
-    std::env::var("CESAROPS_PROJECT_ROOT").unwrap_or_else(|_| DEFAULT_PROJECT_ROOT.to_string())
+pub fn forge_dir() -> String {
+    if std::path::Path::new(DEPLOY_FORGE).exists() {
+        DEPLOY_FORGE.to_string()
+    } else {
+        LOCAL_FORGE.to_string()
+    }
 }
 
-pub fn forge_v2_dir() -> String {
-    std::env::var("CESAROPS_FORGE_V2_DIR").unwrap_or_else(|_| DEFAULT_FORGE_V2_DIR.to_string())
+pub fn cluster_config_path() -> String {
+    let deploy = format!("{}/cluster_config.toml", DEPLOY_FORGE);
+    if std::path::Path::new(&deploy).exists() {
+        deploy
+    } else {
+        format!("{}/forge_cluster_config.toml", LOCAL_FORGE)
+    }
+}
+
+pub fn routing_state_path() -> String {
+    format!("{}/routing_state.json", forge_dir())
+}
+
+pub fn lanes_state_path() -> String {
+    format!("{}/lanes_state.json", forge_dir())
+}
+
+pub fn models_dir() -> String {
+    if std::path::Path::new("/codebase/models").exists() {
+        "/codebase/models".to_string()
+    } else {
+        "/data/cesarops/local_models".to_string()
+    }
+}
+
+pub fn project_root() -> String {
+    for p in [
+        "/data/codebase/repos/wreckhunter2000-1",
+        "/codebase/repos/wreckhunter2000-1",
+        "/codebase/wreckhunter2000-1",
+    ] {
+        if std::path::Path::new(p).exists() {
+            return p.to_string();
+        }
+    }
+    "/home/cesarops".to_string()
 }
 
 pub fn aeromagnetic_worker_binary() -> String {
-    let root = project_root();
-    let candidates = [
-        format!("{}/target/release/cesarops-aeromagnetic-worker", root),
-        "/codebase/repos/wreckhunter2000-1/target/release/cesarops-aeromagnetic-worker".to_string(),
-        "/home/cesarops/wreckhunter2000-1/target/release/cesarops-aeromagnetic-worker".to_string(),
-    ];
-    let fallback = candidates[0].clone();
-    candidates
-        .into_iter()
-        .find(|p| std::path::Path::new(p).exists())
-        .unwrap_or(fallback)
+    format!(
+        "{}/target/release/cesarops-aeromagnetic-worker",
+        project_root()
+    )
 }

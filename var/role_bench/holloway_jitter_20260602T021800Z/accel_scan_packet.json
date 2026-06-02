@@ -1,0 +1,478 @@
+{
+  "mission": "sunken_ship_anchor_hunt",
+  "coordinates": {
+    "lat": 42.331,
+    "lon": -83.048
+  },
+  "files_scanned": 6,
+  "scans": [
+    {
+      "source_file": "/codebase/repos/wreckhunter2000-1/outputs/e2e_forge_holloway_20260525T152535Z/Holloway/mosaic_ch4.png",
+      "tile_id": "mosaic_ch4@Holloway",
+      "coordinates": {
+        "lat": 42.331,
+        "lon": -83.048
+      },
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 1800,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1801,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1802,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1803,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1906,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1895,
+            "row": 209,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1898,
+            "row": 215,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1899,
+            "row": 215,
+            "score": 0.8235294117647058
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 4.4454
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.052,
+        "thermal_delta_c": 1.96,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.91,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.89,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      }
+    },
+    {
+      "source_file": "/codebase/repos/wreckhunter2000-1/outputs/e2e_forge_holloway_20260525T152535Z/Holloway/mosaic_ch5.png",
+      "tile_id": "mosaic_ch5@Holloway",
+      "coordinates": {
+        "lat": 42.331,
+        "lon": -83.048
+      },
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 1666,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1667,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1668,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1669,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1749,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1750,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1751,
+            "row": 479,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1752,
+            "row": 479,
+            "score": 0.8235294117647058
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 2.2251
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.809,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.02,
+        "thermal_delta_c": 0.7,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.86,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.88,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      }
+    },
+    {
+      "source_file": "/codebase/repos/wreckhunter2000-1/outputs/e2e_forge_holloway_20260525T152535Z/Holloway/mosaic_combined.png",
+      "tile_id": "mosaic_combined@Holloway",
+      "coordinates": {
+        "lat": 42.331,
+        "lon": -83.048
+      },
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 1774,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1775,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1779,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1789,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1790,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1791,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1799,
+            "row": 207,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 1800,
+            "row": 207,
+            "score": 0.8235294117647058
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 4.3278
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.03,
+        "thermal_delta_c": 2.12,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.91,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.89,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      }
+    },
+    {
+      "source_file": "/codebase/repos/wreckhunter2000-1/outputs/e2e_forge_holloway_20260525T152535Z/Holloway/mosaic_geographic.png",
+      "tile_id": "mosaic_geographic@Holloway",
+      "coordinates": {
+        "lat": 42.331,
+        "lon": -83.048
+      },
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 6955,
+            "row": 246,
+            "score": 0.8196078431372549
+          },
+          {
+            "col": 6956,
+            "row": 246,
+            "score": 0.8196078431372549
+          },
+          {
+            "col": 6957,
+            "row": 246,
+            "score": 0.8196078431372549
+          },
+          {
+            "col": 6958,
+            "row": 246,
+            "score": 0.8196078431372549
+          },
+          {
+            "col": 6959,
+            "row": 246,
+            "score": 0.8196078431372549
+          },
+          {
+            "col": 6960,
+            "row": 246,
+            "score": 0.8196078431372549
+          },
+          {
+            "col": 6961,
+            "row": 246,
+            "score": 0.8235294117647058
+          },
+          {
+            "col": 6962,
+            "row": 246,
+            "score": 0.8235294117647058
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 6.5029
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.067,
+        "thermal_delta_c": 1.69,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.91,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.89,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      }
+    },
+    {
+      "source_file": "/codebase/repos/wreckhunter2000-1/outputs/e2e_forge_holloway_20260525T152535Z/Holloway/waterfall_ch4.png",
+      "tile_id": "waterfall_ch4@Holloway",
+      "coordinates": {
+        "lat": 42.331,
+        "lon": -83.048
+      },
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 1800,
+            "row": 207,
+            "score": 1.0
+          },
+          {
+            "col": 1801,
+            "row": 207,
+            "score": 1.0
+          },
+          {
+            "col": 1802,
+            "row": 207,
+            "score": 1.0
+          },
+          {
+            "col": 1803,
+            "row": 207,
+            "score": 1.0
+          },
+          {
+            "col": 1906,
+            "row": 207,
+            "score": 1.0
+          },
+          {
+            "col": 1871,
+            "row": 211,
+            "score": 1.0
+          },
+          {
+            "col": 1899,
+            "row": 215,
+            "score": 1.0
+          },
+          {
+            "col": 1900,
+            "row": 215,
+            "score": 1.0
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 2.2184
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.022,
+        "thermal_delta_c": 2.4,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.91,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.89,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      }
+    },
+    {
+      "source_file": "/codebase/repos/wreckhunter2000-1/outputs/e2e_forge_holloway_20260525T152535Z/Holloway/waterfall_ch5.png",
+      "tile_id": "waterfall_ch5@Holloway",
+      "coordinates": {
+        "lat": 42.331,
+        "lon": -83.048
+      },
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 1818,
+            "row": 434,
+            "score": 1.0
+          },
+          {
+            "col": 1667,
+            "row": 479,
+            "score": 1.0
+          },
+          {
+            "col": 1668,
+            "row": 479,
+            "score": 1.0
+          },
+          {
+            "col": 1750,
+            "row": 479,
+            "score": 1.0
+          },
+          {
+            "col": 1751,
+            "row": 479,
+            "score": 1.0
+          },
+          {
+            "col": 1778,
+            "row": 480,
+            "score": 1.0
+          },
+          {
+            "col": 1779,
+            "row": 480,
+            "score": 1.0
+          },
+          {
+            "col": 1780,
+            "row": 480,
+            "score": 1.0
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 2.2258
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.057,
+        "thermal_delta_c": 1.97,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.91,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.89,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      }
+    }
+  ]
+}

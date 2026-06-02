@@ -12,9 +12,39 @@ path = "src/lib.rs"
 name = "cesarops-inference"
 path = "src/main.rs"
 
+[[bin]]
+name = "shader_lab"
+path = "src/bin/shader_lab.rs"
+
+[[bin]]
+name = "validate_dequant"
+path = "src/bin/validate_dequant.rs"
+
+[[bin]]
+name = "probe_moe_layout"
+path = "src/bin/probe_moe_layout.rs"
+
+[[bin]]
+name = "run_gemma4"
+path = "src/bin/run_gemma4.rs"
+
+[[bin]]
+name = "gpu_test"
+path = "src/bin/gpu_test.rs"
+
+[[bin]]
+name = "production-satellite-downloader"
+path = "src/bin/production_satellite_downloader.rs"
+
+[[bin]]
+name = "verify_expert_layout"
+path = "src/bin/verify_expert_layout.rs"
+
 [dependencies]
 # GPU compute
 wgpu = "24"
+ash = "0.38"
+pollster = "0.4"
 
 # Numeric types
 half = { version = "2", features = ["bytemuck"] }
@@ -38,6 +68,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Error handling
 thiserror = "1"
 anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["cookies", "rustls-tls"] }
 
 # System calls (NUMA pinning, mlock)
 libc = "0.2"

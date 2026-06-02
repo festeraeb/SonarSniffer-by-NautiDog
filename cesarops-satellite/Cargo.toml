@@ -1,0 +1,56 @@
+[package]
+name = "cesarops-satellite"
+version = "0.1.0"
+edition = "2021"
+description = "Unified satellite pipeline – wreck hunting & search/rescue (water + land)"
+
+[[bin]]
+name = "sat-run"
+path = "src/bin/sat_run.rs"
+
+[lib]
+name = "cesarops_satellite"
+path = "src/lib.rs"
+
+[dependencies]
+# async runtime
+tokio          = { version = "1",    features = ["full"] }
+# HTTP (STAC + NASA CMR/EDL)
+reqwest        = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
+# serialization
+serde          = { version = "1",    features = ["derive"] }
+serde_json     = "1"
+# numeric / signal
+ndarray        = "0.16"
+rustfft        = "6.2"
+# parallelism
+rayon          = "1"
+# date/time
+chrono         = { version = "0.4",  features = ["serde"] }
+# error handling
+anyhow         = "1"
+thiserror      = "1"
+# CLI
+clap           = { version = "4",    features = ["derive"] }
+# logging
+tracing        = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+image          = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
+base64         = "0.22"
+walkdir        = "2.5"
+# Pure-Rust GeoTIFF/COG decoding for the windowed chip reader (default build, no GDAL)
+tiff           = "0.9"
+
+# Local full-precision curvelet scoring crate
+nauticuvs = { path = "../nauticuvs", package = "nauticuvs-full" }
+
+[features]
+# Enable GDAL-backed COG chip reading (requires system libgdal)
+gdal = ["dep:gdal"]
+
+[dependencies.gdal]
+version   = "0.17"
+optional  = true
+
+[dev-dependencies]
+approx = "0.5"

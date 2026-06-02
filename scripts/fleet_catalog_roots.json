@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "catalog_out": "var/fleet-catalog",
+  "preferred_canonical_host": "t440",
+  "nodes": {
+    "t440": {
+      "ssh": "t440",
+      "remote_repo": "/codebase/repos/wreckhunter2000-1",
+      "path_map": {
+        "/mnt/t440/data/laptopdump": "/data/laptopdump",
+        "/mnt/t440/codebase": "/codebase",
+        "/data/codebase/repos/wreckhunter2000-1": "/codebase/repos/wreckhunter2000-1"
+      },
+      "roots": [
+        "/codebase/repos/wreckhunter2000-1",
+        "/data/laptopdump",
+        "/data/codebase"
+      ]
+    },
+    "cesarops2": {
+      "ssh": null,
+      "roots": [
+        "/data/codebase/repos/wreckhunter2000-1",
+        "/mnt/t440/codebase/repos/wreckhunter2000-1",
+        "/home/cesarops/src"
+      ]
+    },
+    "nautik9": {
+      "ssh": "nautik9",
+      "roots": [
+        "/codebase/repos/wreckhunter2000-1"
+      ]
+    }
+  },
+  "remote_sensing": {
+    "priority_path_globs": [
+      "**/data/**",
+      "**/cache/**",
+      "**/census_raw/**",
+      "**/downloads/**",
+      "**/geotiff*",
+      "**/sentinel*",
+      "**/landsat*",
+      "**/sar*",
+      "**/outputs/**",
+      "**/tiles/**",
+      "**/wreckhunter*/data/**"
+    ],
+    "extensions": [
+      ".tif", ".tiff", ".gtiff", ".vrt", ".jp2", ".j2k",
+      ".nc", ".nc4", ".hdf", ".hdf5", ".h5",
+      ".bag", ".mbag",
+      ".shp", ".shx", ".dbf", ".prj", ".cpg",
+      ".geojson", ".json", ".kml", ".kmz", ".gpx", ".gpkg",
+      ".aux.xml", ".tfw", ".wld", ".hdr", ".img",
+      ".las", ".laz"
+    ],
+    "sidecar_extensions": [".aux.xml", ".tfw", ".wld", ".prj", ".xml", ".md", ".txt", ".yaml", ".yml"],
+    "max_text_examine_bytes": 65536,
+    "max_rs_raster_header_bytes": 524288,
+    "max_sidecar_bytes": 262144
+  },
+  "text_code": {
+    "extensions": [
+      ".py", ".rs", ".sh", ".bash", ".toml", ".yaml", ".yml", ".json", ".md", ".txt",
+      ".js", ".ts", ".sql", ".service", ".nomad", ".hcl", ".cpp", ".c", ".h"
+    ],
+    "default_snippet_bytes": 8192
+  },
+  "skip_dir_names": [
+    ".git", "node_modules", ".venv", "venv", "__pycache__", ".cache",
+    "target", ".cargo-docker", "target/debug", "target/release"
+  ],
+  "hash_max_bytes": 52428800,
+  "rs_deep_workers": [
+    {
+      "id": "c2-p106-gdal",
+      "host": "local",
+      "parallel": 2,
+      "cuda_device": "0",
+      "role": "p106",
+      "note": "P106 — GDAL + sidecars (not llama :5201)"
+    },
+    {
+      "id": "c2-cpu-pool",
+      "host": "local",
+      "parallel": 8,
+      "role": "cpu",
+      "note": "cesarops2 CPU parallel deep scan"
+    },
+    {
+      "id": "t440-cpu-pool",
+      "host": "ssh",
+      "ssh": "t440",
+      "remote_repo": "/codebase/repos/wreckhunter2000-1",
+      "parallel": 8,
+      "role": "cpu",
+      "note": "T440 — scan paths on NFS / laptopdump"
+    }
+  ]
+}

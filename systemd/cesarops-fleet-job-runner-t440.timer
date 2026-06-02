@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll T440 fleet job queue on NFS (cesarops2 recovery)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30s
+Unit=cesarops-fleet-job-runner-t440.service
+
+[Install]
+WantedBy=timers.target

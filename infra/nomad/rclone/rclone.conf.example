@@ -1,0 +1,26 @@
+# Copy to: /home/cesarops/.config/rclone/rclone.conf
+#   mkdir -p ~/.config/rclone
+#   cp infra/nomad/rclone/rclone.conf.example ~/.config/rclone/rclone.conf
+#   chmod 600 ~/.config/rclone/rclone.conf
+#
+# Validate: rclone listremotes
+#           rclone lsd cesarops-backup:
+#
+# Fatal "found key without value" = broken line (e.g. "type = " with no value).
+# Every key must be: key = value
+
+# --- Staging (LAN local path on T440) — works without cloud credentials ---
+[cesarops-backup]
+type = alias
+remote = /codebase/backups/cesarops-state
+
+# --- Optional: S3 (uncomment and fill; remove or comment alias block above) ---
+# [cesarops-backup]
+# type = s3
+# provider = AWS
+# env_auth = false
+# access_key_id = YOUR_KEY
+# secret_access_key = YOUR_SECRET
+# region = us-east-1
+# endpoint =
+# acl = private

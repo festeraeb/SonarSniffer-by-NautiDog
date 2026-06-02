@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>API Docs — CESAROPS Forge</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',sans-serif; background:#0d0d1a; color:#d8d8e8; min-height:100vh; }
+    header {
+      background:#111126; border-bottom:2px solid #1a2a5e;
+      padding:0.6rem 1.2rem; display:flex; justify-content:space-between; align-items:center;
+      position:sticky; top:0; z-index:100;
+    }
+    header h1 { color:#00e5ff; font-size:1.1rem; letter-spacing:1px; }
+    .nav { display:flex; gap:8px; align-items:center; }
+    .nav a { color:#4fc3f7; font-size:0.82rem; text-decoration:none; padding:3px 9px; border:1px solid #1a3a5e; border-radius:4px; }
+    .nav a:hover { background:#1a3a5e; }
+
+    .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+    .page-title { font-size:1.3rem; color:#88bbdd; margin-bottom:4px; }
+    .page-sub { font-size:0.78rem; color:#446; margin-bottom:20px; }
+
+    .group-label { font-size:0.7rem; color:#446; text-transform:uppercase; letter-spacing:.5px; font-weight:700; margin:20px 0 8px; border-bottom:1px solid #1a1a30; padding-bottom:4px; }
+
+    .ep-card { background:#111126; border:1px solid #1a1a38; border-radius:8px; padding:10px 14px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; }
+    .ep-card:hover { border-color:#2a2a50; }
+    .method { display:inline-block; font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:3px; min-width:48px; text-align:center; margin-top:1px; }
+    .m-GET  { background:#0a2a1a; color:#4caf50; border:1px solid #1a4a2a; }
+    .m-POST { background:#1a1a0a; color:#ffcc00; border:1px solid #3a3a00; }
+    .m-WS   { background:#0a1a3a; color:#4fc3f7; border:1px solid #1a2a5e; }
+    .ep-right { flex:1; }
+    .ep-path { font-family:ui-monospace,monospace; font-size:0.88rem; color:#99ccff; font-weight:600; }
+    .ep-desc { font-size:0.78rem; color:#778899; margin-top:2px; line-height:1.4; }
+    .ep-tags { margin-top:4px; display:flex; gap:4px; flex-wrap:wrap; }
+    .ep-tag { font-size:0.6rem; padding:1px 5px; border-radius:3px; background:#1a1a2a; border:1px solid #2a2a40; color:#556677; }
+    .ep-example { margin-top:6px; font-family:ui-monospace,monospace; font-size:0.72rem; background:#090914; padding:5px 8px; border-radius:4px; color:#5577aa; border-left:2px solid #1a1a38; white-space:pre-wrap; word-break:break-word; }
+
+    .try-btn { font-size:0.65rem; padding:2px 8px; border-radius:3px; background:#0a1a3a; border:1px solid #1a2a5e; color:#4fc3f7; cursor:pointer; margin-top:5px; }
+    .try-btn:hover { background:#1a2a4a; }
+    .try-result { margin-top:6px; font-family:ui-monospace,monospace; font-size:0.68rem; background:#060610; padding:5px 8px; border-radius:4px; color:#88bbdd; border:1px solid #1a1a28; white-space:pre-wrap; max-height:200px; overflow:auto; display:none; }
+
+    .search-row { margin-bottom:16px; display:flex; gap:8px; }
+    .search-row input { flex:1; background:#0c0c1e; color:#d0d0e0; border:1px solid #1a1a30; border-radius:4px; padding:7px 10px; font-size:0.82rem; }
+    .search-row input:focus { outline:none; border-color:#2244aa; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>📖 API DOCS</h1>
+  <div class="nav">
+    <a href="/">Forge</a>
+    <a href="/dash">Dash</a>
+    <a href="/mcp-ui">MCP</a>
+    <a href="/cluster">Cluster</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="page-title">CESAROPS Forge v2 — API Reference</div>
+  <div class="page-sub">Routes available on all interfaces below. Copy as JSON for IDE import.</div>
+
+  <!-- NETWORK ACCESS -->
+  <div style="background:#090914;border:1px solid #1a2a50;border-radius:8px;padding:12px;margin-bottom:16px;">
+    <div style="font-size:0.72rem;color:#446;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px;">NETWORK ACCESS — BASE URLS</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;" id="base-url-pills">
+      <span class="base-pill" data-url="http://localhost:9100">localhost:9100</span>
+      <span class="base-pill" data-url="http://10.0.0.61:9100">LAN eno1 · 10.0.0.61:9100</span>
+      <span class="base-pill" data-url="http://10.0.0.62:9100">LAN eno2 · 10.0.0.62:9100</span>
+      <span class="base-pill" data-url="http://100.72.182.77:9100">Tailscale · 100.72.182.77:9100</span>
+      <span class="base-pill base-dim" data-url="">Cloudflare tunnel — configure tunnel_url in cluster_config.toml</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="copyIdeJson()" style="padding:4px 12px;border-radius:4px;background:#0a1a3a;border:1px solid #2a4a88;color:#4fc3f7;cursor:pointer;font-size:0.74rem;">📋 Copy as JSON (IDE import)</button>
+      <button onclick="copyOpenApi()" style="padding:4px 12px;border-radius:4px;background:#0a1a0a;border:1px solid #1a4a1a;color:#4caf50;cursor:pointer;font-size:0.74rem;">📋 Copy OpenAPI paths</button>
+      <span id="copy-ok" style="font-size:0.7rem;color:#4caf50;display:none;">✓ Copied!</span>
+    </div>
+  </div>
+
+  <style>
+    .base-pill { font-size:0.72rem; padding:3px 10px; border-radius:10px; background:#0a1a3a; border:1px solid #1a3a5e; color:#4fc3f7; cursor:pointer; }
+    .base-pill:hover { background:#1a2a4a; }
+    .base-pill.active { background:#1a3a6a; border-color:#4fc3f7; }
+    .base-pill.base-dim { color:#334; border-color:#1a1a28; cursor:default; background:#090910; }
+  </style>
+
+  <div class="search-row">
+    <input id="search" placeholder="Filter endpoints…" oninput="filterEps(this.value)">
+  </div>
+
+  <div id="ep-list"></div>
+</div>
+
+<script>
+'use strict';
+
+const ENDPOINTS = [
+  // ── CORE ──
+  {g:'Core', m:'GET',  p:'/',                   d:'Main Forge chat UI'},
+  {g:'Core', m:'GET',  p:'/dash',               d:'GPU + fleet dashboard'},
+  {g:'Core', m:'GET',  p:'/cluster',            d:'Cluster routing panel'},
+  {g:'Core', m:'GET',  p:'/ide',                d:'Forge IDE (code editor)'},
+  {g:'Core', m:'GET',  p:'/mcp-ui',             d:'MCP stack status page'},
+  {g:'Core', m:'GET',  p:'/api-docs',           d:'This API docs page'},
+  {g:'Core', m:'GET',  p:'/openapi.json',       d:'OpenAPI specification (machine-readable)'},
+  // ── MESSAGING ──
+  {g:'Messaging', m:'POST', p:'/send',          d:'Send message to lane. Body: {message, lane?, steer?}',
+    ex:'{"message":"Hello forge","lane":"lane-a"}'},
+  {g:'Messaging', m:'POST', p:'/steer',         d:'Steer running task (mid-flight instruction). Body: {message}'},
+  {g:'Messaging', m:'POST', p:'/interrupt',     d:'Interrupt current running task'},
+  {g:'Messaging', m:'POST', p:'/clear',         d:'Clear all lane history'},
+  {g:'Messaging', m:'POST', p:'/clear/lane',    d:'Clear specific lane history. Body: {lane}'},
+  // ── LANES ──
+  {g:'Lanes', m:'GET',  p:'/lanes',             d:'List all lanes with status and routing info'},
+  {g:'Lanes', m:'GET',  p:'/lanes/activity',    d:'Recent lane activity (last N events)'},
+  {g:'Lanes', m:'GET',  p:'/lanes/{id}/conversation', d:'Full conversation history for a lane'},
+  {g:'Lanes', m:'POST', p:'/lanes/{id}/role',   d:'Set lane role. Body: {role}'},
+  // ── STREAMS ──
+  {g:'Streams', m:'GET', p:'/streams',          d:'List available event streams'},
+  {g:'Streams', m:'WS',  p:'/streams/{name}',   d:'WebSocket stream (activity, tokens, tool, progress, heartbeat)'},
+  {g:'Streams', m:'GET', p:'/monitor',          d:'SSE monitor endpoint'},
+  // ── CLUSTER ──
+  {g:'Cluster', m:'GET',  p:'/cluster/routing', d:'Get routing state, all agents, presets'},
+  {g:'Cluster', m:'POST', p:'/cluster/routing', d:'Save routing state. Body: {chat_agent?, coder_endpoint?, reviewer_endpoint?, thinker_endpoint?, corrector_endpoint?, draft_endpoint?}',
+    ex:'{"chat_agent":"gemma","coder_endpoint":"http://127.0.0.1:5001"}'},
+  {g:'Cluster', m:'POST', p:'/cluster/routing/preset/{id}', d:'Apply routing preset by ID'},
+  {g:'Cluster', m:'GET',  p:'/cluster/discover', d:'Scan LAN for LLM endpoints; returns discovered nodes'},
+  {g:'Cluster', m:'GET',  p:'/cluster/orchestration', d:'Get orchestration config (tools_backend, n8n URLs, pamp_shadow, n8n_reachable)'},
+  {g:'Cluster', m:'POST', p:'/cluster/orchestration', d:'Save orchestration config. Body: {tools_backend?, pamp_shadow?, ...}',
+    ex:'{"tools_backend":"n8n","pamp_shadow":true}'},
+  // ── FORGE ──
+  {g:'Forge', m:'GET', p:'/forge/status',       d:'Forge health: send_busy, memory, watchdog, lanes'},
+  {g:'Forge', m:'GET', p:'/forge/tooling',      d:'Forge tool inventory: forge_tools[], delegatable_tools[], mcp_tools[], telemetry'},
+  {g:'Forge', m:'GET', p:'/forge/mcp-stack',    d:'MCP service status: crawl4ai, mcp_worker, openmemory, playwright, qdrant, searxng, context7'},
+  // ── HEALTH & GPU ──
+  {g:'Health', m:'GET', p:'/health',            d:'GPU health from nvidia-smi: gpus[{name,temp,util,vram,power,processes}]'},
+  // ── IDE ──
+  {g:'IDE', m:'GET',  p:'/ide/llm-endpoints',  d:'List LLM workers available for IDE chat dropdown'},
+  {g:'IDE', m:'GET',  p:'/ide/file',           d:'Read a file. Query: ?path=<abs-path>'},
+  {g:'IDE', m:'POST', p:'/ide/file',           d:'Write a file. Body: {path, content}'},
+  {g:'IDE', m:'GET',  p:'/ide/tree',           d:'File tree for a directory. Query: ?root=<path>'},
+  {g:'IDE', m:'POST', p:'/ide/exec',           d:'Execute shell command (sandboxed). Body: {command}'},
+  {g:'IDE', m:'POST', p:'/ide/chat/stream',    d:'Streaming LLM chat from IDE. Body: {messages[], endpoint}'},
+  // ── ASSETS ──
+  {g:'Assets', m:'GET', p:'/assets/forge-hud.css', d:'GPU HUD stylesheet'},
+  {g:'Assets', m:'GET', p:'/assets/forge-hud.js',  d:'GPU HUD widget script (auto-injects overlay)'},
+  // ── WEBHOOKS ──
+  {g:'Webhooks', m:'POST', p:'/webhook/mission',    d:'Ingest mission data from satellite / field ops'},
+  {g:'Webhooks', m:'POST', p:'/webhook/satellite',  d:'Ingest satellite event'},
+  {g:'Webhooks', m:'GET',  p:'/webhook/missions',   d:'List all ingested missions'},
+  {g:'Webhooks', m:'GET',  p:'/webhook/missions/{id}', d:'Get specific mission by ID'},
+  // ── NETDATA ──
+  {g:'Netdata', m:'GET', p:'/netdata/status',       d:'Check Netdata availability'},
+  {g:'Netdata', m:'GET', p:'/netdata/embed/{path}', d:'Proxy Netdata dashboard embed'},
+  // ── BENCH ──
+  {g:'Bench', m:'GET', p:'/dash/bench',             d:'Benchmark results JSON'},
+  // ── Cloudflare / Workers routes (future) ──
+  {g:'Cloudflare', m:'GET',  p:'/ (tunnel)',              d:'Forge UI via Cloudflare tunnel. Configure: cloudflare tunnel --url http://localhost:9100'},
+  {g:'Cloudflare', m:'GET',  p:'/send (tunnel)',          d:'Send message via tunnel. Same body as /send. Set tunnel_url in cluster_config.toml.'},
+  {g:'Cloudflare', m:'GET',  p:'/health (tunnel)',        d:'GPU health check via Cloudflare tunnel — useful for external monitoring.'},
+  {g:'Cloudflare', m:'NOTE', p:'Setup',                   d:'Run: cloudflared tunnel --url http://localhost:9100 --name cesarops-forge — then all routes above are available at your tunnel URL.'},
+];
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderEndpoints(eps) {
+  const groups = {};
+  eps.forEach(e => { if (!groups[e.g]) groups[e.g]=[]; groups[e.g].push(e); });
+  let html = '';
+  for (const [g, list] of Object.entries(groups)) {
+    html += `<div class="group-label">${esc(g)}</div>`;
+    list.forEach((e, i) => {
+      const id = `ep-${g.replace(/\s+/g,'-')}-${i}`;
+      html += `<div class="ep-card" data-search="${esc((e.p+' '+e.d+' '+e.m).toLowerCase())}">
+        <div><span class="method m-${e.m}">${e.m}</span></div>
+        <div class="ep-right">
+          <div class="ep-path">${esc(e.p)}</div>
+          <div class="ep-desc">${esc(e.d)}</div>
+          ${e.ex ? `<div class="ep-example">${esc(e.ex)}</div>` : ''}
+          ${e.m==='GET' ? `<button class="try-btn" onclick="tryEp('${esc(e.p)}','${id}')">▶ Try it</button><div class="try-result" id="${id}"></div>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('ep-list').innerHTML = html;
+}
+
+async function tryEp(path, id) {
+  const el = document.getElementById(id); if (!el) return;
+  el.style.display='block'; el.textContent = '⏳ fetching…';
+  try {
+    const r = await fetch(path);
+    const ct = r.headers.get('content-type')||'';
+    let text;
+    if (ct.includes('json')) {
+      const d = await r.json();
+      text = JSON.stringify(d, null, 2).slice(0, 4000);
+    } else {
+      text = (await r.text()).slice(0, 800) + ' [truncated]';
+    }
+    el.textContent = `HTTP ${r.status}\n${text}`;
+  } catch(e) { el.textContent = '✗ '+e.message; }
+}
+
+function filterEps(q) {
+  const qL = q.toLowerCase();
+  const cards = document.querySelectorAll('.ep-card');
+  const labels = document.querySelectorAll('.group-label');
+  // simple show/hide
+  const vis = new Set();
+  cards.forEach(c => {
+    const match = !qL || c.dataset.search.includes(qL);
+    c.style.display = match ? '' : 'none';
+    if (match) vis.add(c.closest('.ep-card')?.previousElementSibling?.textContent);
+  });
+  labels.forEach(l => { l.style.display = (!qL || vis.has(l.textContent)) ? '' : 'none'; });
+}
+
+let activeBase = 'http://localhost:9100';
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#base-url-pills .base-pill[data-url]').forEach(el => {
+    if (el.dataset.url) el.addEventListener('click', () => {
+      activeBase = el.dataset.url;
+      document.querySelectorAll('#base-url-pills .base-pill').forEach(p=>p.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+  const first = document.querySelector('#base-url-pills .base-pill[data-url]');
+  if (first) first.classList.add('active');
+});
+
+function copyIdeJson() {
+  const routes = allEps.filter(e=>e.m!=='NOTE').map(e=>({
+    method: e.m,
+    path: e.p,
+    url: activeBase + e.p.replace(/\{.*?\}/g, ':param'),
+    description: e.d,
+    group: e.g,
+  }));
+  const json = JSON.stringify({base: activeBase, routes}, null, 2);
+  doClipboard(json);
+}
+
+function copyOpenApi() {
+  const paths = {};
+  allEps.filter(e=>e.m!=='NOTE').forEach(e=>{
+    const p = e.p.replace(/\{(.*?)\}/g,'{$1}');
+    if (!paths[p]) paths[p] = {};
+    paths[p][e.m.toLowerCase()] = { summary: e.d, tags:[e.g] };
+  });
+  const spec = { openapi:'3.0.0', info:{title:'CESAROPS Forge v2',version:'2.0.0'}, servers:[{url:activeBase}], paths };
+  doClipboard(JSON.stringify(spec,null,2));
+}
+
+function doClipboard(text) {
+  navigator.clipboard.writeText(text).then(()=>flashCopy()).catch(()=>{
+    const ta = document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); flashCopy();
+  });
+}
+
+function flashCopy() {
+  const el = document.getElementById('copy-ok');
+  if(el){el.style.display='inline';setTimeout(()=>el.style.display='none',2000);}
+}
+
+renderEndpoints(allEps);
+</script>
+</body>
+</html>

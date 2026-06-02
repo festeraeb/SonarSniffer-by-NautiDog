@@ -1,0 +1,267 @@
+{
+  "generated_at": "2026-06-02T04:59:50Z",
+  "pipelines": [
+{
+  "binary": "sat-run",
+  "description": "Optical/SAR satellite wreck + search-and-rescue detection (water + land)",
+  "inputs": {
+    "dry_run": "Run wiring without network/downloads",
+    "knobs": "JSON object overlaying any subset of the knobs above",
+    "spec": "Path to a MissionSpec JSON (mission_id, bbox [lat_min,lon_min,lat_max,lon_max], days_back, stages, knobs, paths, gt_wreck_names)",
+    "stages": "Optional subset/ordering of the stage names above"
+  },
+  "knobs": {
+    "chip_bg_inner_m": 350.0,
+    "chip_bg_outer_m": 1200.0,
+    "chip_scene_radius_m": 1500.0,
+    "chip_signal_m": 150.0,
+    "concepts": "all",
+    "curvelet_energy_threshold": 2.5,
+    "curvelet_num_scales": 5,
+    "curvelet_window_px": 64,
+    "dbscan_eps": 0.5,
+    "dbscan_min_samples": 5,
+    "dry_run_download": false,
+    "gpu_windows": 2,
+    "gt_min_confidence": 0.0,
+    "hit_zscore_min": 1.5,
+    "max_cloud": 20.0,
+    "max_download_results": 25,
+    "max_scenes": 8,
+    "max_wrecks": 20,
+    "min_gt_hit_rate": 0.25,
+    "min_gt_score": 4.0,
+    "min_score": 4.0,
+    "poc_downsample_max_dim": 2000,
+    "poc_max_candidates": 25,
+    "poc_min_separation_px": 0,
+    "poc_zscore_threshold": 2.5,
+    "sensors": "sentinel2",
+    "storm_date_end": "2024-01-20",
+    "storm_date_start": "2024-01-13",
+    "temporal_chip_radius_m": 600.0,
+    "temporal_max_scenes": 12,
+    "temporal_persistence_z": 2.0,
+    "temporal_ratio_channels": [
+      "ndwi",
+      "ndvi"
+    ],
+    "tiles_per_gpu_window": 10,
+    "use_curvelet_rescore": false,
+    "water_year_priority": [],
+    "xref_nearby_radius_m": 2000.0
+  },
+  "output": {
+    "fields": [
+      "mission_id",
+      "status",
+      "runtime_seconds",
+      "stage_results",
+      "candidates[]"
+    ],
+    "format": "MissionReport JSON"
+  },
+  "pipeline": "satellite",
+  "stages": [
+    {
+      "desc": "Acquire Sentinel-2 / multi-sensor scenes for the AOI",
+      "name": "download"
+    },
+    {
+      "desc": "Score known-wreck coordinates across the optical archive",
+      "name": "target_known"
+    },
+    {
+      "desc": "Full-scene AOI anomaly discovery (Sobel/Secchi/NDTI + NMS)",
+      "name": "poc_aoi"
+    },
+    {
+      "desc": "Multi-date NDWI/NDVI persistence z-scoring",
+      "name": "temporal_stack"
+    },
+    {
+      "desc": "Validate detections against ground-truth wrecks",
+      "name": "validate_gt"
+    },
+    {
+      "desc": "Fuse signals and emit the ranked candidate report",
+      "name": "report"
+    }
+  ],
+  "version": "0.1.0"
+}
+,
+{
+  "binary": "cesarops-aeromagnetic-worker",
+  "description": "Aeromagnetic anomaly wreck detection (adaptive + dipole + curvelet, basin-aware)",
+  "inputs": {
+    "grid": "Path to row-major f32 aeromagnetic nT grid (bin)",
+    "levels": "DetectionLevels JSON overlaying any subset of the knobs above",
+    "meta": "GridMeta JSON (width, height, transform, source_tif)",
+    "pixel_size": "Metres per pixel (default 25)",
+    "wells": "Optional OGSr petroleum-well CSV (well_loader.rs). When provided, wells are loaded (Lake Erie-filtered) and cross-referenced; 47 known wrecks are always embedded (known_data.rs) and active"
+  },
+  "knobs": {
+    "apply_loran_correction": true,
+    "coarse": null,
+    "coarse_grid_m_px_threshold": 400.0,
+    "curvelet_energy_threshold": 2.0,
+    "curvelet_num_scales": 6,
+    "curvelet_patch_upscale": 1,
+    "curvelet_score_weight": 0.44999998807907104,
+    "curvelet_window_px": 128,
+    "dipole_inner_yards": 650.0,
+    "dipole_merge_radius_m": 2500.0,
+    "dipole_min_score": 0.3499999940395355,
+    "dipole_outer_yards": 1900.0,
+    "dipole_score_weight": 0.5,
+    "dipole_target_m_px": 100.0,
+    "edge_z_thresh": 0.41999998688697815,
+    "max_pixels": 350,
+    "min_dipole_manmade_score": 20.0,
+    "min_lobe_ratio": 0.2199999988079071,
+    "min_pixels": 4,
+    "require_dipolar_pull": true,
+    "top_n": 500,
+    "use_vertical_derivative": false,
+    "validation_z_thresh": 0.3499999940395355,
+    "wellhead_radius_m": 2000.0,
+    "window_yards": 750.0,
+    "wreck_radius_m": 5000.0,
+    "z_thresh": 0.3799999952316284
+  },
+  "output": {
+    "fields": [
+      "width",
+      "height",
+      "pixel_size_m",
+      "gpu_available",
+      "candidates[]"
+    ],
+    "format": "PipelineReport JSON"
+  },
+  "pipeline": "aeromagnetic",
+  "stages": [
+    {
+      "desc": "Adaptive local z-score + edge screen + connected-component candidates",
+      "name": "adaptive"
+    },
+    {
+      "desc": "WGPU dipole lobe scan (fast lobe score)",
+      "name": "dipole_gpu"
+    },
+    {
+      "desc": "CPU dipole discriminator: flip distance, gradient contrast, aspect, 0-100 man-made score",
+      "name": "dipole_cpu"
+    },
+    {
+      "desc": "Curvelet structural-energy rescore",
+      "name": "curvelet"
+    },
+    {
+      "desc": "Loran-C warp + wellhead/known-wreck cross-reference",
+      "name": "cross_reference"
+    },
+    {
+      "desc": "Lake Erie basin-aware multiplicative score adjustment",
+      "name": "basin_scoring"
+    },
+    {
+      "desc": "Raised/scrapped/geological false-positive down-rank",
+      "name": "disposition"
+    },
+    {
+      "desc": "Candidate merge/NMS within dipole_merge_radius_m",
+      "name": "merge"
+    }
+  ],
+  "version": "0.1.0"
+}
+,
+{
+  "binary": "cesarops-bag-scan",
+  "description": "NOAA BAG bathymetry wreck + redaction/unmask detection",
+  "inputs": {
+    "knobs": "JSON object overlaying any subset of the knobs above",
+    "path": "Path to a .bag file",
+    "redaction_sensitivity": "Legacy: overrides knobs.redaction_sensitivity",
+    "stages": "Comma-separated stage subset (a..g or names)",
+    "threshold": "Legacy: overrides knobs.anomaly_threshold"
+  },
+  "knobs": {
+    "anomaly_threshold": 2.5,
+    "cluster_radius_m": 100.0,
+    "enable_redaction_signatures": false,
+    "enforce_great_lakes_bbox": true,
+    "gl_lat_max": 49.0,
+    "gl_lat_min": 41.3,
+    "gl_lon_max": -76.0,
+    "gl_lon_min": -92.2,
+    "mask_erosion_px": 2,
+    "mask_uncertainty_pct": 5.0,
+    "max_aspect_ratio": 6.0,
+    "max_cells": 10000000,
+    "max_wreck_size_sq_ft": 50000.0,
+    "merge_radius_m": 200.0,
+    "min_cluster_cells": 8,
+    "min_confidence": 0.3,
+    "min_height_m": 1.8,
+    "min_long_side_ft": 36.0,
+    "min_short_side_ft": 10.0,
+    "min_wreck_size_sq_ft": 25.0,
+    "nodata": 1000000.0,
+    "redaction_sensitivity": 0.7,
+    "skip_pattern": [
+      5,
+      10,
+      15
+    ]
+  },
+  "output": {
+    "contract": "detections[].signature_type in {physical_wreck, masked_redaction_flat}",
+    "fields": [
+      "file",
+      "grid_size",
+      "epsg_code",
+      "detections[]",
+      "physical_wreck_count",
+      "masked_redaction_count"
+    ],
+    "format": "MissionReport JSON"
+  },
+  "pipeline": "bag",
+  "stages": [
+    {
+      "desc": "Read BAG elevation + uncertainty, nodata->NaN, downsample",
+      "name": "a_read"
+    },
+    {
+      "desc": "Grid->projected->WGS84 reprojection (GDAL OSR)",
+      "name": "b_geo"
+    },
+    {
+      "desc": "Seafloor background + height-above-floor anomaly clustering",
+      "name": "c_anomaly"
+    },
+    {
+      "desc": "Redaction/unmask signature suite + masked-region scan",
+      "name": "d_redaction"
+    },
+    {
+      "desc": "PCA heading/length/width + compass bearing",
+      "name": "e_orientation"
+    },
+    {
+      "desc": "Spatial dedup merge within merge_radius_m",
+      "name": "f_dedup"
+    },
+    {
+      "desc": "Emit MissionReport with physical_wreck/masked_redaction_flat detections",
+      "name": "g_report"
+    }
+  ],
+  "version": "0.1.0"
+}
+
+  ]
+}

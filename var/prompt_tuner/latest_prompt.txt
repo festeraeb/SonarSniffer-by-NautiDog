@@ -1,0 +1,36 @@
+ROLE: CODER | PHASE: VERIFY | LANE: lane-a | MODE: FAILED_REWRITE | KIND: verify
+
+Work ONLY in /codebase/repos/wreckhunter2000-1.
+- No preamble. Execute commands first.
+- No think_harder on turn 1.
+- Return evidence-backed PASS/FAIL only.
+- export PATH="/data/cargo-home/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:$PATH"
+- Use cesarops-detection port 5580 unless overridden.
+- If health/workers fail, tail /tmp/cd-start.log.
+- Use: pkill -x cesarops-detection || true
+- SELF-CHECK: every PASS row must cite command output.
+
+TASK:
+Verify cesarops-detection startup and endpoints.
+
+Run exactly:
+1) export PATH="/data/cargo-home/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:$PATH"
+2) which cargo && cargo --version
+3) cd /codebase/repos/wreckhunter2000-1 && cargo check -p cesarops-detection
+4) cd /codebase/repos/wreckhunter2000-1 && ./cesarops-detection/scripts/start.sh >/tmp/cd-start.log 2>&1 & echo $!
+5) sleep 4 && curl -sf http://127.0.0.1:5580/health
+6) curl -sf http://127.0.0.1:5580/workers
+7) pkill -x cesarops-detection || true
+8) if step 5 or 6 fails: tail -n 80 /tmp/cd-start.log
+
+Return ONLY:
+| Step | Result | PASS/FAIL |
+|------|--------|-----------|
+| 1 | ... | ... |
+| 2 | ... | ... |
+| 3 | ... | ... |
+| 4 | ... | ... |
+| 5 | ... | ... |
+| 6 | ... | ... |
+| 7 | ... | ... |
+| 8 | ... | ... |

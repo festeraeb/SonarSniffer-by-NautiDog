@@ -1,0 +1,2829 @@
+{
+  "batch_id": "batch-001",
+  "mode": "fleet_deep_llm",
+  "requested_size": 200,
+  "processed_size": 200,
+  "instruction": "For each file: summarize purpose, map to blueprint module(s), note overlap/redundancy, and rate usefulness 1-5.",
+  "workers_used": [
+    "p100-gemma"
+  ],
+  "results": [
+    {
+      "path": "backup/deploy/tools/models/ml/inference/wreck_vs_obstruction_classifier.py",
+      "purpose_summary": "Classifies objects as either wrecks or natural obstructions.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "High-value classification logic using multi-modal inputs."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/bag/atl23_extract.py",
+      "purpose_summary": "ETL pipeline for extracting altimetry data from BAG files.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Identical duplicate found in wreckhunter2000-1 directory."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/bag/bag_wreck_detector.py",
+      "purpose_summary": "Unmasks BAG (Bathymetric Acoustic Geometry) data to detect wreck signatures.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "bag_unmasker",
+      "notes": "Comprehensive multi-modal detection pipeline."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/mag_data_pipeline.py",
+      "purpose_summary": "Main ETL pipeline for magnetic data ingestion and processing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Core pipeline logic."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/mag_lake_harvester.py",
+      "purpose_summary": "ETL pipeline for harvesting lake-based data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Large scale data ingestion; high importance."
+    },
+    {
+      "path": "backup/deploy/tools/src/main.rs",
+      "purpose_summary": "Rust-based orchestration and dispatching of pipeline tasks.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Core engine for managing multi-module execution."
+    },
+    {
+      "path": "backup/src/cesarops-aeromagnetic-worker/src/main.rs",
+      "purpose_summary": "Rust worker for aeromagnetic data processing and orchestration.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Duplicate of main.rs logic; likely a worker node implementation."
+    },
+    {
+      "path": "backup/src/cesarops-inference/src/hybrid_core.rs",
+      "purpose_summary": "Core logic for hybrid LLM and glint inference.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Central inference engine."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-aeromagnetic-worker/src/main.rs",
+      "purpose_summary": "Rust worker for aeromagnetic data processing and orchestration.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Redundant with backup/src/cesarops-aeromagnetic-worker/src/main.rs."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-hybrid-engine/src/spatial_engine.rs",
+      "purpose_summary": "Core engine for spatial computation and multi-sensor fusion.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Central engine for spatial processing."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/src/cesarops/sonar_mosaic.py",
+      "purpose_summary": "Generates mosaic views of sonar data for spatial context.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "docs_config",
+      "notes": "High overlap with spectral and SAR modules; likely a visualization/config tool for sonar imagery."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/src/cesarops/sonar_visualization.py",
+      "purpose_summary": "Visualizes sonar analysis results within a geometric framework.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "sonar_analysis",
+      "notes": "Redundant with sonar_mosaic.py; provides the visual layer for sonar data."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/inspect_geometry_metadata.py",
+      "purpose_summary": "Inspects metadata related to geometric spatial constraints.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "docs_config",
+      "notes": "Utility script for verifying geometric metadata integrity."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/llm_context_injector.py",
+      "purpose_summary": "Injects geometric and spectral context into LLM prompts.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Bridges geospatial data with LLM reasoning; high cross-module dependency."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/wh2k_inference_scorer.py",
+      "purpose_summary": "ML inference scorer for wreck detection using SAR and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "High-value inference logic combining SAR and thermal signatures."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/atl23_extract.py",
+      "purpose_summary": "ETL pipeline for extracting altimetry data from BAG files.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Redundant with deploy/tools/pipelines/bag/atl23_extract.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/mag_lake_harvester.py",
+      "purpose_summary": "ETL pipeline for harvesting magnetic/lake-based geospatial data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Large scale ETL; integrates altimetry displacement with geometry."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/ogsrl_well_discriminator.py",
+      "purpose_summary": "Discriminates well locations using geometric and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Specialized discriminator for well detection."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_data_provenance.py",
+      "purpose_summary": "Tracks data provenance for the WH2K dataset.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "evaluation_testing",
+      "notes": "Ensures data lineage across spectral and thermal modules."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_extract_real_tiles.py",
+      "purpose_summary": "Extracts real-world tiles for training/inference.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Core tile extraction logic for multi-modal inputs."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/nasa_fusion_test.py",
+      "purpose_summary": "Tests fusion of NASA satellite data with altimetry.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "evaluation_testing",
+      "notes": "Validates fusion of spectral and altimetry data."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/wh2k_chip_extractor.py",
+      "purpose_summary": "Extracts chips from satellite imagery for model input.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Similar to tile extractor but focused on satellite chip generation."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/wh2k_raw_ghost_zoom.py",
+      "purpose_summary": "Processes raw 'ghost' zoom imagery from satellite sources.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Handles high-resolution/zoom-specific spectral data."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/export_pipeline_kmz.py",
+      "purpose_summary": "Exports processed data to KMZ format for GIS viewing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "bag_unmasker",
+      "notes": "Output utility for spatial visualization."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/steering_test_qwen.sh",
+      "purpose_summary": "Shell script for steering LLM inference tests.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Automation script for LLM testing."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/sentinel_hunt_src/src/stac.rs",
+      "purpose_summary": "Rust implementation for STAC (SpatioTemporal Asset Catalog) ingestion.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "High-performance ingestion of satellite metadata."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/swot_ssh_extractor.py",
+      "purpose_summary": "Extraction of SSH (Sea Surface Height) data from SWOT satellite products.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Core data ingestion component; overlaps with cesarops-core version."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/tile_geometry.py",
+      "purpose_summary": "Handles ETL processes for ingesting and tiling geospatial geometry data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Critical foundational data ingestion for the geometry context."
+    },
+    {
+      "path": "cesarops-inference/src/optical_mass.rs",
+      "purpose_summary": "High-performance Rust implementation for optical mass inference and spatial analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "spectral_plume_clarity",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Strongest integration across all blueprint modules via Rust."
+    },
+    {
+      "path": "scripts/integrate/run_manifest_rust_dispatch.py",
+      "purpose_summary": "Python dispatcher for Rust-based manifest processing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Orchestrates high-performance Rust tasks via Python."
+    },
+    {
+      "path": "wrecks_api/app.py",
+      "purpose_summary": "Main API entry point for wreck detection services.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 5,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Core service orchestration; high importance."
+    },
+    {
+      "path": "backup/deploy/tools/aeromagnetic_worker/src/main.rs",
+      "purpose_summary": "Orchestrates aeromagnetic data processing tasks.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Strongly integrated with multi-sensor modules."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops-core-github/andaste_geometry_test.py",
+      "purpose_summary": "Tests geometric constraints and thermal/SAR alignment.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Validation tool for geometric/thermal alignment."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops-core-github/scripts/inventory_all_files.py",
+      "purpose_summary": "Utility script for file system inventory and asset tracking.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "mcp_tooling",
+      "notes": "Operational tooling; redundant with evaluation_testing script."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops-core-github/swot_ssh_extractor.py",
+      "purpose_summary": "Extraction of SSH data from SWOT satellite products.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Duplicate logic of wreckhunter2000-1/swot_ssh_extractor.py."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops-slicer/src/optical_structural_worker.rs",
+      "purpose_summary": "Worker process for slicing optical structural data for spatial analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Specialized worker for structural feature extraction."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/cesarops_integrated.py",
+      "purpose_summary": "Integrated runtime environment for managing core operations and SAR glint analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "notes": "High-level integration script; contains non-blueprint thermal sync."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/drifter_training_pipeline.py",
+      "purpose_summary": "Training pipeline for drifter-based drift analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Analyzes drift patterns using spectral and SAR data."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/garmin_rsd_integration.py",
+      "purpose_summary": "Integrates Garmin RSD data into the core system.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "Integration layer for Garmin sensor data."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/real_drifter_collector.py",
+      "purpose_summary": "Analyzes real-world drifter data for drift patterns.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "High utility for drift modeling; overlaps with SAR and thermal modules."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/rosa_case/rosa_multimodal_demo.py",
+      "purpose_summary": "Demonstration of multimodal drift analysis including spectral and SAR data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Good demonstration of multi-module interaction."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/src/cesarops/bathymetry_mapper.py",
+      "purpose_summary": "Testing and evaluation of bathymetry mapping algorithms.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Critical for validating depth/geometry data."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/src/cesarops/sonar_anomaly_detector.py",
+      "purpose_summary": "Evaluates sonar data to detect anomalies in the seabed.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Core detection logic; high overlap across multiple sensor modules."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/src/cesarops/sonar_stream_buffer.py",
+      "purpose_summary": "Manages streaming sonar data buffers for real-time analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "sonar_analysis",
+      "notes": "Critical infrastructure for real-time sonar processing."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/src/cesarops/sonar_visualization.py",
+      "purpose_summary": "Analysis and visualization of sonar data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "sonar_analysis",
+      "notes": "High value for visual verification of targets."
+    },
+    {
+      "path": "backup/deploy/tools/db_ingestor.py",
+      "purpose_summary": "ETL pipeline for ingesting geometric and SAR data into the database.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Critical for data pipeline; includes thermal sync."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/inference/deep_vision_master_protocol.py",
+      "purpose_summary": "Master protocol for serving deep vision inference models.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Orchestrates vision-based inference across multiple spectral domains."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/inference/deep_water_blind_discovery.py",
+      "purpose_summary": "Inference model for deep water wreck discovery.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "Core ML inference logic for deep water detection."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/inference/phase5_debloom_search.py",
+      "purpose_summary": "Inference model for deblurring and searching phase 5 targets.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Specialized search model."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/training/train_lake_erie_offaxis.py",
+      "purpose_summary": "Training script for spectral plume clarity and geometry.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Core training logic for spectral module."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/training/wh2k_basin_finetune.py",
+      "purpose_summary": "Fine-tuning ML models for the WH2K basin.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Training pipeline for specific geographic basins."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/training/wh2k_huron_train_from_scratch.py",
+      "purpose_summary": "Initial training of models for the Huron region.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Foundational training script for regional models."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/training/wh2k_resnet_training.py",
+      "purpose_summary": "ResNet-based training for feature extraction.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Standard CNN training for feature recognition."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/erie_known_wrecks_db.py",
+      "purpose_summary": "Database management for known wrecks in the Erie region.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "web_ui_api",
+      "notes": "Data persistence layer for known wreck locations."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/erie_scanner_pipeline.py",
+      "purpose_summary": "Data ingestion pipeline for Erie scanner data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Ingestion pipeline for regional scanning."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/erie_wellhead_discriminator.py",
+      "purpose_summary": "ETL process for discriminating wellhead features in magnetic data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Integrates magnetic geometry with SAR glint signatures."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/flight_line_physics_v2.py",
+      "purpose_summary": "Updated physics calculations for flight line unmasking.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "bag_unmasker",
+      "notes": "Primary version for physics calculations."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_extract_real_tiles.py",
+      "purpose_summary": "ETL process for extracting real tiles from datasets.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Core data preparation step."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_harvester.py",
+      "purpose_summary": "Data harvesting tool for WH2K datasets.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Automated data collection for training/analysis."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_ncei_fetch.py",
+      "purpose_summary": "Fetches data from NCEI for the WH2K region.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "web_ui_api",
+      "notes": "External data retrieval service."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_wreck_anchor_verifier.py",
+      "purpose_summary": "ETL pipeline to verify wreck anchors using spectral and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Critical verification step combining spectral and thermal signatures."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/historical_drift.py",
+      "purpose_summary": "Analyzes historical satellite-derived drift patterns.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Long-term drift trend analysis."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/nasa_fusion_test.py",
+      "purpose_summary": "Testing fusion of NASA satellite data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Critical for multi-sensor validation."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/wh2k_chip_extractor.py",
+      "purpose_summary": "ETL for extracting image chips from satellite data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Standard preprocessing for deep learning."
+    },
+    {
+      "path": "backup/deploy/tools/sovereign-cloud/src/api.rs",
+      "purpose_summary": "Cloud API for serving inference results and managing spatial queries.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Service layer for cloud-based inference."
+    },
+    {
+      "path": "backup/deploy/tools/sovereign-cloud/src/main.rs",
+      "purpose_summary": "Web API for serving geometry and glint data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "web_ui_api",
+      "notes": "Backend service entry point."
+    },
+    {
+      "path": "backup/deploy/tools/tile_geometry.py",
+      "purpose_summary": "Handles geometric calculations for satellite tiles.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Essential for spatial tiling and geometry context."
+    },
+    {
+      "path": "backup/deploy/tools/weather_service.py",
+      "purpose_summary": "Runtime service for managing weather-related environmental data.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "notes": "Redundant with src/weather_service.py."
+    },
+    {
+      "path": "backup/src/cesarops-inference/src/geo_filter.rs",
+      "purpose_summary": "Rust-based geometric unmasking and spatial filtering for inference data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "bag_unmasker",
+      "notes": "High-performance spatial filtering; note 'thermal_sync' is a non-blueprint alias for thermal_wake."
+    },
+    {
+      "path": "backup/src/cesarops-inference/src/gpu_context.rs",
+      "purpose_summary": "Manages GPU orchestration for glint inference.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Hardware acceleration management."
+    },
+    {
+      "path": "backup/src/cesarops-inference/src/magnetic_eraser.rs",
+      "purpose_summary": "Removes magnetic noise/artifacts from data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Signal processing utility."
+    },
+    {
+      "path": "backup/src/cesarops-mcp-steered/src/scm/drift.rs",
+      "purpose_summary": "Analyzes drift patterns using glint and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Advanced spatial drift analysis."
+    },
+    {
+      "path": "backup/src/cesarops-mcp-steered/src/tools.rs",
+      "purpose_summary": "Tooling for MCP-steered operations involving thermal and spectral data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "mcp_tooling",
+      "notes": "Provides specialized tools for multi-spectral analysis."
+    },
+    {
+      "path": "backup/src/sovereign-cloud/src/api.rs",
+      "purpose_summary": "API serving LLM inference for wreck detection.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "spectral_plume_clarity",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Integrates geometric context with inference-driven detection."
+    },
+    {
+      "path": "backup/src/sovereign-cloud/src/research_engine.rs",
+      "purpose_summary": "Core research engine for processing geospatial data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "High-level research processing logic."
+    },
+    {
+      "path": "backup/src/weather_service.py",
+      "purpose_summary": "Runtime service for managing weather-related environmental data.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "notes": "Primary source for weather service logic."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/andaste_geometry_test.py",
+      "purpose_summary": "Python test suite for validating geometric spatial constraints.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Validation logic for geometry module."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/geo_filter.rs",
+      "purpose_summary": "Duplicate of the Rust-based geometric unmasking filter.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "bag_unmasker",
+      "notes": "Redundant file path; identical to first entry."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-mcp-steered/src/tools.rs",
+      "purpose_summary": "Tooling for MCP-steered operations involving thermal and spectral data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "mcp_tooling",
+      "notes": "Redundant with backup/src/cesarops-mcp-steered/src/tools.rs."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/drifter_training_pipeline.py",
+      "purpose_summary": "Pipeline for analyzing drifter movement and spectral plume clarity.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Integrates geometry with plume and ripple data."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/garmin_rsd_integration.py",
+      "purpose_summary": "Configuration and integration for Garmin RSD sensor data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "Likely sensor configuration for spatial data ingestion."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/real_drifter_collector.py",
+      "purpose_summary": "Live data collection for drifter-based drift analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Real-time data ingestion for spatial drift."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/simple_drifter_collector.py",
+      "purpose_summary": "Lightweight drifter data collection utility.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Simplified version of real_drifter_collector."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/src/cesarops/bathymetry_mapper.py",
+      "purpose_summary": "Evaluation of bathymetry mapping.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Duplicate of deploy/tools/cesarops_core/src/cesarops/bathymetry_mapper.py"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/src/cesarops/sonar_anomaly_detector.py",
+      "purpose_summary": "Detection of anomalies in sonar streams using spectral and ripple data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Multi-module integration for anomaly detection."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/src/cesarops/sonar_stream_buffer.py",
+      "purpose_summary": "Buffer management for sonar data streams.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "sonar_analysis",
+      "notes": "Pre-processing buffer for sonar-based geometry/plume analysis."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/deploy_and_scan.py",
+      "purpose_summary": "Orchestration script for deployment and scanning operations.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "notes": "Includes altimetry-related displacement (maps to altimetry_ssh)."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/hls_download.py",
+      "purpose_summary": "ETL script for downloading HLS data streams.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Ingestion layer for multi-spectral/thermal data."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/deep_vision_master_protocol.py",
+      "purpose_summary": "Master protocol for deep vision inference serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "High-level inference orchestration."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/phase4_6_postprocess.py",
+      "purpose_summary": "Post-processing logic for inference results.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "Refines spectral and thermal outputs."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/wreck_vs_obstruction_classifier.py",
+      "purpose_summary": "Classifier distinguishing wrecks from natural obstructions.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Uses altimetry and ripple data for classification."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/training/wh2k_basin_finetune.py",
+      "purpose_summary": "Fine-tuning pipeline for basin-specific models.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Training-specific ETL for multi-modal data."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/training/wh2k_huron_train_from_scratch.py",
+      "purpose_summary": "Training script for Huron-specific model architecture.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Training logic for geometry and ripple features."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/training/wh2k_resnet_training.py",
+      "purpose_summary": "ResNet-based training for feature extraction.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Focuses on spectral and thermal feature extraction."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/nauticuvs/src/detection.rs",
+      "purpose_summary": "Core detection logic providing API endpoints for web interfaces.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "web_ui_api",
+      "notes": "High overlap across multiple modules; central hub for detection."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/erie_known_wrecks_db.py",
+      "purpose_summary": "Database management for known wreck locations in Lake Erie.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "web_ui_api",
+      "notes": "Provides spatial reference data for glint and thermal analysis."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/erie_scanner_pipeline.py",
+      "purpose_summary": "ETL pipeline for processing magnetic scanner data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Focuses on geometry and thermal synchronization."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/erie_wellhead_discriminator.py",
+      "purpose_summary": "ETL process for discriminating wellhead features in magnetic data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Redundant with backup/deploy/tools/pipelines/mag/erie_wellhead_discriminator.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/export_huron_mag_kml.py",
+      "purpose_summary": "Configuration script for exporting magnetic data to KML format.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "Utility for spatial data visualization."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_discovery_report_v2.py",
+      "purpose_summary": "Generates automated discovery reports using LLM inference for magnetic anomaly interpretation.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "High-level reporting logic; integrates multiple sensor modalities."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_harvester.py",
+      "purpose_summary": "Data harvesting pipeline for magnetic sensor inputs.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Primary ingestion component."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_ncei_fetch.py",
+      "purpose_summary": "Fetches NCEI data for web interface integration.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "web_ui_api",
+      "notes": "External data retrieval for spatial context."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_wreck_anchor_verifier.py",
+      "purpose_summary": "ETL pipeline to verify wreck anchors using spectral and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Redundant with backup/deploy/tools/pipelines/mag/wh2k_wreck_anchor_verifier.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/historical_drift.py",
+      "purpose_summary": "Analyzes historical drift patterns using satellite data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "notes": "Integrates glint and thermal data for drift modeling."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/wh2k_synthetic_tiles_huron.py",
+      "purpose_summary": "Generates synthetic tiles for LLM inference.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Prepares geometric tiles for visual inference."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/deep_scan_spec.py",
+      "purpose_summary": "Configuration and documentation for deep scan parameters across multiple sensor modalities.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "High cross-module integration; serves as a configuration bridge."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/export_wrecks_kmz.py",
+      "purpose_summary": "Unmasking tool for exporting wreck locations to KMZ.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "bag_unmasker",
+      "notes": "Spatial export utility."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/inventory_all_files.py",
+      "purpose_summary": "Utility script for file system inventory and asset tracking.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Redundant with cesarops-core/scripts/inventory_all_files.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/mission_control_spec.py",
+      "purpose_summary": "Orchestration script for mission dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Coordinates glint and thermal workflows."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/run_whitepaper_pipeline.py",
+      "purpose_summary": "Pipeline for generating whitepaper-ready inference results.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "notes": "High module density; integrates all primary detection signals."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_h97_xeon.sh",
+      "purpose_summary": "DevOps shell script for environment setup.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "notes": "Includes altimetry module in environment setup."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/weather_service.py",
+      "purpose_summary": "Provides runtime weather data services to support environmental context for wreck hunting.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement",
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "notes": "High utility for environmental context; overlaps with geometry and SAR modules."
+    },
+    {
+      "path": "backup/wreckhunter2000/fetch_geometry_metadata.py",
+      "purpose_summary": "Retrieves geometry metadata and altimetry displacement data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "docs_config",
+      "notes": "Directly utilizes the altimetry_ssh module."
+    },
+    {
+      "path": "cesarops-inference/src/geo_filter.rs",
+      "purpose_summary": "Geometric filtering logic for unmasking data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "bag_unmasker",
+      "notes": "Rust implementation of spatial filtering."
+    },
+    {
+      "path": "cesarops-inference/src/integrate/db_ingestor.rs",
+      "purpose_summary": "Rust-based ETL for database ingestion.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "High-performance ingestion for glint/thermal data."
+    },
+    {
+      "path": "scripts/production_satellite_downloader.py",
+      "purpose_summary": "ETL pipeline for downloading production satellite imagery.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Critical data ingestion component."
+    },
+    {
+      "path": "scripts/prompt_tuner_worker.py",
+      "purpose_summary": "Worker for tuning LLM prompts in orchestration.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Tuning prompts based on spectral and glint features."
+    },
+    {
+      "path": "scripts/wh2k_harvester.py",
+      "purpose_summary": "Duplicate/Alternative harvester for data ingestion.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Redundant with backup/wh2k_harvester.py."
+    },
+    {
+      "path": "sonarsniffer/src/garmin_rsd_parser.rs",
+      "purpose_summary": "Parser for Garmin RSD data for evaluation.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "evaluation_testing",
+      "notes": "Large file; parses complex sonar/glint data."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops-core-github/db_ingestor.py",
+      "purpose_summary": "Python-based database ingestion tool.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Lower score due to potential redundancy with Rust ingestor."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops-core-github/tauri/src-tauri/src/erie_model.rs",
+      "purpose_summary": "Rust-based implementation for serving LLM inference related to geometric modeling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Includes thermal sync which is outside the 5-module blueprint."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/collaborative_sarops_platform.py",
+      "purpose_summary": "MCP tooling for collaborative SAR operations and geometric context mapping.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "notes": "Focuses on SAR and geometry."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/drone_module.py",
+      "purpose_summary": "MCP tooling for drone-based operations.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "notes": "Hardware interface/tooling."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/ml_drift_predictor.py",
+      "purpose_summary": "Predicts ML drift using geometric and SAR glint data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "notes": "Analyzes drift across multiple modalities."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/rosa_case/rosa_advanced_calibration.py",
+      "purpose_summary": "Advanced calibration for drift analysis involving SAR and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "notes": "Calibration logic for drift prediction."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/rosa_case/rosa_extended_multiday_analysis.py",
+      "purpose_summary": "Multi-day drift analysis using SAR and geometry.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "notes": "Temporal analysis of SAR/geometry data."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/rosa_case/rosa_nautical_visualization.py",
+      "purpose_summary": "Visualization tool for nautical/SAR data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "notes": "Visual output for SAR/geometry data."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/sarops.py",
+      "purpose_summary": "Analyzes drift patterns in SAR data for wreck detection.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "notes": "Large file; likely contains heavy mathematical drift models."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/simple_drifter_collector.py",
+      "purpose_summary": "Simplified version of drifter data collection and analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "notes": "Redundant with real_drifter_collector.py; likely a lightweight alternative."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/inference/wh2k_inference_scorer.py",
+      "purpose_summary": "Scores inference results for wreck probability.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Scoring logic for ML models."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/inference/wh2k_run_huron_inference.py",
+      "purpose_summary": "Inference runner for geometric models.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Pure geometry inference."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/training/wh2k_hybrid_training.py",
+      "purpose_summary": "Hybrid training module for geometric models.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Focuses on geometry."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/training/wh2k_phase2_gpu.py",
+      "purpose_summary": "GPU-accelerated training phase for WH2K models.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Hardware-specific training optimization."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/bag/bag_wreck_gui.py",
+      "purpose_summary": "GUI tool for unmasking bag data within the geometry context.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "notes": "High overlap with spectral and SAR modules; likely a visualization layer."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/erie_synthetic_dipole.py",
+      "purpose_summary": "Inference for synthetic dipole models using geometry and thermal data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Uses thermal sync (non-blueprint)."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/export_huron_mag_kml.py",
+      "purpose_summary": "Exports Huron MAG data to KML format for GIS visualization.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "notes": "Visualization utility for geospatial data."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/flight_line_physics.py",
+      "purpose_summary": "Calculates physics-based flight line parameters for magnetic data unmasking.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "notes": "Likely superseded by v2 version."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/ogsrl_well_discriminator.py",
+      "purpose_summary": "ETL tool for discriminating well features.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Specialized feature discrimination."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_awois_scraper.py",
+      "purpose_summary": "Scrapes AWOIS data for geological/geophysical context.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "notes": "External data ingestion tool."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_data_provenance.py",
+      "purpose_summary": "Evaluation and provenance tracking for data integrity.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "notes": "Essential for data lineage."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_discovery_report_standalone.py",
+      "purpose_summary": "Generates standalone discovery reports using SAR glint data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Reporting tool."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_discovery_report_v2.py",
+      "purpose_summary": "Generates discovery reports from magnetic/geospatial data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Reporting pipeline."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_ingest_gsc_erie.py",
+      "purpose_summary": "Ingests GSC Erie data for spectral and thermal analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Regional data ingestion."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_satellite_mag_validate.py",
+      "purpose_summary": "Validates satellite magnetic anomaly data against known benchmarks.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "notes": "Quality assurance tool for magnetic data."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/wh2k_raw_ghost_zoom.py",
+      "purpose_summary": "ETL for zooming into raw ghost artifacts/features.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Specific feature extraction."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/wh2k_sentinel_cpu.py",
+      "purpose_summary": "Processes Sentinel satellite imagery for spectral clarity.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "notes": "Satellite imagery processing."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/wh2k_synthetic_tiles.py",
+      "purpose_summary": "Testing/evaluation framework for generating synthetic satellite tiles.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "notes": "Broad module coverage suggests a comprehensive testing suite."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/wh2k_synthetic_tiles_huron.py",
+      "purpose_summary": "Generates synthetic satellite tiles for Huron training.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "notes": "Data augmentation tool for model training."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/wh2k_synthetic_tiles_v2.py",
+      "purpose_summary": "Generates synthetic tiles for model training/testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Data augmentation/synthetic generation tool."
+    },
+    {
+      "path": "backup/deploy/tools/tile_selector.py",
+      "purpose_summary": "Evaluates and selects tiles based on glint and thermal signatures.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "notes": "Selection logic for target areas."
+    },
+    {
+      "path": "backup/src/cesarops-inference/src/wgpu_injection.rs",
+      "purpose_summary": "Injects WGPU commands for glint processing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Low-level graphics API integration."
+    },
+    {
+      "path": "backup/src/cesarops-mcp-steered/src/scm/stats.rs",
+      "purpose_summary": "Performs statistical drift analysis to track movement patterns within the geometric coordinate system.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "notes": "Provides essential spatial statistics for tracking wreck movement relative to geometry."
+    },
+    {
+      "path": "backup/src/cesarops-mcp-steered/src/steering.rs",
+      "purpose_summary": "Orchestration logic for steering detection processes.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Logic for managing multi-module detection workflows."
+    },
+    {
+      "path": "backup/src/cesarops-mission-control/src/main.rs",
+      "purpose_summary": "Acts as the central orchestration layer for dispatching mission tasks across multiple sensor modules.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "High-level controller; contains potential redundancy by managing multiple disparate sensor streams."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/bag_wreck_gui.py",
+      "purpose_summary": "GUI tool for unmasking bag data within the geometry context.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "notes": "Redundant with backup/deploy/tools/pipelines/bag/bag_wreck_gui.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/wh2k_synthetic_tiles.py",
+      "purpose_summary": "Testing/evaluation framework for generating synthetic satellite tiles.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "notes": "Redundant with backup/deploy/tools/pipelines/satellite/wh2k_synthetic_tiles.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/wire_pipeline.py",
+      "purpose_summary": "Orchestration script for dispatching data pipelines.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Central orchestration logic."
+    },
+    {
+      "path": "scripts/integrate/dispatch_c2_rust_port.py",
+      "purpose_summary": "Orchestrates dispatch commands for the C2 Rust port integration.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "altimetry_ssh",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Glue code for system orchestration."
+    },
+    {
+      "path": "sonarsniffer/src/outputs.rs",
+      "purpose_summary": "Handles sonar signal output and data formatting.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "sonar_analysis",
+      "notes": "Focuses on sonar output rather than the 5 core modules."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/cesarops_module_implementation_plan.py",
+      "purpose_summary": "MCP tooling implementation plan for the cesarops module.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "mcp_tooling",
+      "notes": "Planning document/tooling rather than core algorithm."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/rosa_case/rosa_corrected.py",
+      "purpose_summary": "Corrected drift analysis module focusing on SAR glint.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "notes": "Likely a refinement of previous drift models."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/rosa_case/rosa_final_analysis.py",
+      "purpose_summary": "Finalized configuration and documentation for the ROSA case study.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Likely contains final report parameters."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/src/cesarops/sonar_mosaic.py",
+      "purpose_summary": "Configuration or documentation for sonar mosaic generation.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Likely metadata or config for mosaic processes."
+    },
+    {
+      "path": "backup/deploy/tools/models/ml/inference/phase4_6_postprocess.py",
+      "purpose_summary": "Post-processing configuration for ML inference phases.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Likely utility/config script for pipeline stages."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/bag/comprehensive_bag_gui.py",
+      "purpose_summary": "GUI for unmasking BAG (likely geospatial/geometry) data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "bag_unmasker",
+      "notes": "Utility tool for data unmasking."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/final_magnetic_fusion.py",
+      "purpose_summary": "Final fusion of magnetic/geometric data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "mcp_tooling",
+      "notes": "Final stage of magnetic pipeline."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/loran_c_warp.py",
+      "purpose_summary": "Configuration/documentation for Loran-C coordinate warping.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Low utility; appears to be configuration or documentation for spatial warping."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/normalize_nrcan_csvs.py",
+      "purpose_summary": "Normalizes NRCAN CSV datasets for spectral and thermal analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "bag_unmasker",
+      "notes": "Specific data normalization utility."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/mag/wh2k_export_kml.py",
+      "purpose_summary": "Exports geological/magnetic data to KML format for visualization.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Visualization export utility."
+    },
+    {
+      "path": "backup/deploy/tools/wreck_web_scraper.py",
+      "purpose_summary": "Scrapes web data for wreck locations and SAR glint context.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Web-based data gathering."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-slicer/src/optical_structural_worker.rs",
+      "purpose_summary": "Duplicate of optical structural worker for slicing data.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Redundant file; identical to backup/deploy/tools/cesarops-slicer/src/optical_structural_worker.rs"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/cesarops_module_implementation_plan.py",
+      "purpose_summary": "Web UI API implementation plan for cesarops.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "web_ui_api",
+      "notes": "Duplicate of deploy/tools/cesarops_core/cesarops_module_implementation.py"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/drone_module.py",
+      "purpose_summary": "Documentation/config for drone module.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Duplicate of deploy/tools/cesarops_core/drone_module.py"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/sarops.py",
+      "purpose_summary": "Duplicate of SAR drift analysis tool.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "notes": "Redundant file; identical to backup/deploy/tools/cesarops_core/sarops.py"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/bag_wreck_detector.py",
+      "purpose_summary": "Duplicate of BAG unmasker detector.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "bag_unmasker",
+      "notes": "Redundant file; identical to backup/deploy/tools/pipelines/bag/bag_wreck_detector.py"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/loran_c_warp.py",
+      "purpose_summary": "Configuration/documentation for Loran-C coordinate warping.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "notes": "Redundant with backup/deploy/tools/pipelines/mag/loran_c_warp.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_satellite_mag_validate.py",
+      "purpose_summary": "Duplicate of magnetic validation script.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "evaluation_testing",
+      "notes": "Redundant file; identical to backup/deploy/tools/pipelines/mag/wh2k_satellite_mag_validate.py"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/deep_codebase_analysis.py",
+      "purpose_summary": "Script for analyzing codebase structure and metrics.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Utility script, not core detection logic."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/steering_test_v2.sh",
+      "purpose_summary": "Shell script for managing LLM inference serving processes.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Note: thermal_sync in input mapped to thermal_wake blueprint."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/sovereign-cloud/src/api.rs",
+      "purpose_summary": "Duplicate of cloud API service.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Redundant file; identical to backup/deploy/tools/sovereign-cloud/src/api.rs"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/prioritized_satellite_pull.rs",
+      "purpose_summary": "Handles prioritized retrieval of satellite data based on displacement metrics.",
+      "primary_module": "altimetry_ssh",
+      "modules": [
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Primary module mapping is slightly off from input (altimetry_displacement vs altimetry_ssh), but serves specific data pull functions."
+    },
+    {
+      "path": "backup/deploy/tools/cesarops_core/src/cesarops/__init__.py",
+      "purpose_summary": "Package initialization for drift analysis and SAR/thermal integration.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "drift_analysis",
+      "notes": "Standard Python package init."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/apply_opera_dswx.py",
+      "purpose_summary": "ETL pipeline script for applying OPERA DSWX processing to satellite data.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Low utility; likely a deployment utility rather than core logic."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/fetch_swot_data.py",
+      "purpose_summary": "ETL script to fetch SWOT satellite data.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Low utility; standard data ingestion script."
+    },
+    {
+      "path": "backup/deploy/tools/pipelines/satellite/nasa_earthdata_client.py",
+      "purpose_summary": "API client for interacting with NASA Earthdata services.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "web_ui_api",
+      "notes": "Low utility; infrastructure/API client."
+    },
+    {
+      "path": "backup/deploy/tools/wrecks_api/app.py",
+      "purpose_summary": "Redundant backup of the main API entry point.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Duplicate of wrecks_api/app.py."
+    },
+    {
+      "path": "backup/src/Cargo.toml",
+      "purpose_summary": "Dependency management for the core Rust codebase.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "docs_config",
+      "notes": "Project configuration file."
+    },
+    {
+      "path": "backup/src/cesarops-agent/src/router.rs",
+      "purpose_summary": "Rust-based router for serving LLM inference requests.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Irrelevant to core geospatial physics/geometry modules."
+    },
+    {
+      "path": "backup/src/wrecks_api/app.py",
+      "purpose_summary": "Redundant backup of the main API entry point.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Duplicate of wrecks_api/app.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-mcp-steered/src/steering.rs",
+      "purpose_summary": "Redundant backup of steering orchestration logic.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "orchestration_dispatch",
+      "notes": "Duplicate of steering.rs."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/deep_water_blind_discovery.py",
+      "purpose_summary": "Redundant backup of deep water discovery model.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "docs_config",
+      "notes": "Duplicate of deep_water_blind_discovery.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/phase5_debloom_search.py",
+      "purpose_summary": "Redundant backup of phase 5 search model.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Duplicate of phase5_debloom_search.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/training/wh2k_phase2_gpu.py",
+      "purpose_summary": "GPU-accelerated training phase for model development.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Low utility; highly specific to a single training phase."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/apply_opera_dswx.py",
+      "purpose_summary": "ETL pipeline script for applying OPERA DSWX processing to satellite data.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Redundant with deploy/tools version."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/fetch_swot_data.py",
+      "purpose_summary": "ETL script to fetch SWOT satellite data.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Redundant with deploy/tools version."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/nasa_earthdata_client.py",
+      "purpose_summary": "API client for interacting with NASA Earthdata services.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "web_ui_api",
+      "notes": "Redundant with deploy/tools version."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/wh2k_synthetic_tiles_v2.py",
+      "purpose_summary": "Redundant backup of synthetic tile generator.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Duplicate of wh2k_synthetic_tiles_v2.py."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/sentinel_hunt_src/src/glos.rs",
+      "purpose_summary": "Rust-based configuration management for documentation or system settings.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "sar_ripple_glint",
+        "thermal_wake"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "docs_config",
+      "notes": "High line count but role suggests low functional utility for core logic."
+    },
+    {
+      "path": "backup/wreckhunter2000-1/wrecks_api/app.py",
+      "purpose_summary": "Redundant backup of the main API entry point.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity",
+        "thermal_wake",
+        "sar_ripple_glint",
+        "altimetry_ssh"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "llm_inference_serving",
+      "notes": "Duplicate of wrecks_api/app.py."
+    },
+    {
+      "path": "cesarops-inference/src/integrate/find_swot_dates.rs",
+      "purpose_summary": "Rust utility to identify relevant SWOT satellite observation dates.",
+      "primary_module": "altimetry_displacement",
+      "modules": [
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 1,
+      "guessed_role": "data_ingest_etl",
+      "notes": "Utility script for data ingestion scheduling."
+    }
+  ]
+}

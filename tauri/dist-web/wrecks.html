@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CESARops Great Lakes shipwreck database — Swayze census plus magnetic and hull enrichments.">
+  <title>CESARops | Wreck Database</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+  <style>
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; }
+    .stat-n { display: block; font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .stat-l { font-size: 0.8rem; color: var(--muted); }
+    .search-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+    .search-row input { flex: 1; min-width: 200px; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-family: var(--font); }
+    .wreck-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .wreck-table th, .wreck-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; }
+    .wreck-table th { color: var(--muted); font-weight: 600; }
+    .pager { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .badge { font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 4px; background: var(--panel); border: 1px solid var(--border); }
+    .badge.ok { color: var(--accent2); }
+    .badge.warn { color: var(--warn); }
+    #wreck-map { height: min(62vh, 520px); width: 100%; border-radius: 12px; border: 1px solid var(--border); margin: 0.75rem 0; }
+    .map-panel { max-width: 1100px; margin: 0 auto 2rem; padding: 0 1.5rem; }
+    .layer-toggles {
+      display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;
+      margin: 0.75rem 0; font-size: 0.9rem;
+    }
+    .layer-toggles label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; color: var(--text); }
+    .layer-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35); }
+    .swatch-verified { background: #22c55e; }
+    .swatch-estimated { background: #f59e0b; }
+    .swatch-parsed { background: #64748b; }
+    .swatch-canonical { background: #00d4ff; }
+    .pin-tag { font-size: 0.72rem; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.25rem; }
+    .pin-verified { background: rgba(34,197,94,0.25); color: #86efac; }
+    .pin-estimated { background: rgba(245,158,11,0.25); color: #fcd34d; }
+    .pin-parsed { background: rgba(148,163,184,0.25); color: #cbd5e1; }
+    .pin-canonical { background: rgba(0,212,255,0.2); color: #7dd3fc; }
+    #map-status { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); margin-top: 0.35rem; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">⚓</div>
+      <span>CESARops · Wrecks</span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="tools.html">Tools</a>
+      <a href="wrecks.html" class="active">Wreck DB</a>
+      <a href="mission-control/index.html">Mission Control</a>
+    </nav>
+  </header>
+
+  <main class="hero" style="padding-bottom:1rem">
+    <h1>Great Lakes wreck database</h1>
+    <p class="lead">
+      Live catalog from <strong>David Swayze</strong> research (~9,800 features) plus NAMAG magnetics, BGSU hull data, and steel-freighter classification.
+      Swayze lists wrecks still missing precise positions; we add Erie, dive-verified, and mission ground-truth sources over time.
+    </p>
+    <div id="wreck-banner" class="forge-banner pending">Connecting…</div>
+  </main>
+
+  <section class="forge-health-panel" style="max-width:1100px;margin:0 auto 2rem;padding:0 1.5rem">
+    <div id="wreck-stats"></div>
+
+    <h2 class="section-title" style="margin-top:1.5rem">Map — selectable pin layers</h2>
+    <div class="layer-toggles" role="group" aria-label="Map layers">
+      <label><input type="checkbox" id="layer-verified" checked> <span class="layer-swatch swatch-verified"></span> Verified / survey</label>
+      <label><input type="checkbox" id="layer-estimated" checked> <span class="layer-swatch swatch-estimated"></span> Estimated loss site</label>
+      <label><input type="checkbox" id="layer-parsed"> <span class="layer-swatch swatch-parsed"></span> Swayze parsed</label>
+      <label><input type="checkbox" id="layer-canonical"> <span class="layer-swatch swatch-canonical"></span> Best pin (deduped)</label>
+      <button id="map-reload" class="btn btn-ghost" type="button" style="padding:0.35rem 0.75rem;font-size:0.85rem">Reload area</button>
+    </div>
+    <div id="wreck-map"></div>
+    <p id="map-status" class="forge-muted">Initializing map…</p>
+
+    <p class="forge-muted" style="margin-top:0.5rem">
+      <a id="api-link" href="https://api.cesarops.org/docs" target="_blank" rel="noopener">API docs</a> ·
+      <a id="kml-link" href="https://api.cesarops.org/wrecks/live.kml" target="_blank" rel="noopener">KML overlay</a> ·
+      Supplemental catalogs: <code>known_wrecks.json</code> (18 GT sites), Erie DB (91), web scrape (167) — merge in progress.
+    </p>
+
+    <h2 class="section-title" style="margin-top:1.5rem">Search</h2>
+    <div class="search-row">
+      <input id="wreck-search" type="search" placeholder="Name, e.g. Gilcher, Cedarville, Fitzgerald" autocomplete="off">
+      <button id="wreck-search-btn" class="btn btn-primary" type="button">Search</button>
+    </div>
+    <p id="wreck-meta" class="forge-muted"></p>
+    <div style="overflow-x:auto">
+      <table class="wreck-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Lat, Lon</th>
+            <th>Pin / quality</th>
+            <th>Hull / type</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody id="wreck-results"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button id="wreck-prev" class="btn btn-ghost" type="button">Previous page</button>
+      <button id="wreck-next" class="btn btn-ghost" type="button">Next page</button>
+    </div>
+  </section>
+
+  <footer>
+    <p>Data © researchers cited per record · Not for navigation · <a href="index.html">CESARops</a></p>
+  </footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script type="module" src="assets/wrecks-db.js"></script>
+  <script type="module" src="assets/wrecks-map.js"></script>
+</body>
+</html>

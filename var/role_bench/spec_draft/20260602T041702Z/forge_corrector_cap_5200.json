@@ -1,0 +1,15 @@
+{
+  "fixture_id": "forge_corrector_cap",
+  "endpoint": "http://127.0.0.1:5200",
+  "port": 5200,
+  "model": "Qwen3.6-35B-A3B-MXFP4_MOE.gguf",
+  "latency_s": 180.1,
+  "error": "HTTPConnectionPool(host='127.0.0.1', port=5200): Read timed out. (read timeout=180)",
+  "raw_text": "",
+  "score": 0.0,
+  "breakdown": {},
+  "grader_notes": [
+    "HTTPConnectionPool(host='127.0.0.1', port=5200): Read timed out. (read timeout=180)"
+  ],
+  "parsed_spec": null
+}

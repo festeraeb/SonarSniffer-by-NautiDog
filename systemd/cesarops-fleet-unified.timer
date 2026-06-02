@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic unified fleet recover on cesarops2
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Unit=cesarops-fleet-unified.service
+
+[Install]
+WantedBy=timers.target

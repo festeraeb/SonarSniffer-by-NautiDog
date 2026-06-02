@@ -158,4 +158,11 @@ impl TripleLockPipeline {
         let jitter_ok = self.jitter.health().await;
         (scout_ok, val_ok, jitter_ok)
     }
+
+    pub async fn worker_endpoints(&self) -> (String, String, String) {
+        let scout = self.scout.endpoint_label().await;
+        let validator = self.validator.endpoint_label().await;
+        let jitter = self.jitter.endpoint_label().await;
+        (scout, validator, jitter)
+    }
 }

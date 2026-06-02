@@ -1,0 +1,47 @@
+[
+  {
+    "kind": "reference",
+    "live_key": "pipelines/bag/advanced_bag_scanner_runner.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__bag__advanced_bag_scanner_runner__SIMILAR_TO_LIVE__laptop-code-pipelines__advanced_bag_scanner_runner.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "pipelines/mag/adaptive_background_scan.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__mag__adaptive_background_scan__SIMILAR_TO_LIVE__laptop-code-pipelines__adaptive_background_scan.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "pipelines/mag/erie_wellhead_discriminator.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__mag__erie_wellhead_discriminator__SIMILAR_TO_LIVE__laptop-code-pipelines__erie_wellhead_discriminator.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "pipelines/mag/mag_data_pipeline.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__mag__mag_data_pipeline__SIMILAR_TO_LIVE__laptop-code-pipelines__mag_data_pipeline.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "repo_root/cmr_search.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__repo_root__cmr_search__SIMILAR_TO_LIVE__laptopdump-programming-root__cmr_search.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "repo_root/universal_downloader.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__repo_root__universal_downloader__SIMILAR_TO_LIVE__laptopdump-programming-root__universal_downloader.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "repo_root/weather_service.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/ref__repo_root__weather_service__SIMILAR_TO_LIVE__laptopdump-programming-root__weather_service.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/analyze_fuel_leaks.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1000/int__analyze_fuel_leaks.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/analyze_resolution_comparison.py",
+    "out": "/mnt/t440/codebase/repos/wreckhunter2000-1/integrate_out/zaya/p1001/int__analyze_resolution_comparison.md"
+  }
+]

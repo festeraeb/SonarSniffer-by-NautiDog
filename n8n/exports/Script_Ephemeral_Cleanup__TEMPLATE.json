@@ -1,0 +1,54 @@
+{
+  "name": "Script Ephemeral Cleanup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      },
+      "name": "Hourly dry-run",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /codebase/repos/wreckhunter2000-1 && DRY_RUN=1 bash scripts/cleanup-ephemeral-scripts.sh"
+      },
+      "name": "Dry-run cleanup",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 4 * * *" }]
+        }
+      },
+      "name": "Daily apply 04:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "command": "cd /codebase/repos/wreckhunter2000-1 && DRY_RUN=0 bash scripts/cleanup-ephemeral-scripts.sh"
+      },
+      "name": "Apply cleanup",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 200],
+      "notes": "Only deletes scripts/_ephemeral/ or # CESAROPS_EPHEMERAL=1 with forge-verdict.json"
+    }
+  ],
+  "connections": {
+    "Hourly dry-run": { "main": [[{ "node": "Dry-run cleanup", "type": "main", "index": 0 }]] },
+    "Daily apply 04:00": { "main": [[{ "node": "Apply cleanup", "type": "main", "index": 0 }]] }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Import and wire executeCommand to host with repo mount. Requires forge-verdict.json from SCRIPT_CLEANUP_FORGE_MISSION."
+  }
+}

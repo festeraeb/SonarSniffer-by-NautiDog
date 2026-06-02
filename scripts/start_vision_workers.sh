@@ -26,7 +26,7 @@ ensure_venv() {
     "$VENV/bin/pip" install -q fastapi uvicorn pillow numpy
   fi
   case "$VISION_MODE" in
-    gpu) "$VENV/bin/pip" install -q torch transformers 2>/dev/null || true ;;
+    gpu) "$VENV/bin/pip" install -q torch 'transformers==4.46.3' 'tokenizers<0.21' einops timm 2>/dev/null || true ;;
     yolo) "$VENV/bin/pip" install -q ultralytics 2>/dev/null || true ;;
   esac
   PYTHON="$VENV/bin/python"
@@ -46,7 +46,8 @@ cmd_start() {
   ensure_venv
   case "$VISION_MODE" in
     gpu)
-      VISION_MODEL_ROOT="$VISION_MODEL_ROOT" SCOUT_PORT=5570 \
+      CUDA_VISIBLE_DEVICES="${SCOUT_CUDA_VISIBLE:-0}" \
+      VISION_MODEL_ROOT="$VISION_MODEL_ROOT" SCOUT_PORT=5570 SCOUT_CUDA_DEVICE=0 \
         setsid "$PYTHON" "$VISION_DIR/scout_1060.py" >>"$PID_DIR/scout.log" 2>&1 &
       VISION_MODEL_ROOT="$VISION_MODEL_ROOT" VALIDATOR_PORT=5572 \
         setsid "$PYTHON" "$VISION_DIR/validator_p1000.py" >>"$PID_DIR/validator.log" 2>&1 &
@@ -61,7 +62,11 @@ cmd_start() {
       ;;
     *)
       for role in scout validator jitter; do
-        setsid "$PYTHON" "$SIM_PY" "$role" --host "$HOST" >>"$PID_DIR/cpu-${role}.log" 2>&1 &
+        if [[ "$role" == "jitter" ]]; then
+          JITTER_PORT="${JITTER_PORT:-8180}" setsid "$PYTHON" "$SIM_PY" "$role" --host "$HOST" >>"$PID_DIR/cpu-${role}.log" 2>&1 &
+        else
+          setsid "$PYTHON" "$SIM_PY" "$role" --host "$HOST" >>"$PID_DIR/cpu-${role}.log" 2>&1 &
+        fi
       done
       ;;
   esac
@@ -73,7 +78,7 @@ cmd_start() {
 cmd_status() {
   probe "http://${HOST}:5570/health" "scout:5570"
   probe "http://${HOST}:5572/health" "validator:5572"
-  probe "http://${HOST}:8080/health" "jitter:8080"
+  probe "http://${HOST}:${JITTER_PORT:-8180}/health" "jitter"
 }
 
 cmd_stop() { stop_all; log "stopped"; }

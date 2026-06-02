@@ -30,17 +30,23 @@ pub async fn auto_remember_success(
     let _ = crate::tools::execute("remember", &args, state).await;
 
     // Also push to nautivecs for semantic search (background, non-blocking)
-    let nautivecs_url = state.config.nautivecs_url.clone();
+    let nautivecs_url = state.config.read().await.nautivecs_url.clone();
     let content_clone = content.clone();
     let tags_clone = tags.clone();
 
     tokio::spawn(async move {
+        let nautivecs_base = nautivecs_url
+            .trim_end_matches("/query")
+            .trim_end_matches("/search")
+            .to_string();
         let client = reqwest::Client::new();
         let _ = client
-            .post(nautivecs_url.replace("/query", "/ingest"))
+            .post(format!("{}/add", nautivecs_base))
             .json(&serde_json::json!({
-                "content": content_clone,
-                "metadata": {"tags": tags_clone, "type": "auto_fix"},
+                "text": content_clone,
+                "tags": tags_clone,
+                "source": "auto_fix",
+                "file_path": "research_log/lessons_learned.md"
             }))
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -52,10 +58,11 @@ pub async fn auto_remember_success(
 /// Returns the fix content if found with high confidence.
 pub async fn search_prior_fixes(failure_type: &FailureType, state: &AppState) -> Option<String> {
     let query = format!("format_fix {:?} recovery", failure_type);
+    let nautivecs_url = state.config.read().await.nautivecs_url.clone();
     let client = reqwest::Client::new();
 
     let resp = client
-        .post(&state.config.nautivecs_url)
+        .post(&nautivecs_url)
         .json(&serde_json::json!({"query": query, "top_k": 3}))
         .timeout(std::time::Duration::from_secs(5))
         .send()

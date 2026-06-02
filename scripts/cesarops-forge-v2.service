@@ -1,14 +1,15 @@
 [Unit]
 Description=CESAROPS Forge v2 - Self-Healing Knowledge Translator
-After=network.target koboldcpp.service nautivecs-server.service
-Wants=koboldcpp.service nautivecs-server.service deepseek-r1-xeon.service
+After=network.target nautivecs-server.service
+Wants=nautivecs-server.service
+# Enable after pipeline: systemctl enable cesarops-forge-v2.service
 
 [Service]
 Type=simple
 User=cesarops
-WorkingDirectory=/codebase/wreckhunter2000-1/cesarops-forge-v2
+WorkingDirectory=/codebase/repos/wreckhunter2000-1/cesarops-forge-v2
 Environment=RUST_LOG=cesarops_forge_v2=info
-ExecStart=/codebase/wreckhunter2000-1/cesarops-forge-v2/target/release/cesarops-forge-v2
+ExecStart=/codebase/repos/wreckhunter2000-1/target/release/cesarops-forge-v2
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

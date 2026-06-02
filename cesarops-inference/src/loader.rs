@@ -103,21 +103,48 @@ pub fn load(path: &Path, _profile: &IronProfile) -> Result<ModelWeights, io::Err
     // Extract model dimensions from metadata
     let n_layers = get_u32_meta(&metadata, "llama.block_count")
         .or_else(|| get_u32_meta(&metadata, "qwen2.block_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma4.block_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma2.block_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma.block_count"))
         .unwrap_or(48) as usize;
     let hidden_dim = get_u32_meta(&metadata, "llama.embedding_length")
         .or_else(|| get_u32_meta(&metadata, "qwen2.embedding_length"))
+        .or_else(|| get_u32_meta(&metadata, "gemma4.embedding_length"))
+        .or_else(|| get_u32_meta(&metadata, "gemma2.embedding_length"))
+        .or_else(|| get_u32_meta(&metadata, "gemma.embedding_length"))
         .unwrap_or(5120) as usize;
     let n_heads = get_u32_meta(&metadata, "llama.attention.head_count")
         .or_else(|| get_u32_meta(&metadata, "qwen2.attention.head_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma4.attention.head_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma2.attention.head_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma.attention.head_count"))
         .unwrap_or(40) as usize;
+    // For Gemma-4 MoE, head_count_kv is a per-layer array — use the scalar
+    // fallback here (the runner reads the array directly from metadata).
     let n_kv_heads = get_u32_meta(&metadata, "llama.attention.head_count_kv")
         .or_else(|| get_u32_meta(&metadata, "qwen2.attention.head_count_kv"))
+        .or_else(|| get_u32_meta(&metadata, "gemma4.attention.head_count_kv"))
+        .or_else(|| get_u32_meta(&metadata, "gemma2.attention.head_count_kv"))
+        .or_else(|| get_u32_meta(&metadata, "gemma.attention.head_count_kv"))
         .unwrap_or(8) as usize;
     let vocab_size = get_u32_meta(&metadata, "llama.vocab_size")
         .or_else(|| get_u32_meta(&metadata, "qwen2.vocab_size"))
+        .or_else(|| get_u32_meta(&metadata, "gemma4.vocab_size"))
+        .or_else(|| get_u32_meta(&metadata, "gemma2.vocab_size"))
+        .or_else(|| get_u32_meta(&metadata, "gemma.vocab_size"))
+        // Fallback: count from tokenizer vocab array length
+        .or_else(|| {
+            if let Some(GgufValue::Array(arr)) = metadata.get("tokenizer.ggml.tokens") {
+                Some(arr.len() as u32)
+            } else {
+                None
+            }
+        })
         .unwrap_or(152064) as usize;
     let n_experts = get_u32_meta(&metadata, "llama.expert_count")
         .or_else(|| get_u32_meta(&metadata, "qwen2.expert_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma4.expert_count"))
+        .or_else(|| get_u32_meta(&metadata, "gemma2.expert_count"))
         .unwrap_or(0) as usize;
 
     info!("Model: {} layers, {} hidden, {} heads, {} kv_heads, {} vocab, {} experts",
@@ -219,53 +246,87 @@ fn read_gguf_string(data: &[u8], cursor: &mut usize) -> String {
 
 fn read_gguf_value(data: &[u8], cursor: &mut usize) -> GgufValue {
     let value_type = read_u32(data, cursor);
+    read_gguf_value_typed(data, cursor, value_type)
+}
+
+/// Read one value of the given type code. Used both at top-level and
+/// inside arrays. GGUF spec value types:
+///   0 = u8, 1 = i8, 2 = u16, 3 = i16, 4 = u32, 5 = i32,
+///   6 = f32, 7 = bool, 8 = string, 9 = array, 10 = u64, 11 = i64, 12 = f64
+fn read_gguf_value_typed(data: &[u8], cursor: &mut usize, value_type: u32) -> GgufValue {
     match value_type {
-        0 => GgufValue::U32(read_u32(data, cursor)),       // UINT32
-        1 => GgufValue::I32(read_i32(data, cursor)),       // INT32
-        2 => GgufValue::F32(read_f32(data, cursor)),       // FLOAT32
-        4 => GgufValue::U32(read_u32(data, cursor)),       // UINT16 (read as u32)
-        5 => GgufValue::I32(read_i32(data, cursor)),       // INT16
-        6 => GgufValue::F32(read_f32(data, cursor)),       // FLOAT64 (lossy)
-        7 => GgufValue::Bool({                              // BOOL
+        0 => {
             let v = data[*cursor];
             *cursor += 1;
-            v != 0
-        }),
-        8 => GgufValue::Str(read_gguf_string(data, cursor)), // STRING
-        9 => {                                              // ARRAY
-            let arr_type = read_u32(data, cursor);
+            GgufValue::U32(v as u32)
+        }
+        1 => {
+            let v = data[*cursor] as i8;
+            *cursor += 1;
+            GgufValue::I32(v as i32)
+        }
+        2 => {
+            let v = u16::from_le_bytes([data[*cursor], data[*cursor + 1]]);
+            *cursor += 2;
+            GgufValue::U32(v as u32)
+        }
+        3 => {
+            let v = i16::from_le_bytes([data[*cursor], data[*cursor + 1]]);
+            *cursor += 2;
+            GgufValue::I32(v as i32)
+        }
+        4 => GgufValue::U32(read_u32(data, cursor)),
+        5 => GgufValue::I32(read_i32(data, cursor)),
+        6 => GgufValue::F32(read_f32(data, cursor)),
+        7 => {
+            let v = data[*cursor];
+            *cursor += 1;
+            GgufValue::Bool(v != 0)
+        }
+        8 => GgufValue::Str(read_gguf_string(data, cursor)),
+        9 => {
+            // Nested array — rare but possible.
+            let inner_type = read_u32(data, cursor);
             let arr_len = read_u64(data, cursor) as usize;
             let mut arr = Vec::with_capacity(arr_len);
             for _ in 0..arr_len {
-                // Simplified: skip array contents for now
-                arr.push(GgufValue::Other);
+                arr.push(read_gguf_value_typed(data, cursor, inner_type));
             }
-            // Skip the actual array data based on type
-            let elem_size = match arr_type {
-                0 | 4 => 4, // u32, u16
-                1 | 5 => 4, // i32, i16
-                2 | 6 => 4, // f32, f64
-                7 => 1,     // bool
-                8 => {
-                    // String array - need to read each
-                    for _ in 0..arr_len {
-                        let _ = read_gguf_string(data, cursor);
-                    }
-                    return GgufValue::Array(arr);
-                }
-                10 => 8, // u64
-                _ => 4,
-            };
-            *cursor += arr_len * elem_size;
             GgufValue::Array(arr)
-        },
-        10 => GgufValue::U64(read_u64(data, cursor)),      // UINT64
+        }
+        10 => GgufValue::U64(read_u64(data, cursor)),
+        11 => {
+            let v = i64::from_le_bytes([
+                data[*cursor], data[*cursor + 1], data[*cursor + 2], data[*cursor + 3],
+                data[*cursor + 4], data[*cursor + 5], data[*cursor + 6], data[*cursor + 7],
+            ]);
+            *cursor += 8;
+            GgufValue::I32(v as i32) // best-effort downcast
+        }
+        12 => {
+            // f64 — store as f32 (lossy).
+            let bits = u64::from_le_bytes([
+                data[*cursor], data[*cursor + 1], data[*cursor + 2], data[*cursor + 3],
+                data[*cursor + 4], data[*cursor + 5], data[*cursor + 6], data[*cursor + 7],
+            ]);
+            *cursor += 8;
+            GgufValue::F32(f64::from_bits(bits) as f32)
+        }
         _ => {
-            // Unknown type - skip 8 bytes as best guess
             *cursor += 8;
             GgufValue::Other
         }
     }
+}
+
+fn read_gguf_array_top(data: &[u8], cursor: &mut usize) -> GgufValue {
+    let arr_type = read_u32(data, cursor);
+    let arr_len = read_u64(data, cursor) as usize;
+    let mut arr = Vec::with_capacity(arr_len);
+    for _ in 0..arr_len {
+        arr.push(read_gguf_value_typed(data, cursor, arr_type));
+    }
+    GgufValue::Array(arr)
 }
 
 fn get_u32_meta(metadata: &HashMap<String, GgufValue>, key: &str) -> Option<u32> {
@@ -290,7 +351,8 @@ fn compute_tensor_size(shape: &[usize], quant_type: u32) -> usize {
         12 => (n_elements + 255) / 256 * 176,          // Q4_K
         13 => (n_elements + 255) / 256 * 176,          // Q5_K: 2+2+12+32+128
         14 => (n_elements + 255) / 256 * 210,          // Q6_K
-        17 => (n_elements + 255) / 256 * 136,          // IQ4_XS: 2+2+4+128
+        20 => (n_elements + 31) / 32 * 18,             // IQ4_NL: 2(f16) + 16 nibbles
+        23 => (n_elements + 255) / 256 * 136,          // IQ4_XS: 2+2+4+128
         28 => n_elements * 2,                          // BF16
         30 => n_elements * 2,                          // F16 alt
         _  => n_elements * 2,                          // Unknown: conservative 2 bytes

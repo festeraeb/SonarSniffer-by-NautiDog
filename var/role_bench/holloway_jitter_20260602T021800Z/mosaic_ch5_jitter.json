@@ -1,0 +1,23 @@
+{
+  "material": "ferrous_composite",
+  "certainty": 0.809,
+  "depth_estimate_ft": 137.8,
+  "jitter_frequency_hz": 0.02,
+  "thermal_delta_c": 0.7,
+  "classification": "confirmed_structure",
+  "validation": [
+    {
+      "device": "movidius_ncs2",
+      "agreement": 0.86,
+      "agreed": true,
+      "backend": "myriad_fp16"
+    },
+    {
+      "device": "coral_edgetpu",
+      "agreement": 0.88,
+      "agreed": true,
+      "backend": "stub_rule"
+    }
+  ],
+  "primary_backend": "cpu_thermal"
+}

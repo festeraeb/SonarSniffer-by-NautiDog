@@ -1,0 +1,165 @@
+{
+  "name": "Predictive Async MoE (PAMP)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pamp-route",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "pamp-webhook",
+      "name": "PAMP Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "pamp-route"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst message = body.message || body.text || '';\nconst mode = (body.mode || 'chat').toLowerCase();\nconst baseline = body.baseline_id || 'interactive_fast';\nconst failures = body.failure_count || 0;\nconst shadow = body.shadow === true;\nconst lower = message.toLowerCase();\nlet parallel = [];\nlet serial_after = [];\nlet skip = ['draft'];\nif (mode === 'ask' || message.startsWith('/fast')) {\n  parallel = ['coder_gemma'];\n} else if (body.tool_name === 'think_harder') {\n  parallel = ['nautivecs', 'wso'];\n} else if (/architecture|why does|debug|design/.test(lower)) {\n  parallel = ['thinker_r1', 'nautivecs'];\n  serial_after = ['coder_gemma'];\n} else {\n  parallel = ['nautivecs'];\n  serial_after = ['coder_gemma'];\n  if (baseline === 'execute_safe' || mode === 'execute') serial_after.push('reviewer_mtp');\n}\nif (failures >= 3 && !parallel.includes('wso')) parallel.push('wso');\nif (/speculative|draft/.test(lower)) { skip = []; parallel.push('draft_phi'); }\nconst expert_plan = { parallel, serial_after, skip };\nreturn [{ json: { message, mode, baseline_id: baseline, shadow, expert_plan, partial_review: body.partial_review || false } }];"
+      },
+      "id": "predict-plan",
+      "name": "Predict Expert Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shadow }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "if-shadow",
+      "name": "Shadow?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nreturn [{ json: {\n  expert_plan: j.expert_plan,\n  results: {},\n  shadow: j.shadow === true,\n  parallel_ms_saved: null,\n  status: 'shadow'\n}}];"
+      },
+      "id": "shadow-merge",
+      "name": "Shadow Fast Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5003/query",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.message, top_k: 5 }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "expert-nautivecs",
+      "name": "Expert Nautivecs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.0.0.201:5200/v1/chat/completions",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: [{ role: 'user', content: 'Preflight plan (terse): ' + $json.message }], max_tokens: 256, temperature: 0.3 }) }}",
+        "options": { "timeout": 8000 }
+      },
+      "id": "expert-thinker",
+      "name": "Expert Thinker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5001/v1/chat/completions",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: [{ role: 'user', content: $json.message }], max_tokens: 512, temperature: 0.3 }) }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "expert-coder",
+      "name": "Expert Coder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 720]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.0.0.201:5571/v1/chat/completions",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: [{ role: 'user', content: 'Review (terse): ' + $('Predict Expert Plan').first().json.message }], max_tokens: 512, temperature: 0.2 }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "expert-reviewer",
+      "name": "Expert Reviewer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 720]
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $('Predict Expert Plan').first().json.expert_plan;\nconst shadow = false;\nconst results = {};\ntry { results.nautivecs = $('Expert Nautivecs').first().json; } catch(e) { results.nautivecs = { error: String(e) }; }\ntry { results.thinker = $('Expert Thinker').first().json; } catch(e) { results.thinker = { error: String(e) }; }\ntry { results.coder = $('Expert Coder').first().json; } catch(e) { results.coder = { error: String(e) }; }\ntry { results.reviewer = $('Expert Reviewer').first().json; } catch(e) { results.reviewer = { error: String(e) }; }\nreturn [{ json: {\n  expert_plan: plan,\n  results,\n  shadow,\n  parallel_ms_saved: 0,\n  status: 'success'\n}}];"
+      },
+      "id": "merge-pamp",
+      "name": "Merge PAMP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "pamp-respond",
+      "name": "Respond PAMP",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1600, 400]
+    }
+  ],
+  "connections": {
+    "PAMP Webhook": { "main": [[{ "node": "Predict Expert Plan", "type": "main", "index": 0 }]] },
+    "Predict Expert Plan": { "main": [[{ "node": "Shadow?", "type": "main", "index": 0 }]] },
+    "Shadow?": {
+      "main": [
+        [{ "node": "Shadow Fast Merge", "type": "main", "index": 0 }],
+        [
+          { "node": "Expert Nautivecs", "type": "main", "index": 0 },
+          { "node": "Expert Thinker", "type": "main", "index": 0 },
+          { "node": "Expert Coder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Shadow Fast Merge": { "main": [[{ "node": "Respond PAMP", "type": "main", "index": 0 }]] },
+    "Expert Coder": { "main": [[{ "node": "Expert Reviewer", "type": "main", "index": 0 }]] },
+    "Expert Reviewer": { "main": [[{ "node": "Merge PAMP", "type": "main", "index": 0 }]] },
+    "Expert Nautivecs": { "main": [[{ "node": "Merge PAMP", "type": "main", "index": 0 }]] },
+    "Expert Thinker": { "main": [[{ "node": "Merge PAMP", "type": "main", "index": 0 }]] },
+    "Merge PAMP": { "main": [[{ "node": "Respond PAMP", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

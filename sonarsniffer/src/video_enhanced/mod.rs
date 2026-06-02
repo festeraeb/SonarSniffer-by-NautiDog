@@ -195,7 +195,7 @@ impl Default for SonarProcessingParams {
             // Video encoding
             fps: 6,
             video_height: 1080,
-            prefer_hardware_encoding: true,
+            prefer_hardware_encoding: false,
 
             // Water column
             remove_water_column: false,

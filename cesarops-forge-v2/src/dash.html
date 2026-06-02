@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>CESAROPS DASH</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',sans-serif; background:#0d0d1a; color:#d8d8e8; min-height:100vh; }
+    header {
+      background:#111126; border-bottom:2px solid #1a2a5e;
+      padding:0.6rem 1.2rem; display:flex; justify-content:space-between; align-items:center; gap:10px;
+      position:sticky; top:0; z-index:100;
+    }
+    header h1 { color:#00e5ff; font-size:1.1rem; letter-spacing:1px; }
+    .nav { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .nav a { color:#4fc3f7; font-size:0.82rem; text-decoration:none; padding:3px 9px; border:1px solid #1a3a5e; border-radius:4px; }
+    .nav a:hover { background:#1a3a5e; }
+    .nav button { padding:4px 12px; border-radius:4px; border:1px solid #2a4a88; background:#0d1a3a; color:#88bbff; cursor:pointer; font-size:0.78rem; font-weight:700; }
+    .wrap { max-width:1400px; margin:0 auto; padding:14px; }
+    .status-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+    .st { background:#111126; border:1px solid #1e2050; border-radius:8px; padding:8px 12px; min-width:120px; }
+    .st .sl { font-size:0.65rem; color:#446; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+    .st .sv { font-size:1.0rem; font-weight:700; }
+    .ok { color:#4caf50; } .busy { color:#ff9800; } .err { color:#ef4444; } .grey { color:#556; }
+    .sec-label { font-size:0.7rem; color:#446; text-transform:uppercase; letter-spacing:.5px; margin:16px 0 8px; font-weight:700; border-bottom:1px solid #1a1a30; padding-bottom:4px; }
+    .gpu-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:12px; margin-bottom:16px; }
+    .gpu-card { background:#111126; border:2px solid #1e2050; border-radius:12px; padding:12px; position:relative; }
+    .gpu-card.hot  { border-color:#ff4444; } .gpu-card.warm { border-color:#ff9800; } .gpu-card.cool { border-color:#2a5a2a; }
+    .gpu-card.offline { border-color:#3a1a1a; opacity:0.75; }
+    .gpu-name { font-size:0.92rem; font-weight:700; color:#88bbdd; padding-right:48px; }
+    .gpu-node-tag { font-size:0.68rem; color:#6688aa; margin:2px 0 6px; }
+    .gpu-loaded { font-size:0.72rem; color:#7ec8a0; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gpu-temp { font-size:1.4rem; font-weight:700; position:absolute; top:10px; right:12px; }
+    .temp-cool { color:#4caf50; } .temp-warm { color:#ff9800; } .temp-hot { color:#ef4444; }
+    .bar-row { margin-bottom:6px; }
+    .bar-hd { display:flex; justify-content:space-between; font-size:0.66rem; margin-bottom:2px; color:#446; }
+    .bar-track { height:7px; background:#181828; border-radius:4px; overflow:hidden; }
+    .bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#1a5a8a,#2288cc); transition:width 0.4s; }
+    .st-pill { display:inline-block; font-size:0.62rem; padding:2px 6px; border-radius:4px; margin-right:4px; }
+    .pill-on { background:#1a3a1a; color:#4caf50; } .pill-off { background:#2a1a1a; color:#aa6666; }
+    .pill-live { background:#1a2a4a; color:#88bbff; }
+    .hint-box { background:#090914; border:1px solid #1a2a50; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.74rem; color:#6688aa; }
+    .hint-box code { background:#0a0a1e; padding:2px 6px; border-radius:3px; color:#4fc3f7; font-family:monospace; }
+    .quick-card { background:#111126; border:1px solid #1e2050; border-radius:8px; padding:10px 12px; margin-bottom:12px; }
+    .q-row { display:flex; gap:6px; flex-wrap:wrap; }
+    .q-row input { flex:1; min-width:180px; background:#0c0c1e; color:#d0d0e0; border:1px solid #1a1a30; border-radius:4px; padding:6px 9px; }
+    .q-row button { padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.76rem; font-weight:700; border:none; }
+    .btn-s { background:#162256; color:#99bbff; } .btn-t { background:#2a1a50; color:#c8a8ff; } .btn-x { background:#cc2222; color:#fff; }
+    .log-pre { font-family:monospace; font-size:0.7rem; white-space:pre-wrap; max-height:160px; overflow-y:auto; color:#99aabb; background:#080812; border:1px solid #1a1a28; border-radius:8px; padding:8px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .spin { display:inline-block; width:11px; height:11px; border:2px solid #334; border-top-color:#4fc3f7; border-radius:50%; animation:spin 0.7s linear infinite; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>⚡ CESAROPS DASH</h1>
+  <div class="nav">
+    <a href="/">Forge</a>
+    <a href="/cluster">Cluster</a>
+    <a href="/mcp-ui">MCP</a>
+    <a href="/api-docs">API</a>
+    <button onclick="refreshAll()">↻ Refresh</button>
+  </div>
+</header>
+<div class="wrap">
+  <div class="status-row">
+    <div class="st"><div class="sl">Forge</div><div class="sv grey" id="sv-forge">…</div></div>
+    <div class="st"><div class="sl">Agent</div><div class="sv grey" id="sv-agent">…</div></div>
+    <div class="st"><div class="sl">Cluster GPUs</div><div class="sv grey" id="sv-gpu">…</div></div>
+    <div class="st"><div class="sl">Heartbeats</div><div class="sv grey" id="sv-hb">…</div></div>
+    <div class="st"><div class="sl">n8n</div><div class="sv grey" id="sv-n8n">…</div></div>
+    <div class="st"><div class="sl">Lane-A</div><div class="sv grey" id="sv-lane">…</div></div>
+  </div>
+
+  <div class="hint-box" id="hb-hint" style="display:none">
+    For live metrics on every node, run <code>cesarops-node</code> on each host
+    (<code>cesarops-node-cesarops2.toml</code>, <code>cesarops-node-t440.toml</code>).
+    Forge also probes endpoints and SSH-pulls T440 P100s when primary is on cesarops2.
+  </div>
+
+  <div class="sec-label" id="cluster-sec-label">CLUSTER GPUs — all nodes</div>
+  <div class="gpu-grid" id="cluster-gpu-grid"><div style="color:#446;padding:16px"><span class="spin"></span> Loading…</div></div>
+
+  <div class="sec-label">QUICK SEND</div>
+  <div class="quick-card">
+    <div class="q-row">
+      <input id="q-msg" placeholder="Send to lane-a…" onkeydown="if(event.key==='Enter')qSend()">
+      <button class="btn-s" onclick="qSend()">Send</button>
+      <button class="btn-t" onclick="qSteer()">Steer</button>
+      <button class="btn-x" onclick="qStop()">Stop</button>
+    </div>
+  </div>
+
+  <div class="sec-label">LANE-A LOG</div>
+  <pre class="log-pre" id="lane-log">Loading…</pre>
+</div>
+<script>
+'use strict';
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function mg(mb){return (mb/1024).toFixed(1)+'G';}
+function pct(u,t){return t>0?Math.round(u/t*100):0;}
+function tempCls(t){return t>=78?'hot':t>=60?'warm':'cool';}
+function tempLbl(t){return t>=78?'temp-hot':t>=60?'temp-warm':'temp-cool';}
+
+function renderClusterCard(g) {
+  const online = g.endpoint_online === true;
+  const live = g.live === true;
+  const temp = g.temperature_c ?? null;
+  const tc = temp != null ? tempCls(temp) : (online ? 'cool' : 'offline');
+  const mp = pct(g.memory_used_mb||0, g.memory_total_mb||g.vram_mb||1);
+  const loaded = (g.loaded_model || g.model || '').trim();
+  const shortLoaded = loaded
+    ? loaded.split('/').pop().replace(/\.gguf$/i,'')
+    : (g.endpoint_online ? '— up (model unknown) —' : '— endpoint down —');
+  const role = (g.role && g.role !== 'idle') ? g.role : '';
+  const procs = (g.processes||[]).slice(0,3);
+  return `<div class="gpu-card ${tc} ${online?'':'offline'}">
+    <div class="gpu-name">${esc(g.name||'GPU')}</div>
+    <div class="gpu-node-tag">📍 ${esc(g.node||'?')} · ${esc((g.gpu_uuid||'').replace('GPU-','').slice(0,8))}… · :${g.port||'?'}${g.port_discovered?' (live)':''}</div>
+    <div class="gpu-loaded" title="${esc(loaded)}">🧠 ${esc(shortLoaded)}</div>
+    ${temp!=null?`<div class="gpu-temp ${tempLbl(temp)}">${temp}°C</div>`:''}
+    <div style="margin-bottom:6px">
+      <span class="st-pill ${online?'pill-on':'pill-off'}">${online?'endpoint up':'endpoint down'}</span>
+      ${live?'<span class="st-pill pill-live">live smi</span>':''}
+      ${role?`<span class="st-pill pill-live">${esc(role)}</span>`:''}
+    </div>
+    ${g.memory_total_mb?`<div class="bar-row"><div class="bar-hd"><span>VRAM</span><span>${mg(g.memory_used_mb||0)}/${mg(g.memory_total_mb)} (${mp}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${mp}%"></div></div></div>`:''}
+    ${procs.length?`<div style="font-size:0.64rem;color:#556;margin-top:4px">${procs.map(p=>`${esc(p.name)} [${p.pid}]`).join('<br>')}</div>`:''}
+  </div>`;
+}
+
+async function loadClusterGpus() {
+  const grid = document.getElementById('cluster-gpu-grid');
+  try {
+    const d = await fetch('/cluster/gpus').then(r=>r.json());
+    const gpus = d.gpus||[];
+    const onlineN = gpus.filter(g=>g.endpoint_online).length;
+    document.getElementById('sv-gpu').textContent = `${onlineN}/${gpus.length} up`;
+    document.getElementById('sv-gpu').className = 'sv '+(onlineN===gpus.length?'ok':onlineN>0?'busy':'err');
+    document.getElementById('sv-hb').textContent = String(d.heartbeat_nodes||0);
+    document.getElementById('sv-hb').className = 'sv '+(d.heartbeat_nodes>0?'ok':'grey');
+    document.getElementById('hb-hint').style.display = (d.heartbeat_nodes||0) < 2 ? '' : 'none';
+    const fh = d.forge_host||'?';
+    document.getElementById('cluster-sec-label').textContent =
+      `CLUSTER GPUs — all nodes (forge @ ${fh})`;
+    grid.innerHTML = gpus.length ? gpus.map(renderClusterCard).join('')
+      : '<div style="color:#446;padding:16px">No GPUs in cluster config</div>';
+  } catch(e) {
+    grid.innerHTML = `<div style="color:#ef4444;padding:16px">${esc(e.message)}</div>`;
+  }
+}
+
+async function loadStatus() {
+  try {
+    const h = await fetch('/forge/status').then(r=>r.json());
+    document.getElementById('sv-forge').textContent='ONLINE';
+    document.getElementById('sv-forge').className='sv ok';
+    const ae=document.getElementById('sv-agent');
+    ae.textContent=h.send_busy?'⚡ BUSY':'✓ idle';
+    ae.className='sv '+(h.send_busy?'busy':'ok');
+  } catch {
+    document.getElementById('sv-forge').textContent='OFFLINE';
+    document.getElementById('sv-forge').className='sv err';
+  }
+  try {
+    const d = await fetch('/cluster/orchestration').then(r=>r.json());
+    const ne=document.getElementById('sv-n8n');
+    ne.textContent=d.n8n_reachable?'✓':'✗';
+    ne.className='sv '+(d.n8n_reachable?'ok':'err');
+  } catch {}
+  try {
+    const d = await fetch('/lanes/activity').then(r=>r.json());
+    const acts=(d.activity||[]).filter(a=>a.lane==='lane-a');
+    document.getElementById('lane-log').textContent=acts.slice(-20).reverse().map(a=>
+      `[${new Date(a.ts*1000).toLocaleTimeString()}] ${a.kind}: ${(a.text||'').slice(0,80)}`
+    ).join('\n')||'No activity';
+  } catch {}
+}
+
+async function refreshAll(){ await Promise.allSettled([loadClusterGpus(), loadStatus()]); }
+async function qSend(){
+  const msg=document.getElementById('q-msg').value.trim(); if(!msg)return;
+  await fetch('/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,lane:'lane-a'})});
+  document.getElementById('q-msg').value='';
+}
+async function qSteer(){ const m=document.getElementById('q-msg').value.trim(); if(m) await fetch('/steer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})}); }
+async function qStop(){ await fetch('/interrupt',{method:'POST'}); }
+
+refreshAll();
+setInterval(loadClusterGpus, 8000);
+setInterval(loadStatus, 10000);
+</script>
+</body>
+</html>

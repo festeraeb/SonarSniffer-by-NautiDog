@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "default_template": "missions/dual_use_mission_template.json",
+  "profiles": {
+    "water_wreck_hunt": {
+      "patch": {
+        "domain": "water",
+        "objective": "wreck_hunt",
+        "weather_filter": "calm_and_post_storm",
+        "sensors": ["hls", "sentinel1", "swot", "icesat2"],
+        "pipeline": {
+          "run_satellite": true,
+          "run_magnetic": true,
+          "run_drift": true,
+          "run_bag": true,
+          "run_pdf_breaker": true,
+          "run_sonar": true,
+          "run_fusion": true
+        },
+        "knobs": {
+          "fusion_high_threshold": 0.85,
+          "fusion_medium_threshold": 0.6
+        }
+      }
+    },
+    "water_vessel_sar": {
+      "patch": {
+        "domain": "water",
+        "objective": "vessel_sar",
+        "weather_filter": "storm_and_post_storm",
+        "sensors": ["sentinel1", "hls", "swot"],
+        "pipeline": {
+          "run_satellite": true,
+          "run_magnetic": false,
+          "run_drift": true,
+          "run_bag": false,
+          "run_pdf_breaker": true,
+          "run_sonar": true,
+          "run_fusion": true
+        },
+        "knobs": {
+          "fusion_high_threshold": 0.8,
+          "fusion_medium_threshold": 0.55
+        }
+      }
+    },
+    "land_aircraft_sar": {
+      "patch": {
+        "domain": "land",
+        "objective": "aircraft_sar",
+        "weather_filter": "all",
+        "sensors": ["hls", "sentinel1", "icesat2"],
+        "pipeline": {
+          "run_satellite": true,
+          "run_magnetic": true,
+          "run_drift": true,
+          "run_bag": false,
+          "run_pdf_breaker": true,
+          "run_sonar": false,
+          "run_fusion": true
+        },
+        "knobs": {
+          "fusion_high_threshold": 0.82,
+          "fusion_medium_threshold": 0.58
+        }
+      }
+    },
+    "land_vehicle_sar": {
+      "patch": {
+        "domain": "land",
+        "objective": "vehicle_sar",
+        "weather_filter": "all",
+        "sensors": ["hls", "sentinel1"],
+        "pipeline": {
+          "run_satellite": true,
+          "run_magnetic": true,
+          "run_drift": true,
+          "run_bag": false,
+          "run_pdf_breaker": true,
+          "run_sonar": false,
+          "run_fusion": true
+        }
+      }
+    },
+    "land_person_search": {
+      "patch": {
+        "domain": "land",
+        "objective": "person_search",
+        "weather_filter": "all",
+        "sensors": ["hls", "sentinel1"],
+        "pipeline": {
+          "run_satellite": true,
+          "run_magnetic": false,
+          "run_drift": true,
+          "run_bag": false,
+          "run_pdf_breaker": true,
+          "run_sonar": false,
+          "run_fusion": true
+        }
+      }
+    },
+    "sonar_public_scan": {
+      "patch": {
+        "domain": "water",
+        "objective": "wreck_hunt",
+        "weather_filter": "calm",
+        "sensors": ["hls", "sentinel1"],
+        "pipeline": {
+          "run_satellite": true,
+          "run_magnetic": false,
+          "run_drift": false,
+          "run_bag": true,
+          "run_pdf_breaker": false,
+          "run_sonar": true,
+          "run_fusion": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+You are the THINKER in a multi-agent pipeline. Do not write full code.
+
+Task (from our fleet punch list — MIGRATION_STATUS + SCRIPT_CLEANUP_FORGE_MISSION):
+
+We have ~185 shell scripts on shared NFS. Phase 1 inventory is done at `var/script-inventory/latest/` (manifest.json, report.md, keep/review/ephemeral tiers). Phase 2 needs Forge to classify each script into keep / archive / ephemeral and write `forge-verdict.json` — no deletes yet.
+
+Deliver exactly these sections:
+## Goal
+## Constraints (NFS shared T440+cesarops2, do not break fleet/forge-health/nomad scripts)
+## Architecture sketch (how thinker → coder → reviewer would execute Phase 2)
+## Handoff to coders (numbered tasks + acceptance criteria for forge-verdict.json)
+## Risks & open questions
+
+Under 700 words. Be specific to our repo paths.

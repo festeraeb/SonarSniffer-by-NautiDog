@@ -54,6 +54,36 @@
         .btn-stop  { background: var(--danger);  color: white; }
         .btn-apply { width: 100%; background: var(--accent); color: var(--bg); margin-top: 10px; padding: 9px; }
         .btn-secondary { background: #2d2d44; color: var(--text); }
+        .btn-pamp { background: #9c27b0; color: white; }
+        .btn-candle { background: #ff6f00; color: white; }
+        .fleet-toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center; }
+        .card.remote { border-color: #9c27b0; }
+        .remote-hint { font-size:0.72rem; color:#ce93d8; margin-top:6px; }
+        /* Flow builder */
+        .flow-toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
+        .flow-preset-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+        .flow-editor { position: relative; border:1px solid var(--border); border-radius:10px; background:#0b0b14; height:520px; overflow:hidden; }
+        .flow-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; }
+        .flow-canvas { position:absolute; inset:0; z-index:1; }
+        .flow-node { position:absolute; background:#17172a; border:2px solid #2f2f48; border-radius:10px; width:260px; color:var(--text); box-shadow:0 6px 20px rgba(0,0,0,0.25); z-index:3; }
+        .flow-node.role { width:180px; border-color:#00d4ff; }
+        .flow-node.remote { border-color:#9c27b0; }
+        .flow-node-head { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-bottom:1px solid #2a2a42; cursor:grab; user-select:none; }
+        .flow-node-title { font-size:0.84rem; font-weight:bold; color:var(--accent); }
+        .flow-node-kind { font-size:0.68rem; color:var(--text-dim); text-transform:uppercase; }
+        .flow-node-body { padding:8px 10px; font-size:0.8rem; }
+        .flow-node-body .control-label { margin-top:4px; }
+        .flow-node-body select { font-size:0.82rem; padding:5px 8px; }
+        .flow-port { position:absolute; width:14px; height:14px; border-radius:50%; border:2px solid #6a6a88; background:#0f0f1a; cursor:pointer; }
+        .flow-port.in { left:-8px; top:50%; transform:translateY(-50%); }
+        .flow-port.out { right:-8px; top:50%; transform:translateY(-50%); border-color:#00d4ff; }
+        .flow-port.out.selected { background:#00d4ff; }
+        .flow-help { font-size:0.78rem; color:var(--text-dim); margin-bottom:8px; }
+        .flow-link { pointer-events:stroke; cursor:pointer; }
+        .flow-link:hover { stroke:#ff9800; stroke-width:3; }
+        .flow-state { font-size:0.68rem; font-weight:bold; }
+        .flow-state.online { color:var(--success); }
+        .flow-state.offline { color:var(--danger); }
         /* Memory pool */
         .pool-section { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 20px; }
         .pool-controls { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
@@ -98,357 +128,36 @@
     </div>
 </header>
 
-<!-- ── DII Node Fleet ──────────────────────────────────────────────────── -->
-<div id="dii-fleet">
-<style>
-  #dii-fleet { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-  #dii-fleet h2 { margin: 0 0 16px; color: #fff; font-size: 1.4em; }
-  .node-card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-  .node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .node-name { font-weight: 700; font-size: 1.1em; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .dot.online { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
-  .dot.offline { background: #ff4444; box-shadow: 0 0 6px #ff4444; }
-  .last-seen { margin-left: auto; font-size: 0.8em; color: #888; }
-  .state-badge-dii { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
-  .state-idle { background: #4a4a4a; color: #ccc; }
-  .state-serving { background: #00b894; color: #fff; }
-  .state-loading { background: #fdcb6e; color: #2d3436; }
-  .state-error { background: #d63031; color: #fff; }
-  .active-model { color: #74b9ff; font-size: 0.9em; margin-bottom: 8px; }
-  .gpu-card { background: #0f3460; border-radius: 6px; padding: 8px 10px; margin-top: 6px; }
-  .gpu-name-dii { font-size: 0.9em; font-weight: 500; margin-bottom: 4px; }
-  .vram-bar { height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-  .vram-fill { height: 100%; background: #0984e3; transition: width 0.3s; }
-  .gpu-stats { font-size: 0.8em; color: #b2bec3; display: flex; justify-content: space-between; }
-  .models-count { font-size: 0.85em; color: #a0a0a0; margin-top: 8px; }
-</style>
-<h2>🖥️ DII Node Fleet</h2>
-<div id="nodes-container"></div>
-<script>
-  async function fetchNodes() {
-    try {
-      const res = await fetch('/cluster/nodes');
-      const nodes = await res.json();
-      const container = document.getElementById('nodes-container');
-      container.innerHTML = '';
-      nodes.forEach(node => {
-        const hb = node.last_heartbeat || {};
-        const state = hb.state || 'idle';
-        const stateClass = 'state-' + state;
-        const isOnline = !!node.online;
-        let gpusHtml = '';
-        (hb.all_gpus || []).forEach(gpu => {
-          const pct = gpu.vram_total_mb ? (gpu.vram_used_mb / gpu.vram_total_mb * 100) : 0;
-          gpusHtml += '<div class="gpu-card"><div class="gpu-name-dii">' + gpu.name + '</div>' +
-            '<div class="vram-bar"><div class="vram-fill" style="width:' + pct + '%"></div></div>' +
-            '<div class="gpu-stats"><span>' + gpu.vram_used_mb + '/' + gpu.vram_total_mb + ' MB</span>' +
-            '<span>' + gpu.temp_c + '°C</span><span>' + gpu.util_pct + '%</span></div></div>';
-        });
-        const card = document.createElement('div');
-        card.className = 'node-card';
-        card.innerHTML = '<div class="node-header"><span class="node-name">' + node.node_id + '</span>' +
-          '<span class="dot ' + (isOnline ? 'online' : 'offline') + '"></span>' +
-          '<span class="last-seen">' + (node.last_seen_secs_ago || '?') + 's ago</span></div>' +
-          '<span class="state-badge-dii ' + stateClass + '">' + state + '</span>' +
-          (hb.model ? '<div class="active-model">📂 ' + hb.model + '</div>' : '') +
-          gpusHtml +
-          '<div class="models-count">📦 ' + (node.available_models ? node.available_models.length : 0) + ' available models</div>';
-        container.appendChild(card);
-      });
-    } catch (e) { console.error('DII Fleet fetch failed', e); }
-  }
-  fetchNodes();
-  setInterval(fetchNodes, 10000);
-</script>
+<!-- ── GPU Fleet (per-GPU engine / model / role) ───────────────────────── -->
+<h2>GPU Fleet <span style="font-size:0.75rem;color:var(--text-dim);font-weight:normal">— bind each GPU, then START (remote: apply + fleet dispatch)</span></h2>
+<div class="fleet-toolbar">
+    <button class="btn-stop" onclick="stopAllWorkers()">STOP ALL</button>
+    <button class="btn-secondary" onclick="clearAllCards()">CLEAR ALL BINDINGS</button>
+    <button class="btn-candle" onclick="launchCandleBig()">CANDLE BIG (P100)</button>
+    <button class="btn-pamp" onclick="applyRoutingPreset('pamp-moe-predict')">PAMP ROUTING</button>
+    <select id="routing-preset-select" style="min-width:200px;background:#0f0f1a;color:#fff;border:1px solid var(--border);border-radius:6px;padding:6px" aria-label="Routing preset">
+        <option value="">— routing preset —</option>
+    </select>
+    <button class="btn-secondary" onclick="applySelectedPreset()">APPLY PRESET</button>
+    <button class="btn-secondary" onclick="dispatchCesarops2()">SYNC CESAROPS2</button>
+</div>
+<div class="worker-grid" id="gpu-fleet"></div>
+
+<!-- ── Visual Route Builder ───────────────────────────────────────────── -->
+<h2>Route Flow Builder <span style="font-size:0.75rem;color:var(--text-dim);font-weight:normal">— drag nodes, connect GPU → role, then APPLY FLOW</span></h2>
+<div class="flow-toolbar">
+    <button class="btn-secondary" onclick="applyFlowGraph()">APPLY FLOW</button>
+    <button class="btn-secondary" onclick="saveFlowLayout()">SAVE LAYOUT</button>
+    <button class="btn-secondary" onclick="resetFlowLayout()">RESET LAYOUT</button>
+    <button class="btn-secondary" onclick="clearFlowLinks()">CLEAR LINKS</button>
+</div>
+<div class="flow-preset-row" id="flow-preset-row"></div>
+<div class="flow-help">Click an output port on a GPU node, then click an input port on a role node to draw arrow connectors.</div>
+<div class="flow-editor" id="flow-editor">
+    <svg class="flow-svg" id="flow-svg"></svg>
+    <div class="flow-canvas" id="flow-canvas"></div>
 </div>
 
-<div id="flow-editor">
-    <style>
-        #flow-editor {
-            --bg: #0f0f1a; --node-bg: #1a1a2e; --border: #2d2d44; --text: #e0e0e0; --accent: #4f46e5;
-            background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
-            display: flex; height: 600px; width: 100%; border: 1px solid var(--border); position: relative; overflow: hidden;
-        }
-        #palette { width: 180px; background: #161625; border-right: 1px solid var(--border); padding: 10px; z-index: 10; }
-        .palette-item { 
-            background: var(--node-bg); border: 1px solid var(--border); padding: 8px; margin-bottom: 8px; 
-            cursor: grab; font-size: 12px; border-radius: 4px; user-select: none;
-        }
-        .palette-item:hover { border-color: var(--accent); }
-        #canvas-container { flex-grow: 1; position: relative; overflow: hidden; cursor: crosshair; }
-        canvas { display: block; }
-        #toolbar { position: absolute; top: 10px; right: 10px; display: flex; gap: 10px; z-index: 10; }
-        button { 
-            background: var(--accent); border: none; color: white; padding: 6px 12px; 
-            border-radius: 4px; cursor: pointer; font-size: 12px; 
-        }
-        button:hover { opacity: 0.8; }
-        button.stop { background: #ef4444; }
-        .node-ui { position: absolute; pointer-events: none; width: 200px; font-size: 11px; }
-    </style>
-
-    <div id="palette">
-        <div style="font-weight:bold; margin-bottom:10px; font-size:14px;">Nodes</div>
-        <div class="palette-item" draggable="true" data-type="input">Input Node</div>
-        <div class="palette-item" draggable="true" data-type="task">Task: Code</div>
-        <div class="palette-item" draggable="true" data-type="task" data-task="Review">Task: Review</div>
-        <div class="palette-item" draggable="true" data-type="task" data-task="Compile">Task: Compile</div>
-        <div class="palette-item" draggable="true" data-type="output">Output Node</div>
-        <div style="margin-top:20px; font-size:10px; color:#666;">Drag to canvas. Drag ports to connect.</div>
-    </div>
-
-    <div id="canvas-container">
-        <div id="toolbar">
-            <button onclick="flow.save()">Save</button>
-            <button onclick="flow.load()">Load</button>
-            <button id="run-btn" onclick="flow.run()">Run Pipeline</button>
-        </div>
-        <canvas id="flow-canvas"></canvas>
-    </div>
-
-    <script>
-        class FlowEditor {
-            constructor() {
-                this.canvas = document.getElementById('flow-canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.container = document.getElementById('canvas-container');
-                this.nodes = [];
-                this.connections = [];
-                this.offset = { x: 0, y: 0 };
-                this.zoom = 1;
-                this.dragNode = null;
-                this.activePort = null;
-                this.isPanning = false;
-                this.isExecuting = false;
-                this.gpuNodes = [];
-
-                this.init();
-            }
-
-            async init() {
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                this.canvas.addEventListener('mousedown', e => this.handleMouseDown(e));
-                window.addEventListener('mousemove', e => this.handleMouseMove(e));
-                window.addEventListener('mouseup', () => this.handleMouseUp());
-                this.canvas.addEventListener('wheel', e => this.handleWheel(e));
-                
-                // Drag & Drop from Palette
-                this.container.addEventListener('dragover', e => e.preventDefault());
-                this.container.addEventListener('drop', e => {
-                    e.preventDefault();
-                    const type = e.dataTransfer.getData('text/plain');
-                    const taskType = e.dataTransfer.getData('task-type');
-                    const rect = this.canvas.getBoundingClientRect();
-                    const x = (e.clientX - rect.left - this.offset.x) / this.zoom;
-                    const y = (e.clientY - rect.top - this.offset.y) / this.zoom;
-                    this.addNode(type, x, y, taskType);
-                });
-
-                document.querySelectorAll('.palette-item').forEach(el => {
-                    el.addEventListener('dragstart', e => {
-                        e.dataTransfer.setData('text/plain', el.dataset.type);
-                        e.dataTransfer.setData('task-type', el.dataset.task || '');
-                    });
-                });
-
-                await this.fetchGPUs();
-                this.render();
-            }
-
-            async fetchGPUs() {
-                try {
-                    const res = await fetch('/cluster/nodes');
-                    this.gpuNodes = await res.json();
-                } catch (e) {
-                    this.gpuNodes = [{ name: 'P100#0', model: 'Gemma', vram: 80, temp: 45, status: 'online' }];
-                }
-            }
-
-            resize() {
-                this.canvas.width = this.container.clientWidth;
-                this.canvas.height = this.container.clientHeight;
-            }
-
-            addNode(type, x, y, task = '') {
-                const node = { id: Date.now(), type, x, y, w: 180, h: 80, task, data: '', status: 'idle', assignedGpu: null };
-                if (type === 'gpu') { /* Logic for GPU nodes */ }
-                this.nodes.push(node);
-            }
-
-            handleMouseDown(e) {
-                const rect = this.canvas.getBoundingClientRect();
-                const mx = (e.clientX - rect.left - this.offset.x) / this.zoom;
-                const my = (e.clientY - rect.top - this.offset.y) / this.zoom;
-
-                // Check ports first
-                for (const n of this.nodes) {
-                    if (this.checkPort(mx, my, n, 'out')) {
-                        this.activePort = { node: n, type: 'out' };
-                        return;
-                    }
-                    if (this.checkPort(mx, my, n, 'in')) {
-                        this.activePort = { node: n, type: 'in' };
-                        return;
-                    }
-                }
-
-                // Check nodes
-                this.dragNode = this.nodes.find(n => mx > n.x && mx < n.x + n.w && my > n.y && my < n.y + n.h);
-                if (!this.dragNode && e.button === 1) this.isPanning = true;
-            }
-
-            checkPort(mx, my, n, type) {
-                const px = type === 'out' ? n.x + n.w : n.x;
-                const py = n.y + n.h / 2;
-                return Math.hypot(mx - px, my - py) < 10;
-            }
-
-            handleMouseMove(e) {
-                const rect = this.canvas.getBoundingClientRect();
-                const mx = (e.clientX - rect.left - this.offset.x) / this.zoom;
-                const my = (e.clientY - rect.top - this.offset.y) / this.zoom;
-
-                if (this.dragNode) {
-                    this.dragNode.x = mx - this.dragNode.w / 2;
-                    this.dragNode.y = my - this.dragNode.h / 2;
-                } else if (this.isPanning) {
-                    this.offset.x += e.movementX;
-                    this.offset.y += e.movementY;
-                } else if (this.activePort) {
-                    this.mousePos = { x: mx, y: my };
-                }
-            }
-
-            handleMouseUp() {
-                if (this.activePort) {
-                    const target = this.nodes.find(n => 
-                        this.checkPort(this.mousePos.x, this.mousePos.y, n, this.activePort.type === 'out' ? 'in' : 'out')
-                    );
-                    if (target && target !== this.activePort.node) {
-                        const from = this.activePort.type === 'out' ? this.activePort.node : target;
-                        const to = this.activePort.type === 'out' ? target : this.activePort.node;
-                        this.connections.push({ from: from.id, to: to.id, status: 'idle' });
-                    }
-                }
-                this.dragNode = null;
-                this.isPanning = false;
-                this.activePort = null;
-            }
-
-            handleWheel(e) {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                this.zoom *= delta;
-            }
-
-            async run() {
-                if (this.isExecuting) return;
-                this.isExecuting = true;
-                document.getElementById('run-btn').innerText = "Running...";
-                
-                let currentNode = this.nodes.find(n => n.type === 'input');
-                let context = "";
-
-                try {
-                    while (currentNode) {
-                        currentNode.status = 'active';
-                        if (currentNode.type === 'task') {
-                            const gpu = this.gpuNodes[0]; // Simplified: pick first GPU
-                            const res = await fetch('/ide/chat/stream', {
-                                method: 'POST',
-                                body: JSON.stringify({ prompt: context, task: currentNode.task, gpu: gpu.name })
-                            });
-                            // Simulate streaming
-                            context = "Result of " + currentNode.task; 
-                        } else if (currentNode.type === 'input') {
-                            context = "Initial Prompt";
-                        }
-                        
-                        const conn = this.connections.find(c => c.from === currentNode.id);
-                        if (!conn) break;
-                        
-                        currentNode.status = 'idle';
-                        currentNode = this.nodes.find(n => n.id === conn.to);
-                        conn.status = 'active';
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    this.isExecuting = false;
-                    document.getElementById('run-btn').innerText = "Run Pipeline";
-                }
-            }
-
-            save() {
-                const data = JSON.stringify({ nodes: this.nodes, connections: this.connections });
-                fetch('/ide/pipeline/save', { method: 'POST', body: data });
-            }
-
-            async load() {
-                const res = await fetch('/ide/pipeline/load');
-                const data = await res.json();
-                this.nodes = data.nodes;
-                this.connections = data.connections;
-            }
-
-            render() {
-                const { ctx, canvas, zoom, offset } = this;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.save();
-                ctx.translate(offset.x, offset.y);
-                ctx.scale(zoom, zoom);
-
-                // Grid
-                ctx.strokeStyle = '#1e1e2e';
-                ctx.lineWidth = 1;
-                for(let i=-2000; i<2000; i+=40) {
-                    ctx.beginPath(); ctx.moveTo(i, -2000); ctx.lineTo(i, 2000); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(-2000, i); ctx.lineTo(2000, i); ctx.stroke();
-                }
-
-                // Connections
-                this.connections.forEach(c => {
-                    const n1 = this.nodes.find(n => n.id === c.from);
-                    const n2 = this.nodes.find(n => n.id === c.to);
-                    if (!n1 || !n2) return;
-                    ctx.beginPath();
-                    ctx.strokeStyle = c.status === 'active' ? '#10b981' : '#4f46e5';
-                    ctx.lineWidth = 2;
-                    ctx.moveTo(n1.x + n1.w, n1.y + n1.h/2);
-                    ctx.bezierCurveTo(n1.x + n1.w + 50, n1.y + n1.h/2, n2.x - 50, n2.y + n2.h/2, n2.x, n2.y + n2.h/2);
-                    ctx.stroke();
-                });
-
-                // Nodes
-                this.nodes.forEach(n => {
-                    ctx.fillStyle = '#1a1a2e';
-                    ctx.strokeStyle = n.status === 'active' ? '#10b981' : '#2d2d44';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.roundRect(n.x, n.y, n.w, n.h, 6);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 12px sans-serif';
-                    ctx.fillText(n.type.toUpperCase() + (n.task ? `: ${n.task}` : ''), n.x + 10, n.y + 20);
-                    
-                    // Ports
-                    ctx.fillStyle = '#4f46e5';
-                    ctx.beginPath(); ctx.arc(n.x, n.y + n.h/2, 5, 0, Math.PI*2); ctx.fill(); // In
-                    ctx.beginPath(); ctx.arc(n.x + n.w, n.y + n.h/2, 5, 0, Math.PI*2); ctx.fill(); // Out
-                });
-
-                ctx.restore();
-                requestAnimationFrame(() => this.render());
-            }
-        }
-
-        const flow = new FlowEditor();
-    </script>
-</div>
 <!-- ── Memory Pool ─────────────────────────────────────────────────────── -->
 <h2>Memory Pools</h2>
 <div class="pool-section">
@@ -483,58 +192,16 @@
 </div>
 
 <!-- ── GPU Status ─────────────────────────────────────────────────────── -->
-<h2>Local GPUs</h2>
+<h2>Cluster GPUs <span style="font-size:0.75rem;color:var(--text-dim);font-weight:normal">— live + loaded model (all nodes)</span></h2>
 <div id="gpu-status"></div>
 
 <!-- ── Network Nodes ─────────────────────────────────────────────────── -->
-<h2>Network Nodes <span id="disc-spinner" style="display:none;color:var(--text-dim)">⟳</span></h2>
+<h2>Cluster Nodes <span id="disc-spinner" style="display:none;color:var(--text-dim)">⟳</span></h2>
 <div class="node-grid" id="node-grid"></div>
-
-<!-- ── Polisher / Forge Status ───────────────────────────────────────── -->
-<h2>Polisher Status <span style="font-size:0.7rem;color:var(--text-dim);font-weight:normal">— orchestrator + tool wiring</span></h2>
-<div class="card" id="polisher-card" style="margin-bottom:18px">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
-    <div>
-      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Tool Wiring</div>
-      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
-        <div>✓ Corrector cascade <span style="color:var(--text-dim)">(Marvin → Picasso → Nautik)</span></div>
-        <div>✓ think_harder = nautivecs + WSO web</div>
-        <div>✓ Vector injection per worker</div>
-        <div>✓ Auto-WSO after <b id="ps-auto-wso">3</b> consecutive failures</div>
-        <div>✓ Translator + JSON fixer + loop detector</div>
-        <div>✓ Hot-swap on 5 consecutive scorecard failures</div>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Today's Big Hitters</div>
-      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
-        <div>P100 #0 → <b>Gemma-4-26B-MoE</b> IQ4_XS</div>
-        <div>P100 #1 → <b>Qwen3.6-35B-A3B</b> Q4_K_M</div>
-        <div style="color:var(--text-dim)">All routed through forge tools</div>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Specialists (today)</div>
-      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
-        <div>1070 → FortyTwo Rust 14B (corrector)</div>
-        <div>P1000 → TinyLlama (draft / validator)</div>
-        <div>1060 → routed via forge</div>
-        <div>M2200 → cesarops-inference (regression)</div>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:0.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em">Knowledge</div>
-      <div style="font-size:0.95rem;line-height:1.6;margin-top:6px">
-        <div>nautivecs: <b id="ps-vec-count">12,600+</b> chunks indexed</div>
-        <div>scorecard: <code>~/.cache/cesarops/model_scorecard.json</code></div>
-        <div>polisher writes lessons via remember()</div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ── Activity Log ──────────────────────────────────────────────────── -->
 <h2>Activity Log</h2>
+<div id="ops-status" style="display:none;background:#0a2a14;border:1px solid #2a5a2a;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:0.85rem;color:#7ec8a0"></div>
 <div class="log-box" id="log">Ready.</div>
 
 </div><!-- /container -->
@@ -543,9 +210,17 @@
 // ── State ──────────────────────────────────────────────────────────────────
 let workers = [];
 let pools = [];
+let gpuCards = [];
+let modelList = [];
 let engines = { available: [], per_node: {} };
+const ROLE_OPTIONS = ['idle','coder','thinker','reviewer','corrector','validator','general','coding','bootstrap'];
 let selectedIds = new Set();
 let correctorOpen = false;
+let routingPresets = [];
+let flow = { nodes: [], links: [], selectedOut: null, drag: null };
+
+const FLOW_KEY = 'forge-flow-layout-v1';
+const FLOW_ROLES = ['coding','general','thinker','reviewer','corrector','validator'];
 
 const CORRECTOR_FUNCTIONS = [
     { id: 'json_fixer',    label: 'JSON Fixer',    desc: 'Fixes malformed tool call JSON from main model' },
@@ -557,7 +232,7 @@ const CORRECTOR_FUNCTIONS = [
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
-    await Promise.all([fetchEngines(), fetchConfig()]);
+    await Promise.all([fetchEngines(), fetchConfig(), fetchModels(), fetchGpuFleet(), fetchRoutingPresets()]);
     render();
     refreshGpus();
     refreshNodes();
@@ -576,7 +251,7 @@ async function fetchEngines() {
 
 async function fetchConfig() {
     try {
-        const r = await fetch('/cluster/config');
+        const r = await fetch('/cluster/config/full');
         const d = await r.json();
         workers = d.workers || defaultWorkers();
         pools   = d.pools   || [];
@@ -586,13 +261,198 @@ async function fetchConfig() {
     }
 }
 
+async function fetchModels() {
+    try {
+        const r = await fetch('/cluster/models');
+        modelList = await r.json();
+    } catch(e) { modelList = []; }
+}
+
+async function fetchGpuFleet() {
+    try {
+        const r = await fetch('/cluster/gpus');
+        const d = await r.json();
+        gpuCards = d.gpus || [];
+    } catch(e) { gpuCards = []; }
+}
+
+async function fetchRoutingPresets() {
+    try {
+        const r = await fetch('/cluster/routing');
+        const d = await r.json();
+        routingPresets = d.presets || [];
+        const sel = document.getElementById('routing-preset-select');
+        if (sel) {
+            sel.innerHTML = '<option value="">— routing preset —</option>' +
+                routingPresets.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+        renderFlowPresetButtons();
+    } catch(e) { routingPresets = []; }
+}
+
+function renderGpuFleet() {
+    const el = document.getElementById('gpu-fleet');
+    if (!el) return;
+    if (!gpuCards.length) {
+        el.innerHTML = '<div style="color:var(--text-dim)">No GPUs in config</div>';
+        return;
+    }
+    el.innerHTML = gpuCards.map(g => {
+        const modelOpts = modelList.map(m => {
+            const short = m.split('/').pop();
+            return `<option value="${m}" ${g.model===m?'selected':''}>${short}</option>`;
+        }).join('');
+        const roleOpts = ROLE_OPTIONS.map(r =>
+            `<option value="${r}" ${g.role===r?'selected':''}>${r}</option>`).join('');
+        const engList = g.remote
+            ? ['llama-server','koboldcpp']
+            : ['llama-server','koboldcpp','cesarops-inference'];
+        const engOpts = engList.map(e =>
+            `<option value="${e}" ${g.engine===e?'selected':''}>${e}</option>`).join('');
+        const wname = g.worker_name || `gpu${g.id}-${g.role}`;
+        const remoteCls = g.remote ? 'remote' : '';
+        const remoteHint = g.remote
+            ? `<div class="remote-hint">Remote — START on ${g.host} via lab script or SYNC CESAROPS2</div>`
+            : '';
+        return `<div class="card ${remoteCls}" id="gpu-card-${g.id}">
+  <div class="card-header">
+    <div>
+      <div class="card-title">${g.name}</div>
+      <div class="card-role">GPU ${g.id} · ${g.host} · port ${g.port}${g.cuda_index != null ? ' · cuda '+g.cuda_index : ''}</div>
+      ${g.notes ? `<div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px">${g.notes}</div>` : ''}
+    </div>
+    <span id="gpu-status-${g.id}" class="status-badge badge-offline">?</span>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Role</label>
+    <select id="gpu-role-${g.id}" aria-label="Role GPU ${g.id}">${roleOpts}</select>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Engine</label>
+    <select id="gpu-engine-${g.id}">${engOpts}</select>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Model</label>
+    <select id="gpu-model-${g.id}"><option value="">— select —</option>${modelOpts}</select>
+  </div>
+  <div class="btn-row">
+    <button class="btn-start" onclick="startGpuWorker(${g.id}, ${g.remote})">START</button>
+    <button class="btn-stop" onclick="stopGpuWorker(${g.id},'${wname}', ${g.remote})">STOP</button>
+  </div>
+  ${remoteHint}
+  <button class="btn-apply" onclick="applyGpu(${g.id})">APPLY BINDING</button>
+</div>`;
+    }).join('');
+    gpuCards.forEach(g => {
+        const w = workers.find(x => x.gpu === g.id) || { name: g.worker_name, port: g.port };
+        if (w && w.name) pingWorkerByName(w.name, `gpu-status-${g.id}`);
+    });
+}
+
+async function applyGpu(id) {
+    const role = document.getElementById(`gpu-role-${id}`).value;
+    const engine = document.getElementById(`gpu-engine-${id}`).value;
+    const model = document.getElementById(`gpu-model-${id}`).value;
+    const r = await api(`/cluster/gpu/${id}/apply`, { role, engine, model, backend: 'cuda' });
+    log(`GPU ${id}: ${r.message || r.error || 'ok'}`);
+    await fetchGpuFleet();
+    await fetchConfig();
+    render();
+}
+
+async function startGpuWorker(id, isRemote) {
+    if (isRemote) {
+        log(`GPU ${id}: remote — use SYNC CESAROPS2 or ssh cesarops@10.0.0.201 bash scripts/cesarops2_research_lab.sh start`);
+        return;
+    }
+    await applyGpu(id);
+    const g = gpuCards.find(x => x.id === id);
+    const name = g?.worker_name || workers.find(w => w.gpu === id)?.name;
+    if (!name) { log(`GPU ${id}: no worker name — APPLY first`); return; }
+    await startWorker(name);
+    pingWorkerByName(name, `gpu-status-${id}`);
+}
+
+async function stopGpuWorker(id, name, isRemote) {
+    if (isRemote) {
+        log(`${name}: remote stop — run on host or SYNC CESAROPS2`);
+        return;
+    }
+    await stopWorker(name);
+    document.getElementById(`gpu-status-${id}`)?.classList.replace('badge-online','badge-offline');
+}
+
+async function stopAllWorkers() {
+    const r = await api('/cluster/stop-all', {});
+    log('STOP ALL: ' + (r.message || r.error || 'ok'));
+    gpuCards.forEach(g => {
+        const el = document.getElementById(`gpu-status-${g.id}`);
+        if (el) { el.textContent = 'OFFLINE'; el.className = 'status-badge badge-offline'; }
+    });
+}
+
+async function clearAllCards() {
+    if (!confirm('Stop local inference and reset all worker bindings to idle?')) return;
+    const r = await api('/cluster/fleet/clear-all', {});
+    log('CLEAR ALL: ' + (r.message || r.error || 'ok'));
+    await fetchGpuFleet();
+    await fetchConfig();
+    render();
+}
+
+async function launchCandleBig() {
+    const gpu = prompt('T440 GPU index for Candle (0 or 1):', '0');
+    if (gpu === null) return;
+    const model = prompt('Model path (blank = Qwen3.6-35B MoE):', '') || undefined;
+    const body = { gpu_id: parseInt(gpu, 10) || 0, port: 5012 };
+    if (model) body.model = model;
+    const r = await api('/cluster/launch/candle', body);
+    log('CANDLE: ' + (r.message || r.error || JSON.stringify(r)));
+}
+
+function showOpsStatus(msg, ok) {
+    const el = document.getElementById('ops-status');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.borderColor = ok ? '#2a5a2a' : '#5a2a2a';
+    el.style.color = ok ? '#7ec8a0' : '#ff9988';
+    el.textContent = msg;
+    setTimeout(() => { el.style.display = 'none'; }, 12000);
+}
+
+async function applyRoutingPreset(id) {
+    showOpsStatus(`Applying preset ${id}…`, true);
+    const r = await api(`/cluster/routing/preset/${encodeURIComponent(id)}`, { start_workers: true });
+    const ts = r.completed_at ? new Date(r.completed_at * 1000).toLocaleTimeString() : '';
+    const msg = r.error || r.message || 'done';
+    const ready = r.ready !== false && !(r.failed?.length);
+    showOpsStatus((ready ? '✓ Ready — ' : '⚠ ') + msg + (ts ? ` (${ts})` : ''), ready);
+    log(`PAMP/preset ${id}: ` + msg);
+    if (r.started?.length) log('  started: ' + r.started.join(', '));
+    if (r.failed?.length) log('  failed: ' + r.failed.join(', '));
+    await fetchGpuFleet();
+    render();
+    refreshGpus();
+}
+
+function applySelectedPreset() {
+    const id = document.getElementById('routing-preset-select')?.value;
+    if (!id) { log('Pick a routing preset first'); return; }
+    applyRoutingPreset(id);
+}
+
+async function dispatchCesarops2() {
+    const r = await api('/cluster/fleet/dispatch', { node: 'cesarops2', action: 'sync_llm_endpoints' });
+    log('CESAROPS2: ' + (r.message || r.status || r.error || JSON.stringify(r)).slice(0, 200));
+}
+
 function defaultWorkers() {
     return [
-        { name:'Coder',     role:'code',      node_ip:'127.0.0.1',       port:5001, engine:'koboldcpp', backend:'vulkan', inject_vectors:true,  memory_pool:'', model:'', corrector_functions:{json_fixer:true,loop_detector:true,translator:true,think_harder:false,auto_remember:true} },
+        { name:'GemmaIntegrate', role:'coder', node_ip:'127.0.0.1', port:5001, engine:'llama-server', backend:'cuda', inject_vectors:true, memory_pool:'integrate', model:'Gemma-4-26B-MoE-IQ4_XS.gguf', corrector_functions:{json_fixer:true,loop_detector:true,translator:true,think_harder:false,auto_remember:true} },
+        { name:'CakeFleet', role:'idle', node_ip:'127.0.0.1', port:8081, engine:'cake', backend:'cuda', inject_vectors:false, memory_pool:'cake', model:'Qwen/Qwen2.5-72B-Instruct' },
         { name:'Thinker',   role:'think',     node_ip:'100.105.77.74',   port:5100, engine:'koboldcpp', backend:'vulkan', inject_vectors:true,  memory_pool:'', model:'' },
         { name:'Corrector', role:'correct',   node_ip:'100.102.158.111', port:5555, engine:'koboldcpp', backend:'cuda',   inject_vectors:false, memory_pool:'', model:'', corrector_functions:{json_fixer:true,loop_detector:true,translator:true,think_harder:false,auto_remember:true} },
         { name:'Validator', role:'validate',  node_ip:'100.102.158.111', port:5571, engine:'koboldcpp', backend:'cuda',   inject_vectors:false, memory_pool:'', model:'' },
-        { name:'Bootstrap', role:'bootstrap', node_ip:'127.0.0.1',       port:5002, engine:'cesarops-inference', backend:'cpu', inject_vectors:false, memory_pool:'', model:'' },
     ];
 }
 
@@ -606,9 +466,348 @@ async function api(url, body) {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
+    renderGpuFleet();
+    renderFlowBuilder();
     renderPools();
     renderWorkers();
     renderCorrectorFunctions();
+}
+
+function flowRoleNodeId(role) { return `role-${role}`; }
+function flowGpuNodeId(gid) { return `gpu-${gid}`; }
+
+function loadFlowLayout() {
+    try {
+        const raw = localStorage.getItem(FLOW_KEY);
+        return raw ? JSON.parse(raw) : { positions: {}, links: [] };
+    } catch(e) {
+        return { positions: {}, links: [] };
+    }
+}
+
+function saveFlowLayout() {
+    const positions = {};
+    flow.nodes.forEach(n => { positions[n.id] = { x: n.x, y: n.y }; });
+    localStorage.setItem(FLOW_KEY, JSON.stringify({ positions, links: flow.links }));
+    log('Flow layout saved');
+}
+
+function resetFlowLayout() {
+    localStorage.removeItem(FLOW_KEY);
+    renderFlowBuilder();
+    log('Flow layout reset');
+}
+
+function clearFlowLinks() {
+    flow.links = [];
+    saveFlowLayout();
+    drawFlowLinks();
+    log('Flow links cleared');
+}
+
+function renderFlowPresetButtons() {
+    const row = document.getElementById('flow-preset-row');
+    if (!row) return;
+    if (!routingPresets.length) {
+        row.innerHTML = '<span style="color:var(--text-dim);font-size:0.8rem">No routing presets loaded</span>';
+        return;
+    }
+    row.innerHTML = routingPresets.map(p =>
+        `<button class="btn-secondary" onclick="applyRoutingPreset('${p.id}')">${p.name}</button>`
+    ).join('');
+}
+
+function buildFlowNodes() {
+    const layout = loadFlowLayout();
+    const positions = layout.positions || {};
+    const nodes = [];
+
+    FLOW_ROLES.forEach((role, i) => {
+        const id = flowRoleNodeId(role);
+        nodes.push({
+            id,
+            kind: 'role',
+            role,
+            label: role,
+            x: positions[id]?.x ?? 24,
+            y: positions[id]?.y ?? (20 + i * 82),
+        });
+    });
+
+    let li = 0;
+    let ri = 0;
+    gpuCards.forEach(g => {
+        const id = flowGpuNodeId(g.id);
+        const colX = g.remote ? 660 : 360;
+        const row = g.remote ? ri++ : li++;
+        nodes.push({
+            id,
+            kind: 'gpu',
+            gpuId: g.id,
+            name: g.name,
+            host: g.host,
+            remote: !!g.remote,
+            port: g.port,
+            role: g.role || 'idle',
+            model: g.model || '',
+            engine: g.engine || 'llama-server',
+            x: positions[id]?.x ?? colX,
+            y: positions[id]?.y ?? (20 + row * 140),
+        });
+    });
+
+    const nodeIds = new Set(nodes.map(n => n.id));
+    let links = Array.isArray(layout.links) ? layout.links.filter(l => nodeIds.has(l.from) && nodeIds.has(l.to)) : [];
+    if (!links.length) {
+        links = nodes
+            .filter(n => n.kind === 'gpu' && FLOW_ROLES.includes(n.role))
+            .map(n => ({ from: n.id, to: flowRoleNodeId(n.role) }));
+    }
+
+    flow.nodes = nodes;
+    flow.links = links;
+}
+
+function renderFlowBuilder() {
+    const canvas = document.getElementById('flow-canvas');
+    const svg = document.getElementById('flow-svg');
+    if (!canvas || !svg) return;
+
+    buildFlowNodes();
+    const modelOpts = modelList.map(m => `<option value="${m}">${m.split('/').pop()}</option>`).join('');
+
+    canvas.innerHTML = flow.nodes.map(n => {
+        if (n.kind === 'role') {
+            return `<div class="flow-node role" data-node-id="${n.id}" style="left:${n.x}px;top:${n.y}px">
+                <div class="flow-port in" data-node-in="${n.id}" title="Connect to ${n.role}"></div>
+                <div class="flow-node-head" data-node-drag="${n.id}">
+                    <div class="flow-node-title">${n.role}</div>
+                    <div class="flow-node-kind">Role</div>
+                </div>
+                <div class="flow-node-body">Route target: <strong>${n.role}</strong></div>
+            </div>`;
+        }
+
+        const roleOpts = ROLE_OPTIONS.map(r => `<option value="${r}" ${n.role===r?'selected':''}>${r}</option>`).join('');
+        const engList = n.remote ? ['llama-server','koboldcpp'] : ['llama-server','koboldcpp','cesarops-inference'];
+        const engOpts = engList.map(e => `<option value="${e}" ${n.engine===e?'selected':''}>${e}</option>`).join('');
+        return `<div class="flow-node ${n.remote ? 'remote' : ''}" data-node-id="${n.id}" style="left:${n.x}px;top:${n.y}px">
+            <div class="flow-port in" data-node-in="${n.id}" title="Input"></div>
+            <div class="flow-port out ${flow.selectedOut===n.id?'selected':''}" data-node-out="${n.id}" title="Connect from ${n.name}"></div>
+            <div class="flow-node-head" data-node-drag="${n.id}">
+                <div class="flow-node-title">${n.name}</div>
+                <div>
+                    <div class="flow-node-kind">GPU ${n.gpuId}</div>
+                    <div class="flow-state offline" id="flow-status-${n.gpuId}">OFFLINE</div>
+                </div>
+            </div>
+            <div class="flow-node-body">
+                <div style="font-size:0.72rem;color:var(--text-dim)">${n.host} · ${n.port}</div>
+                <label class="control-label">Role</label>
+                <select data-flow-role="${n.id}">${roleOpts}</select>
+                <label class="control-label">Model</label>
+                <select data-flow-model="${n.id}"><option value="">— select —</option>${modelOpts}</select>
+                <label class="control-label">Engine</label>
+                <select data-flow-engine="${n.id}">${engOpts}</select>
+            </div>
+        </div>`;
+    }).join('');
+
+    flow.nodes.filter(n => n.kind==='gpu').forEach(n => {
+        const m = document.querySelector(`[data-flow-model="${n.id}"]`);
+        if (m) m.value = n.model || '';
+        const r = document.querySelector(`[data-flow-role="${n.id}"]`);
+        if (r) r.value = n.role || 'idle';
+        const e = document.querySelector(`[data-flow-engine="${n.id}"]`);
+        if (e) e.value = n.engine || 'llama-server';
+    });
+
+    bindFlowEvents();
+    drawFlowLinks();
+    refreshFlowNodeStatuses();
+}
+
+function bindFlowEvents() {
+    document.querySelectorAll('[data-node-out]').forEach(el => {
+        el.onclick = (ev) => {
+            ev.stopPropagation();
+            flow.selectedOut = el.getAttribute('data-node-out');
+            // Update selected state in-place — no full re-render
+            document.querySelectorAll('.flow-port.out').forEach(p => p.classList.remove('selected'));
+            el.classList.add('selected');
+            log(`Source port selected: ${flow.selectedOut} — now click an input port on a role node`);
+        };
+    });
+
+    document.querySelectorAll('[data-node-in]').forEach(el => {
+        el.onclick = (ev) => {
+            ev.stopPropagation();
+            const to = el.getAttribute('data-node-in');
+            if (!flow.selectedOut) { log('Click an output port first (right side of a GPU node)'); return; }
+            if (flow.selectedOut === to) { flow.selectedOut = null; document.querySelectorAll('.flow-port.out').forEach(p => p.classList.remove('selected')); return; }
+            flow.links = flow.links.filter(l => !(l.from === flow.selectedOut));
+            flow.links.push({ from: flow.selectedOut, to });
+            flow.selectedOut = null;
+            document.querySelectorAll('.flow-port.out').forEach(p => p.classList.remove('selected'));
+            saveFlowLayout();
+            drawFlowLinks();
+            log(`Route linked: ${to}`);
+        };
+    });
+
+    document.querySelectorAll('[data-node-drag]').forEach(el => {
+        el.onmousedown = (ev) => {
+            const id = el.getAttribute('data-node-drag');
+            const node = flow.nodes.find(n => n.id === id);
+            if (!node) return;
+            flow.drag = { id, dx: ev.clientX - node.x, dy: ev.clientY - node.y };
+            document.body.style.userSelect = 'none';
+        };
+    });
+
+    document.onmousemove = (ev) => {
+        if (!flow.drag) return;
+        const node = flow.nodes.find(n => n.id === flow.drag.id);
+        const editor = document.getElementById('flow-editor');
+        if (!node || !editor) return;
+        node.x = Math.max(6, Math.min(editor.clientWidth - 280, ev.clientX - flow.drag.dx));
+        node.y = Math.max(6, Math.min(editor.clientHeight - 120, ev.clientY - flow.drag.dy));
+        const el = document.querySelector(`[data-node-id="${node.id}"]`);
+        if (el) {
+            el.style.left = `${node.x}px`;
+            el.style.top = `${node.y}px`;
+        }
+        drawFlowLinks();
+    };
+
+    document.onmouseup = () => {
+        if (flow.drag) saveFlowLayout();
+        flow.drag = null;
+        document.body.style.userSelect = '';
+    };
+
+    document.querySelectorAll('[data-flow-role],[data-flow-model],[data-flow-engine]').forEach(el => {
+        el.onchange = () => {
+            const id = el.getAttribute('data-flow-role') || el.getAttribute('data-flow-model') || el.getAttribute('data-flow-engine');
+            const node = flow.nodes.find(n => n.id === id);
+            if (!node) return;
+            const roleSel = document.querySelector(`[data-flow-role="${id}"]`);
+            const modelSel = document.querySelector(`[data-flow-model="${id}"]`);
+            const engSel = document.querySelector(`[data-flow-engine="${id}"]`);
+            node.role = roleSel?.value || node.role;
+            node.model = modelSel?.value || node.model;
+            node.engine = engSel?.value || node.engine;
+            saveFlowLayout();
+        };
+    });
+}
+
+function drawFlowLinks() {
+    const svg = document.getElementById('flow-svg');
+    const editor = document.getElementById('flow-editor');
+    if (!svg || !editor) return;
+    const w = editor.clientWidth;
+    const h = editor.clientHeight;
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.innerHTML = `<defs>
+        <marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#00d4ff"></path>
+        </marker>
+    </defs>`;
+
+    const byId = Object.fromEntries(flow.nodes.map(n => [n.id, n]));
+    flow.links.forEach((l, idx) => {
+        const a = byId[l.from];
+        const b = byId[l.to];
+        if (!a || !b) return;
+        const ax = a.x + (a.kind === 'role' ? 8 : 260);
+        const ay = a.y + 40;
+        const bx = b.x + 2;
+        const by = b.y + 40;
+        const c1x = ax + 80;
+        const c2x = bx - 80;
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', `M ${ax} ${ay} C ${c1x} ${ay}, ${c2x} ${by}, ${bx} ${by}`);
+        p.setAttribute('stroke', '#00d4ff');
+        p.setAttribute('stroke-width', '2');
+        p.setAttribute('fill', 'none');
+        p.setAttribute('marker-end', 'url(#flow-arrow)');
+        p.setAttribute('class', 'flow-link');
+        p.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            flow.links.splice(idx, 1);
+            saveFlowLayout();
+            drawFlowLinks();
+            log('Flow link removed');
+        });
+        svg.appendChild(p);
+    });
+}
+
+function updateFlowStatusBadge(gpuId, online) {
+    const el = document.getElementById(`flow-status-${gpuId}`);
+    if (!el) return;
+    el.textContent = online ? 'ONLINE' : 'OFFLINE';
+    el.className = `flow-state ${online ? 'online' : 'offline'}`;
+}
+
+async function refreshFlowNodeStatuses() {
+    const gpuNodes = flow.nodes.filter(n => n.kind === 'gpu');
+    await Promise.all(gpuNodes.map(async (n) => {
+        const g = gpuCards.find(x => x.id === n.gpuId);
+        const fallback = workers.find(w => w.gpu === n.gpuId)?.name;
+        const name = g?.worker_name || fallback;
+        if (!name) {
+            updateFlowStatusBadge(n.gpuId, false);
+            return;
+        }
+        try {
+            const r = await fetch(`/cluster/worker/${encodeURIComponent(name)}/status`, { signal: AbortSignal.timeout(4000) });
+            const d = await r.json();
+            updateFlowStatusBadge(n.gpuId, !!d.online);
+        } catch (e) {
+            updateFlowStatusBadge(n.gpuId, false);
+        }
+    }));
+}
+
+function flowGpuEndpoint(node) {
+    const card = gpuCards.find(g => String(g.id) === String(node.gpuId));
+    if (!card) return null;
+    const host = card.host === 'local' ? '127.0.0.1' : card.host;
+    if (!host || !card.port) return null;
+    return `http://${host}:${card.port}`;
+}
+
+async function applyFlowGraph() {
+    const gpuNodes = flow.nodes.filter(n => n.kind === 'gpu');
+    for (const n of gpuNodes) {
+        const payload = { role: n.role || 'idle', engine: n.engine || 'llama-server', model: n.model || '', backend: 'cuda' };
+        await api(`/cluster/gpu/${n.gpuId}/apply`, payload);
+    }
+
+    const byId = Object.fromEntries(flow.nodes.map(n => [n.id, n]));
+    const routeMap = {};
+    flow.links.forEach(l => {
+        const src = byId[l.from];
+        const dst = byId[l.to];
+        if (!src || !dst || src.kind !== 'gpu' || dst.kind !== 'role') return;
+        const ep = flowGpuEndpoint(src);
+        if (!ep) return;
+        routeMap[dst.role] = ep;
+    });
+
+    const body = {};
+    if (routeMap.coder || routeMap.coding || routeMap.general) body.coder_endpoint = routeMap.coder || routeMap.coding || routeMap.general;
+    if (routeMap.thinker) body.thinker_endpoint = routeMap.thinker;
+    if (routeMap.reviewer) body.reviewer_endpoint = routeMap.reviewer;
+    if (routeMap.corrector) body.corrector_endpoint = routeMap.corrector;
+    if (routeMap.validator) body.draft_endpoint = routeMap.validator;
+    if (Object.keys(body).length) await api('/cluster/routing', body);
+
+    await Promise.all([fetchGpuFleet(), fetchConfig()]);
+    render();
+    log(`Flow applied (${gpuNodes.length} GPU bindings, ${Object.keys(body).length} route overrides)`);
 }
 
 function renderPools() {
@@ -641,6 +840,19 @@ function renderWorkers() {
     <span id="status-${w.name}" class="status-badge badge-offline">?</span>
   </div>
 
+  <div class="control-group">
+    <label class="control-label">Role</label>
+    <select onchange="updateField('${w.name}','role',this.value)">
+      ${ROLE_OPTIONS.map(r => `<option value="${r}" ${w.role===r?'selected':''}>${r}</option>`).join('')}
+    </select>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Model</label>
+    <select onchange="updateField('${w.name}','model',this.value)">
+      <option value="">—</option>
+      ${modelList.map(m => `<option value="${m}" ${w.model===m?'selected':''}>${m.split('/').pop()}</option>`).join('')}
+    </select>
+  </div>
   <div class="control-group">
     <label class="control-label" for="engine-${w.name}">Inference Engine</label>
     <select id="engine-${w.name}" aria-label="${w.name} engine"
@@ -833,15 +1045,21 @@ async function refreshNodes() {
 // ── Worker ping ────────────────────────────────────────────────────────────
 async function pingWorker(w) {
     if (!w) return;
-    const el = document.getElementById(`status-${w.name}`);
+    await pingWorkerByName(w.name, `status-${w.name}`);
+}
+
+async function pingWorkerByName(name, elId) {
+    const el = document.getElementById(elId);
     if (!el) return;
     try {
-        const url = `http://${w.node_ip}:${w.port}/v1/models`;
-        const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
-        if (r.ok) {
+        const r = await fetch(`/cluster/worker/${encodeURIComponent(name)}/status`, { signal: AbortSignal.timeout(4000) });
+        const d = await r.json();
+        if (d.online) {
             el.textContent = 'ONLINE';
             el.className = 'status-badge badge-online';
-        } else throw new Error();
+        } else {
+            throw new Error('offline');
+        }
     } catch(e) {
         el.textContent = 'OFFLINE';
         el.className = 'status-badge badge-offline';
@@ -857,206 +1075,5 @@ function log(msg) {
 
 window.onload = init;
 </script>
-
-<!-- ─── WRECK DETECTION / SAR CONTROL PANEL ─── -->
-<hr style="margin: 40px 0; border: 1px solid #444;">
-
-<div class="wreck-detection-panel" style="font-family: sans-serif; color: #eee; background: #1a1a1a; padding: 20px; border-radius: 8px;">
-    <h2 style="margin-top: 0; color: #00d4ff; border-bottom: 1px solid #333; padding-bottom: 10px;">Wreck Detection / SAR Control</h2>
-
-    <details open style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 4px;">
-        <summary style="cursor: pointer; font-weight: bold; color: #aaa;">1. Detection Service Status</summary>
-        <div style="margin-top: 10px;">
-            <button onclick="checkDetectionHealth()" style="padding: 5px 15px; cursor: pointer;">Check Detection Health</button>
-            <pre id="detection-health-output" style="background: #000; color: #0f0; padding: 10px; margin-top: 10px; min-height: 20px; font-size: 0.85em; overflow-x: auto; white-space: pre-wrap;"></pre>
-        </div>
-    </details>
-
-    <details style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 4px;">
-        <summary style="cursor: pointer; font-weight: bold; color: #aaa;">2. Quick Region Scan</summary>
-        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="grid-column: span 2;">
-                <label style="display:block; font-size: 0.8em;">BBOX (lat_min,lon_min,lat_max,lon_max)</label>
-                <input type="text" id="scan-bbox" value="41.0,-83.5,42.5,-82.0" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px;">
-            </div>
-            <div>
-                <label style="display:block; font-size: 0.8em;">Days</label>
-                <input type="number" id="scan-days" value="14" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px;">
-            </div>
-            <div>
-                <label style="display:block; font-size: 0.8em;">Mode</label>
-                <select id="scan-mode" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px;">
-                    <option value="wreck">Wreck</option>
-                    <option value="sar">SAR</option>
-                    <option value="downed_aircraft">Downed Aircraft</option>
-                </select>
-            </div>
-        </div>
-        <button onclick="runScan()" style="margin-top: 10px; width: 100%; padding: 8px; cursor: pointer;">Scan Region</button>
-        <pre id="scan-output" style="background: #000; color: #0af; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; font-size: 0.85em; white-space: pre-wrap;"></pre>
-    </details>
-
-    <details style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 4px;">
-        <summary style="cursor: pointer; font-weight: bold; color: #aaa;">3. Weather Window Check</summary>
-        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="grid-column: span 2;">
-                <label style="display:block; font-size: 0.8em;">BBOX</label>
-                <input type="text" id="weather-bbox" value="41.0,-83.5,42.5,-82.0" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px;">
-            </div>
-            <div style="grid-column: span 2;">
-                <label style="display:block; font-size: 0.8em;">Condition</label>
-                <select id="weather-check" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px;">
-                    <option value="post_storm">Post Storm</option>
-                    <option value="calm">Calm</option>
-                    <option value="any">Any</option>
-                </select>
-            </div>
-        </div>
-        <button onclick="checkWeather()" style="margin-top: 10px; width: 100%; padding: 8px; cursor: pointer;">Check Weather Window</button>
-        <pre id="weather-output" style="background: #000; color: #ff0; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; font-size: 0.85em; white-space: pre-wrap;"></pre>
-    </details>
-
-    <details style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 4px;">
-        <summary style="cursor: pointer; font-weight: bold; color: #aaa;">4. Triple-Lock Detection Submission</summary>
-        <input type="hidden" id="last-job-id" value="">
-        <div style="margin-top: 10px;">
-            <label style="display:block; font-size: 0.8em;">Region (label, e.g. lake_erie_central)</label>
-            <input type="text" id="submit-region" placeholder="lake_erie_central" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px; margin-bottom: 10px;">
-            <label style="display:block; font-size: 0.8em;">Tiles (JSON Array of {lat, lon, image_b64})</label>
-            <textarea id="submit-tiles" rows="5" placeholder='[{"lat":41.5,"lon":-82.7,"image_b64":"..."}]' style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px; font-family: monospace; font-size: 0.8em;"></textarea>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button onclick="submitDetectionJob()" style="flex: 1; padding: 8px; cursor: pointer;">Submit Job</button>
-            <button onclick="pollLastJob()" style="flex: 1; padding: 8px; cursor: pointer;">Poll Last Job</button>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-            <div>
-                <small style="color: #888;">Submit Result:</small>
-                <pre id="detection-submit-output" style="background: #000; color: #0f0; padding: 5px; font-size: 0.75em; min-height: 20px; white-space: pre-wrap;"></pre>
-            </div>
-            <div>
-                <small style="color: #888;">Poll Result:</small>
-                <pre id="detection-poll-output" style="background: #000; color: #0af; padding: 5px; font-size: 0.75em; min-height: 20px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;"></pre>
-            </div>
-        </div>
-    </details>
-</div>
-
-<script>
-(function() {
-    async function callTool(name, args) {
-        const r = await fetch('/tool/' + encodeURIComponent(name), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ arguments: args })
-        });
-        const d = await r.json();
-        if (d.error) throw new Error(d.error);
-        return d.result || JSON.stringify(d);
-    }
-
-    window.checkDetectionHealth = async function() {
-        const out = document.getElementById('detection-health-output');
-        try {
-            out.textContent = 'Probing...';
-            const res = await callTool('detection_health', {});
-            out.textContent = typeof res === 'object' ? JSON.stringify(res, null, 2) : res;
-            out.style.color = '#0f0';
-        } catch (e) {
-            out.textContent = 'Error: ' + e.message;
-            out.style.color = '#f00';
-        }
-    };
-
-    window.runScan = async function() {
-        const out = document.getElementById('scan-output');
-        out.textContent = 'Scanning... (up to 30 min)';
-        const args = {
-            bbox: document.getElementById('scan-bbox').value,
-            days: parseInt(document.getElementById('scan-days').value),
-            mode: document.getElementById('scan-mode').value
-        };
-        try {
-            const res = await callTool('scan_region', args);
-            out.textContent = typeof res === 'object' ? JSON.stringify(res, null, 2) : res;
-            out.style.color = '#0af';
-        } catch (e) {
-            out.textContent = 'Error: ' + e.message;
-            out.style.color = '#f00';
-        }
-    };
-
-    window.checkWeather = async function() {
-        const out = document.getElementById('weather-output');
-        out.textContent = 'Fetching...';
-        const args = {
-            bbox: document.getElementById('weather-bbox').value,
-            check: document.getElementById('weather-check').value
-        };
-        try {
-            const res = await callTool('weather_window', args);
-            out.textContent = typeof res === 'object' ? JSON.stringify(res, null, 2) : res;
-            out.style.color = '#ff0';
-        } catch (e) {
-            out.textContent = 'Error: ' + e.message;
-            out.style.color = '#f00';
-        }
-    };
-
-    window.submitDetectionJob = async function() {
-        const out = document.getElementById('detection-submit-output');
-        const jobInput = document.getElementById('last-job-id');
-        out.textContent = 'Submitting...';
-        let tiles;
-        try {
-            tiles = JSON.parse(document.getElementById('submit-tiles').value);
-        } catch (e) {
-            out.textContent = 'Error: invalid JSON in tiles field';
-            out.style.color = '#f00';
-            return;
-        }
-        const args = {
-            region: document.getElementById('submit-region').value,
-            tiles: tiles
-        };
-        try {
-            const res = await callTool('detection_scan', args);
-            const text = typeof res === 'object' ? JSON.stringify(res, null, 2) : res;
-            // Try to extract job_id from the result string
-            const match = String(text).match(/job_id=([a-f0-9-]+)/i);
-            if (match) jobInput.value = match[1];
-            out.textContent = text;
-            out.style.color = '#0f0';
-        } catch (e) {
-            out.textContent = 'Error: ' + e.message;
-            out.style.color = '#f00';
-        }
-    };
-
-    window.pollLastJob = async function() {
-        const out = document.getElementById('detection-poll-output');
-        const jobId = document.getElementById('last-job-id').value;
-        if (!jobId) {
-            out.textContent = 'No job_id stored. Submit first.';
-            out.style.color = '#f00';
-            return;
-        }
-        out.textContent = 'Polling ' + jobId + '...';
-        try {
-            const res = await callTool('detection_poll', { job_id: jobId });
-            out.textContent = typeof res === 'object' ? JSON.stringify(res, null, 2) : res;
-            out.style.color = '#0af';
-        } catch (e) {
-            out.textContent = 'Error: ' + e.message;
-            out.style.color = '#f00';
-        }
-    };
-
-    // Auto-refresh detection health every 30s and on initial panel load
-    checkDetectionHealth();
-    setInterval(checkDetectionHealth, 30000);
-})();
-</script>
-
 </body>
 </html>

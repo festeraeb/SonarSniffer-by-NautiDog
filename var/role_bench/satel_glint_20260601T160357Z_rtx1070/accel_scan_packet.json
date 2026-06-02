@@ -1,0 +1,30 @@
+{
+  "mission": "sunken_ship_anchor_hunt",
+  "tile_id": "Holloway-probe-42N83W",
+  "coordinates": {
+    "lat": 42.331,
+    "lon": -83.048
+  },
+  "repeat_pass_hypothesis": "glint_ripple_dark_clear_water_same_pixels",
+  "tpu_scan": {
+    "detection_count": 1,
+    "top_detections": [
+      {
+        "col": 0,
+        "row": 0,
+        "score": 0.2980392156862745
+      }
+    ],
+    "used_tpu": false,
+    "took_s": 0.016
+  },
+  "movidius_jitter": {
+    "material": "ferrous_composite",
+    "certainty": 0.738,
+    "depth_estimate_ft": 137.8,
+    "jitter_frequency_hz": 0.028,
+    "thermal_delta_c": 1.02,
+    "classification": "confirmed_structure"
+  },
+  "coder_task": "Rank wreck candidates; cue matrix; FP guards; sketch process_tile()"
+}

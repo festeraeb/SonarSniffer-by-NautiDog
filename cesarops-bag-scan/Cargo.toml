@@ -1,0 +1,17 @@
+[package]
+name = "cesarops-bag-scan"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gdal = "0.17"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+# ndarray: bag_mesh.rs (the porting base) uses Array2 everywhere for grid math.
+# Pinned to 0.15 to match the version gdal 0.17 builds against.
+ndarray = "0.15"
+# rayon: parallel sliding-window scanning in anomaly.rs / redaction_unmask.rs.
+rayon = "1"

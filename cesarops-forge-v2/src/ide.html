@@ -26,8 +26,26 @@
         .chat-messages { flex: 1; overflow-y: auto; padding: 10px; font-size: 13px; }
         .chat-input-area { padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 5px; }
         .chat-input-area input { flex: 1; background: #0f0f1a; border: 1px solid var(--border); color: white; padding: 5px; border-radius: 4px; }
-        .terminal-area { height: 20%; border-top: 2px solid var(--border); background: #000; display: flex; flex-direction: column; }
-        .terminal-toolbar { height: 30px; background: var(--panel); display: flex; align-items: center; padding: 0 10px; gap: 10px; font-size: 12px; }
+        .terminal-area { height: 28%; border-top: 2px solid var(--border); background: #000; display: flex; flex-direction: column; min-height: 180px; }
+        .terminal-toolbar { height: 30px; background: var(--panel); display: flex; align-items: center; padding: 0 10px; gap: 10px; font-size: 12px; flex-shrink: 0; }
+        .bottom-split { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+        #terminal-output { flex: 1; min-width: 0; }
+        .ops-panel { width: 42%; min-width: 280px; max-width: 480px; border-left: 1px solid var(--border); display: flex; flex-direction: column; background: #0a0a12; font-size: 11px; }
+        .ops-gpus { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid var(--border); flex-wrap: wrap; flex-shrink: 0; }
+        .gpu-mini { flex: 1; min-width: 120px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+        .gpu-mini h5 { margin: 0 0 4px; font-size: 10px; color: var(--accent); }
+        .gpu-mini .row { display: flex; justify-content: space-between; color: var(--muted); margin: 2px 0; }
+        .gpu-mini .row b { color: var(--text); }
+        .gpu-mini.util-active { border-color: var(--success); box-shadow: 0 0 8px rgba(76,175,80,.25); }
+        .ops-engines { padding: 4px 8px; border-bottom: 1px solid var(--border); color: var(--muted); flex-shrink: 0; }
+        #ide-ops-log { flex: 1; overflow-y: auto; padding: 6px 8px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 11px; line-height: 1.45; }
+        .log-line { margin: 0 0 3px; }
+        .log-ts { color: #666; }
+        .log-info { color: var(--accent); }
+        .log-ok { color: var(--success); }
+        .log-warn { color: var(--warn); }
+        .log-err { color: var(--err); }
+        .mode-sub { font-size: 10px; color: var(--muted); margin-left: 8px; font-weight: normal; }
 
         /* UI Elements */
         .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
@@ -44,14 +62,13 @@
         .msg.stream { color: #fff; font-style: italic; }
         .tree-dir { color: var(--accent); font-weight: bold; }
         .tree-file { color: #aaa; }
-        #terminal-output { flex: 1; overflow-y: auto; padding: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
     <header>
-        <div><strong>CESAROPS FORGE IDE</strong> <span id="mode-badge" class="badge badge-mode">MODE</span></div>
+        <div><strong>CESAROPS FORGE IDE</strong> <span id="mode-badge" class="badge badge-mode">MODE</span><span id="mode-sub" class="mode-sub"></span></div>
         <div>
             <span id="node-count" class="badge badge-nodes">Nodes: 0</span>
             <button onclick="switchMode()">Switch Mode</button>
@@ -99,7 +116,18 @@
             <input type="text" id="cmd-input" placeholder="Custom command..." style="flex:1; background:#000; border:1px solid #333; color:#fff; font-size:11px;">
             <button onclick="runCustomCommand()">Run</button>
         </div>
-        <div id="terminal-output"></div>
+        <div class="bottom-split">
+            <div id="terminal-output"></div>
+            <aside class="ops-panel">
+                <div class="ops-gpus" id="ops-gpu-strip">
+                    <div class="gpu-mini"><h5>P100 #0</h5><div class="row"><span>—</span></div></div>
+                    <div class="gpu-mini"><h5>P100 #1</h5><div class="row"><span>—</span></div></div>
+                </div>
+                <div class="ops-engines" id="ops-engines">LLM: polling…</div>
+                <div style="font-size:10px;color:#666;padding:4px 8px 0;text-transform:uppercase;letter-spacing:0.08em">Logs</div>
+                <div id="ide-ops-log" aria-live="polite"></div>
+            </aside>
+        </div>
     </div>
 </div>
 
@@ -108,6 +136,75 @@
     let editor, currentFilePath = null;
     let chatContext = { a: [], b: [] };
     let lastResponses = { a: "", b: "" };
+    let inferenceActive = false;
+    let monitorTimer = null;
+    const PEAK_TFLOPS = [[/P100/i, 18.7], [/V100/i, 112], [/2060/i, 40], [/1070/i, 19.3]];
+
+    function peakTflops(name) {
+        for (const [re, t] of PEAK_TFLOPS) if (re.test(name || '')) return t;
+        return null;
+    }
+    function effTflops(peak, util) {
+        if (peak == null || util == null) return null;
+        return (peak * (util / 100)).toFixed(1);
+    }
+    function ts() {
+        return new Date().toLocaleTimeString('en-GB', { hour12: false });
+    }
+    function appendLog(msg, cls = 'log-info') {
+        const el = document.getElementById('ide-ops-log');
+        const line = document.createElement('div');
+        line.className = 'log-line ' + cls;
+        line.innerHTML = `<span class="log-ts">[${ts()}]</span> ${msg}`;
+        el.appendChild(line);
+        while (el.childNodes.length > 200) el.removeChild(el.firstChild);
+        el.scrollTop = el.scrollHeight;
+        if (window.ForgeHud && typeof window.ForgeHud.log === 'function') {
+            window.ForgeHud.log(msg, cls);
+        }
+    }
+    function setEngines(txt) {
+        document.getElementById('ops-engines').textContent = txt;
+    }
+    async function refreshGpuOps() {
+        try {
+            const [mon, ping] = await Promise.all([
+                fetch('/monitor').then(r => r.ok ? r.json() : null),
+                fetch('/validate/ping').then(r => r.ok ? r.json() : null),
+            ]);
+            const strip = document.getElementById('ops-gpu-strip');
+            if (mon && mon.gpus && mon.gpus.length) {
+                strip.innerHTML = mon.gpus.map(g => {
+                    const peak = peakTflops(g.name);
+                    const eff = effTflops(peak, g.utilization_pct);
+                    const vram = g.memory_total_mb ? Math.round(100 * g.memory_used_mb / g.memory_total_mb) : 0;
+                    const hot = (g.utilization_pct || 0) > 5;
+                    return `<div class="gpu-mini${hot ? ' util-active' : ''}">
+                        <h5>${g.name || 'GPU'} #${g.index}</h5>
+                        <div class="row"><span>Util</span><b>${g.utilization_pct ?? 0}%</b></div>
+                        <div class="row"><span>Est FP16</span><b>${eff != null ? eff + ' TFLOPS' : 'idle'}</b></div>
+                        <div class="row"><span>VRAM</span><b>${g.memory_used_mb}/${g.memory_total_mb} MB</b></div>
+                        <div class="row"><span>Temp</span><b>${g.temperature_c ?? '—'}°C</b></div>
+                    </div>`;
+                }).join('');
+            }
+            if (ping) {
+                const m = ping.main_engine;
+                const v = ping.p1000_validator;
+                setEngines(
+                    `Coder ${m?.online ? (m.tps?.toFixed(1) + ' tok/s @ ' + (m.url || '')) : 'offline'} · ` +
+                    `Reviewer ${v?.online ? (v.tps?.toFixed(1) + ' tok/s') : 'offline'}`
+                );
+            }
+        } catch (e) {
+            setEngines('metrics unavailable');
+        }
+    }
+    function startMonitorPoll(fast) {
+        if (monitorTimer) clearInterval(monitorTimer);
+        refreshGpuOps();
+        monitorTimer = setInterval(refreshGpuOps, fast ? 1500 : 5000);
+    }
 
     require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
     require(['vs/editor/editor.main'], function () {
@@ -121,28 +218,32 @@
     });
 
     async function initApp() {
+        appendLog('IDE ready — ops log + GPU metrics active', 'log-ok');
         await refreshHeader();
         await loadTree('/home/cesarops/wreckhunter2000-1');
         await loadGpus();
         setupTerminal();
+        startMonitorPoll(false);
     }
 
     async function refreshHeader() {
         const modeRes = await fetch('/mode');
-        const mode = await modeRes.text();
-        document.getElementById('mode-badge').innerText = mode;
+        const modeJson = await modeRes.json();
+        const mode = modeJson.mode || 'unknown';
+        document.getElementById('mode-badge').innerText = mode.toUpperCase();
+        const ex = modeJson.extras || {};
+        const pipe = ex.pipeline || '';
+        document.getElementById('mode-sub').textContent = pipe ? ` · ${pipe}` : '';
         const nodeRes = await fetch('/cluster/nodes');
         const nodes = await nodeRes.json();
         document.getElementById('node-count').innerText = `Nodes: ${nodes.length}`;
-        const gpuSelects = [document.getElementById('gpu-a'), document.getElementById('gpu-b')];
-        gpuSelects.forEach(s => {
-            s.innerHTML = nodes.map(n => `<option value="${n.url}">${n.name}</option>`).join('');
-        });
+        appendLog(`Mode <b>${mode}</b>${pipe ? ' — ' + pipe : ''}`, 'log-info');
     }
 
     async function switchMode() {
         const current = document.getElementById('mode-badge').innerText;
-        const target = current === 'CESAROPS' ? '/mode/coding' : '/mode/cesarops';
+        const target = current === 'CODING' ? '/mode/cesarops' : '/mode/coding';
+        appendLog('Switching cluster mode…', 'log-warn');
         await fetch(target, { method: 'POST' });
         initApp();
     }
@@ -214,21 +315,42 @@
         container.scrollTop = container.scrollHeight;
 
         const endpoint = document.getElementById(`gpu-${panelId}`).value;
-        
+        const gpuLabel = document.getElementById(`gpu-${panelId}`).selectedOptions[0]?.text || endpoint;
+        if (!endpoint || endpoint === 'Select GPU...' || !endpoint.startsWith('http')) {
+            aiDiv.innerText = 'Select a GPU endpoint from the dropdown first.';
+            aiDiv.className = 'msg err';
+            appendLog('Chat blocked — no GPU endpoint selected', 'log-err');
+            return;
+        }
+
+        inferenceActive = true;
+        startMonitorPoll(true);
+        const t0 = performance.now();
+        let tokenCount = 0;
+        let firstTokenMs = null;
+        appendLog(`Panel ${panelId.toUpperCase()} → <b>${gpuLabel}</b>`, 'log-info');
+        appendLog(`POST /ide/chat/stream · ${prompt.length} chars in · max 2048 tokens`, 'log-info');
+
         try {
             const response = await fetch('/ide/chat/stream', {
                 method: 'POST',
                 headers: { 'Accept': 'text/event-stream' },
                 body: JSON.stringify({ prompt, endpoint, max_length: 2048, temperature: 0.4 })
             });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            appendLog(`Stream connected (${response.status}) — waiting for tokens…`, 'log-ok');
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let fullText = "";
+            let bytesIn = 0;
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
+                bytesIn += value.length;
                 const chunk = decoder.decode(value);
                 const lines = chunk.split('\n');
                 for (let line of lines) {
@@ -237,20 +359,40 @@
                         if (data === '[DONE]') break;
                         try {
                             const parsed = JSON.parse(data);
-                            const token = parsed.text || "";
-                            fullText += token;
-                            aiDiv.innerText = fullText;
-                            aiDiv.classList.remove('stream');
-                            container.scrollTop = container.scrollHeight;
+                            const token = extractStreamToken(parsed);
+                            if (token) {
+                                if (firstTokenMs === null) {
+                                    firstTokenMs = performance.now() - t0;
+                                    appendLog(`First token in <b>${(firstTokenMs/1000).toFixed(2)}s</b> — GPU should show util ↑`, 'log-ok');
+                                    refreshGpuOps();
+                                }
+                                tokenCount += token.length;
+                                fullText += token;
+                                aiDiv.innerText = fullText;
+                                aiDiv.classList.remove('stream');
+                                container.scrollTop = container.scrollHeight;
+                            }
                         } catch(e) {}
                     }
                 }
             }
+            const elapsed = (performance.now() - t0) / 1000;
+            const approxTok = Math.max(1, Math.round(tokenCount / 4));
+            const tps = (approxTok / elapsed).toFixed(1);
+            appendLog(
+                `Done panel ${panelId.toUpperCase()}: ~${approxTok} tokens in <b>${elapsed.toFixed(1)}s</b> (~${tps} tok/s) · ${bytesIn} bytes SSE`,
+                'log-ok'
+            );
+            refreshGpuOps();
             lastResponses[panelId] = fullText;
             chatContext[panelId].push({ role: 'user', content: prompt }, { role: 'assistant', content: fullText });
         } catch (err) {
             aiDiv.innerText = "Error: " + err.message;
             aiDiv.className = 'msg err';
+            appendLog(`Error panel ${panelId.toUpperCase()}: ${err.message}`, 'log-err');
+        } finally {
+            inferenceActive = false;
+            startMonitorPoll(false);
         }
     }
 
@@ -298,13 +440,36 @@
     }
 
     async function loadGpus() {
-        const res = await fetch('/cluster/nodes');
-        const nodes = await res.json();
+        const res = await fetch('/ide/llm-endpoints');
+        const data = await res.json();
+        const eps = (data.endpoints || []).filter(e => e.online);
+        const fallback = [
+            { name: 'Gemma integrate (P100 #0, :5001)', url: 'http://127.0.0.1:5001' },
+            { name: 'Cake fleet 72B (:8081)', url: 'http://127.0.0.1:8081' },
+        ];
+        const list = eps.length ? eps : fallback;
         const selects = [document.getElementById('gpu-a'), document.getElementById('gpu-b')];
-        selects.forEach(s => {
-            s.innerHTML = nodes.map(n => `<option value="${n.url}">${n.name}</option>`).join('');
+        selects.forEach((s, i) => {
+            s.innerHTML = list.map(e => `<option value="${e.url}">${e.name}</option>`).join('');
+            if (list[i]) s.value = list[i].url;
         });
+        appendLog(`LLM endpoints: ${list.map(e => e.name).join(', ')}`, 'log-info');
+    }
+
+    function extractStreamToken(parsed) {
+        if (parsed.text) return parsed.text;
+        if (parsed.choices && parsed.choices[0]) {
+            const c = parsed.choices[0];
+            if (c.text) return c.text;
+            if (c.delta && c.delta.content) return c.delta.content;
+        }
+        if (parsed.results && parsed.results[0] && parsed.results[0].text) {
+            return parsed.results[0].text;
+        }
+        return '';
     }
 </script>
+<link rel="stylesheet" href="/assets/forge-hud.css">
+<script src="/assets/forge-hud.js" defer></script>
 </body>
 </html>

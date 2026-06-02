@@ -1,0 +1,69 @@
+# ---- Rust build artifacts (regenerable) ----
+target/
+**/target/
+target-docker/
+**/target-docker/
+*.rlib
+*.rmeta
+
+# ---- Sonar test fixtures (relocated to /mnt/raid0) ----
+sonarsniffer/test_files/
+
+# ---- Large data / downloads (belong on /data or /mnt/raid0, not in git) ----
+# These are relocated to /mnt/raid0/wreckhunter2000-1-data and symlinked back.
+data/
+downloads/
+backup/
+geotiff_repository/
+outputs/
+var/fleet-catalog/
+var/fleet-jobs/
+*.bag
+*.tif
+*.tiff
+*.geotiff
+*.SAFE/
+*.nc
+*.h5
+*.hdf5
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# ---- Model weights ----
+*.gguf
+*.safetensors
+*.onnx
+*.pt
+*.pth
+*.bin
+
+# ---- One-off debug / scratch artifacts ----
+*.bak
+*.log
+*_reference.txt
+*_reference_output.txt
+*_reference.json
+gemma_*.json
+verify_*.py
+wget-log*
+storcli.log
+
+# ---- Local DBs / caches ----
+*.db
+sqlite:*
+.cargo-docker/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.venv-*/
+.venvs/
+*/site-packages/
+
+# ---- Editor / OS ----
+.DS_Store
+*.swp
+.idea/
+.vscode/

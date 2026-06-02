@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: CESAROPS Forge v2 API
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:9100
+    description: Local
+  - url: http://100.72.182.77:9100
+    description: T440
+  - url: http://100.72.129.86:9100
+    description: cesarops2
+paths:
+  /health:
+    get:
+      summary: Service health
+  /openapi.json:
+    get:
+      summary: Runtime OpenAPI document
+  /forge/status:
+    get:
+      summary: Forge runtime status
+  /forge/tooling:
+    get:
+      summary: Tooling and MCP parity
+  /forge/mcp-stack:
+    get:
+      summary: MCP stack config and health
+  /cluster/orchestration:
+    get:
+      summary: n8n orchestration config
+  /send:
+    post:
+      summary: Send lane/chat message

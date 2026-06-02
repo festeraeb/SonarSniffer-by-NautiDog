@@ -1,0 +1,27 @@
+{
+  "started_at": "20260602T041702Z",
+  "endpoints": [
+    {
+      "endpoint": "http://127.0.0.1:5200",
+      "online": true,
+      "model": "Qwen3.6-35B-A3B-MXFP4_MOE.gguf",
+      "id": "c2:5200",
+      "port": 5200
+    },
+    {
+      "endpoint": "http://127.0.0.1:5203",
+      "online": true,
+      "model": "ZAYA1-8B-Q4_K_M.gguf",
+      "id": "c2:5203",
+      "port": 5203
+    }
+  ],
+  "fixtures": [
+    "forge_corrector_cap"
+  ],
+  "ports_policy": [
+    5200,
+    5203
+  ],
+  "p100_allowed": false
+}

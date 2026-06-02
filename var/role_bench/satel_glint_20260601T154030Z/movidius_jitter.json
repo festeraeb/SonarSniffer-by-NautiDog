@@ -1,0 +1,8 @@
+{
+  "material": "ferrous_composite",
+  "certainty": 0.738,
+  "depth_estimate_ft": 137.8,
+  "jitter_frequency_hz": 0.028,
+  "thermal_delta_c": 1.02,
+  "classification": "confirmed_structure"
+}

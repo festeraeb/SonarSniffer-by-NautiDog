@@ -187,7 +187,29 @@ pub async fn rpc_handler(
     
     let params = body.get("params").unwrap_or(&serde_json::Value::Null);
     
+    let id = body.get("id").cloned().unwrap_or(serde_json::Value::Null);
     let result = match method {
+        // MCP/RMCP-compatible initialize handshake (2025-11-25 family)
+        "initialize" => {
+            serde_json::json!({
+                "protocolVersion": "2025-11-25",
+                "capabilities": {
+                    "tools": { "listChanged": false },
+                    "resources": { "listChanged": false, "subscribe": false },
+                },
+                "serverInfo": {
+                    "name": "cesarops-mcp-worker",
+                    "version": env!("CARGO_PKG_VERSION"),
+                },
+                "instructions": "CesarOps MCP worker with coding and satellite mission tools."
+            })
+        }
+        "notifications/initialized" => {
+            return (
+                StatusCode::OK,
+                Json(serde_json::json!({ "jsonrpc": "2.0", "id": id, "result": serde_json::Value::Null })),
+            );
+        }
         "tools/list" => {
             serde_json::json!({
                 "tools": manifest.tools.iter().map(|t| serde_json::json!({
@@ -222,15 +244,44 @@ pub async fn rpc_handler(
                 ]
             })
         }
+        "resources/read" => {
+            let uri = params.get("uri").and_then(|u| u.as_str()).unwrap_or_default();
+            let content = match uri {
+                "manifest://worker" => serde_json::to_string_pretty(manifest)
+                    .unwrap_or_else(|_| "{}".to_string()),
+                "registry://models" => serde_json::to_string_pretty(&state.registry.models)
+                    .unwrap_or_else(|_| "[]".to_string()),
+                _ => String::new(),
+            };
+            if content.is_empty() {
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(serde_json::json!({
+                        "jsonrpc": "2.0",
+                        "id": id,
+                        "error": { "code": -32001, "message": format!("Unknown resource URI: {}", uri) }
+                    })),
+                );
+            }
+            serde_json::json!({
+                "contents": [{
+                    "uri": uri,
+                    "mimeType": "application/json",
+                    "text": content
+                }]
+            })
+        }
         _ => {
             return (
                 StatusCode::METHOD_NOT_ALLOWED,
                 Json(serde_json::json!({
-                    "error": format!("Unknown method: {}. Supported: tools/list, tools/call, resources/list", method)
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": { "code": -32601, "message": format!("Unknown method: {}. Supported: initialize, notifications/initialized, tools/list, tools/call, resources/list, resources/read", method) }
                 })),
             );
         }
     };
     
-    (StatusCode::OK, Json(serde_json::json!({ "result": result })))
+    (StatusCode::OK, Json(serde_json::json!({ "jsonrpc": "2.0", "id": id, "result": result })))
 }

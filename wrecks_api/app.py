@@ -40,6 +40,13 @@ for _sub in ("pipelines/mag", "pipelines/satellite", "pipelines/bag",
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import BackgroundTasks
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
+
+import httpx
+
+FORGE_URL = os.environ.get("FORGE_URL", "http://127.0.0.1:9100").rstrip("/")
+FORGE_PROXY_TIMEOUT = float(os.environ.get("FORGE_PROXY_TIMEOUT", "120"))
 
 # UploadFile / File / Form require python-multipart — import lazily so the API
 # starts even if the package is absent (upload endpoint will return a clear error)
@@ -98,6 +105,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_WEB_ROOT = Path(os.environ.get("CESAROPS_WEB_ROOT", "/var/www/cesarops"))
+if _WEB_ROOT.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(_WEB_ROOT / "assets")), name="web-assets")
+    app.mount("/mission-control", StaticFiles(directory=str(_WEB_ROOT / "mission-control"), html=True), name="mission-control")
+
+
+@app.get("/wrecks.html", include_in_schema=False)
+def wrecks_page():
+    path = _WEB_ROOT / "wrecks.html"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="wrecks.html not deployed")
+    return FileResponse(path)
+
+
+@app.get("/tools.html", include_in_schema=False)
+def tools_page():
+    path = _WEB_ROOT / "tools.html"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="tools.html not deployed")
+    return FileResponse(path)
+
+
+@app.get("/", include_in_schema=False)
+def web_index():
+    path = _WEB_ROOT / "index.html"
+    if path.is_file():
+        return FileResponse(path)
+    raise HTTPException(status_code=404)
 
 
 # â”€â”€ DB helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -193,12 +229,59 @@ def _insert_scan_audit(job_id: str, created_at: str, paths: list, output_dir: st
         conn.commit()
 
 
-# â”€â”€ Health â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-@app.get("/health", tags=["meta"])
-def health():
+# â”€â”€ Forge proxy (api.cesarops.org tunnel → :8099 → forge :9100) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+async def _proxy_forge(request: Request, forge_path: str) -> Response:
+    """Forward cluster/health/monitor paths to cesarops-forge-v2."""
+    url = f"{FORGE_URL}{forge_path}"
+    if request.url.query:
+        url = f"{url}?{request.url.query}"
+    try:
+        async with httpx.AsyncClient(timeout=FORGE_PROXY_TIMEOUT) as client:
+            upstream = await client.request(
+                request.method,
+                url,
+                content=await request.body(),
+                headers={
+                    k: v
+                    for k, v in request.headers.items()
+                    if k.lower() not in ("host", "content-length")
+                },
+            )
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"forge unreachable: {exc}") from exc
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        media_type=upstream.headers.get("content-type"),
+    )
+
+
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["forge"])
+async def forge_health(request: Request):
+    return await _proxy_forge(request, "/health")
+
+
+@app.api_route("/monitor", methods=["GET", "HEAD"], tags=["forge"])
+async def forge_monitor(request: Request):
+    return await _proxy_forge(request, "/monitor")
+
+
+@app.api_route("/validate/{path:path}", methods=["GET", "POST", "HEAD"], tags=["forge"])
+async def forge_validate(request: Request, path: str):
+    return await _proxy_forge(request, f"/validate/{path}")
+
+
+@app.api_route("/cluster/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"], tags=["forge"])
+async def forge_cluster(request: Request, path: str):
+    return await _proxy_forge(request, f"/cluster/{path}")
+
+
+# â”€â”€ Wrecks DB health (was /health before forge took public path) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+@app.get("/db/health", tags=["meta"])
+def db_health():
     with get_db() as conn:
         conn.execute("SELECT 1 FROM features LIMIT 1")
-    return {"status": "ok", "db": _DB_PATH}
+    return {"status": "ok", "service": "wrecks-db", "db": _DB_PATH}
 
 
 # â”€â”€ Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -207,6 +290,24 @@ def stats():
     with get_db() as conn:
         c = conn.cursor()
         def q(sql): c.execute(sql); return c.fetchone()[0]
+        pin_stats = {}
+        try:
+            c.execute(
+                "SELECT pin_class, COUNT(*) FROM features WHERE latitude IS NOT NULL GROUP BY pin_class"
+            )
+            pin_stats = {r[0]: r[1] for r in c.fetchall()}
+        except sqlite3.OperationalError:
+            pin_stats = {}
+        canonical_n = 0
+        try:
+            canonical_n = q("SELECT COUNT(*) FROM wreck_canonical")
+        except sqlite3.OperationalError:
+            pass
+        supplemental_n = 0
+        try:
+            supplemental_n = q("SELECT COUNT(*) FROM supplemental_wrecks")
+        except sqlite3.OperationalError:
+            pass
         return {
             "total_wrecks":          q("SELECT COUNT(*) FROM features"),
             "with_coordinates":      q("SELECT COUNT(*) FROM features WHERE latitude IS NOT NULL"),
@@ -216,7 +317,167 @@ def stats():
             "iron_ore_carriers":     q("SELECT COUNT(*) FROM features WHERE is_iron_ore_carrier=1"),
             "strong_mag_potential":  q("SELECT COUNT(*) FROM features WHERE magnetic_potential='strong'"),
             "moderate_mag_potential":q("SELECT COUNT(*) FROM features WHERE magnetic_potential='moderate'"),
+            "pins_by_class": pin_stats,
+            "canonical_sites": canonical_n,
+            "supplemental_wrecks": supplemental_n,
         }
+
+
+_VALID_PIN_CLASSES = frozenset({"verified", "estimated", "parsed", "unknown", "canonical"})
+
+
+@app.get("/wrecks/map/geojson", tags=["wrecks", "map"])
+def wrecks_map_geojson(
+    layers: str = Query(
+        "verified,estimated,parsed",
+        description="Comma-separated: verified, estimated, parsed, canonical",
+    ),
+    min_lat: Optional[float] = Query(None),
+    max_lat: Optional[float] = Query(None),
+    min_lon: Optional[float] = Query(None),
+    max_lon: Optional[float] = Query(None),
+    limit_per_layer: int = Query(4000, ge=1, le=15000),
+):
+    """GeoJSON FeatureCollection for map overlays — filter by pin trust layer."""
+    requested = {x.strip().lower() for x in layers.split(",") if x.strip()}
+    invalid = requested - _VALID_PIN_CLASSES
+    if invalid:
+        raise HTTPException(400, detail=f"Unknown layers: {sorted(invalid)}")
+
+    bbox_where, bbox_params = [], []
+    if min_lat is not None:
+        bbox_where.append("latitude >= ?"); bbox_params.append(min_lat)
+    if max_lat is not None:
+        bbox_where.append("latitude <= ?"); bbox_params.append(max_lat)
+    if min_lon is not None:
+        bbox_where.append("longitude >= ?"); bbox_params.append(min_lon)
+    if max_lon is not None:
+        bbox_where.append("longitude <= ?"); bbox_params.append(max_lon)
+    bbox_sql = (" AND " + " AND ".join(bbox_where)) if bbox_where else ""
+
+    features_out = []
+
+    if requested & {"verified", "estimated", "parsed", "unknown"}:
+        layer_list = list(requested & {"verified", "estimated", "parsed", "unknown"})
+        placeholders = ",".join("?" * len(layer_list))
+        sql = (
+            f"SELECT id, name, latitude, longitude, depth, feature_type, source, "
+            f"coord_quality, pin_class, record_tier, hull_material, magnetic_potential "
+            f"FROM features WHERE latitude IS NOT NULL AND longitude IS NOT NULL "
+            f"AND pin_class IN ({placeholders}){bbox_sql} LIMIT ?"
+        )
+        params = layer_list + bbox_params + [limit_per_layer]
+        with get_db() as conn:
+            for row in conn.execute(sql, params):
+                r = dict(row)
+                features_out.append({
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [r["longitude"], r["latitude"]],
+                    },
+                    "properties": {
+                        "id": r["id"],
+                        "name": r.get("name"),
+                        "pin_class": r.get("pin_class") or "unknown",
+                        "coord_quality": r.get("coord_quality"),
+                        "record_tier": r.get("record_tier"),
+                        "depth": r.get("depth"),
+                        "feature_type": r.get("feature_type"),
+                        "source": r.get("source"),
+                        "layer": r.get("pin_class") or "unknown",
+                        "origin": "features",
+                    },
+                })
+
+    if "verified" in requested:
+        sql = (
+            "SELECT id, name, latitude, longitude, depth_ft, coord_quality, pin_class, "
+            "preserve, source_url, matched_feature_id "
+            "FROM supplemental_wrecks WHERE matched_feature_id IS NULL"
+        )
+        sup_params = list(bbox_params)
+        if bbox_where:
+            sql += " AND " + " AND ".join(
+                b.replace("latitude", "latitude").replace("longitude", "longitude")
+                for b in bbox_where
+            )
+        sql += " LIMIT ?"
+        sup_params.append(limit_per_layer)
+        with get_db() as conn:
+            try:
+                for row in conn.execute(sql, sup_params):
+                    r = dict(row)
+                    features_out.append({
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [r["longitude"], r["latitude"]],
+                        },
+                        "properties": {
+                            "id": f"sup-{r['id']}",
+                            "name": r.get("name"),
+                            "pin_class": "verified",
+                            "coord_quality": r.get("coord_quality"),
+                            "depth": r.get("depth_ft"),
+                            "preserve": r.get("preserve"),
+                            "source": r.get("source_url"),
+                            "layer": "verified",
+                            "origin": "supplemental",
+                            "matched_feature_id": r.get("matched_feature_id"),
+                        },
+                    })
+            except sqlite3.OperationalError:
+                pass
+
+    if "canonical" in requested:
+        cw = []
+        cp = []
+        if min_lat is not None:
+            cw.append("best_lat >= ?"); cp.append(min_lat)
+        if max_lat is not None:
+            cw.append("best_lat <= ?"); cp.append(max_lat)
+        if min_lon is not None:
+            cw.append("best_lon >= ?"); cp.append(min_lon)
+        if max_lon is not None:
+            cw.append("best_lon <= ?"); cp.append(max_lon)
+        csql = " AND ".join(cw) if cw else "1=1"
+        with get_db() as conn:
+            try:
+                for row in conn.execute(
+                    f"SELECT id, display_name, best_lat, best_lon, best_pin_class, "
+                    f"best_coord_quality, member_count, best_feature_id, best_supplemental_id "
+                    f"FROM wreck_canonical WHERE {csql} LIMIT ?",
+                    cp + [limit_per_layer],
+                ):
+                    r = dict(row)
+                    features_out.append({
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [r["best_lon"], r["best_lat"]],
+                        },
+                        "properties": {
+                            "id": f"can-{r['id']}",
+                            "name": r.get("display_name"),
+                            "pin_class": r.get("best_pin_class"),
+                            "coord_quality": r.get("best_coord_quality"),
+                            "member_count": r.get("member_count"),
+                            "layer": "canonical",
+                            "origin": "canonical",
+                        },
+                    })
+            except sqlite3.OperationalError:
+                pass
+
+    return {
+        "type": "FeatureCollection",
+        "features": features_out,
+        "meta": {
+            "layers": sorted(requested),
+            "count": len(features_out),
+        },
+    }
 
 
 # â”€â”€ List wrecks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -226,6 +487,8 @@ def list_wrecks(
     limit: int = Query(50, ge=1, le=500, description="Results per page"),
     name: Optional[str] = Query(None, description="Name contains (case-insensitive)"),
     has_coords: Optional[bool] = Query(None, description="Filter to wrecks with lat/lon"),
+    pin_class: Optional[str] = Query(None, description="verified|estimated|parsed|unknown"),
+    record_tier: Optional[str] = Query(None, description="census|estimated|survey"),
     is_steel: Optional[bool] = Query(None, description="Filter steel freighters only"),
     magnetic_potential: Optional[str] = Query(None, description="strong|moderate|weak|unknown"),
     has_mag: Optional[bool] = Query(None, description="Has NAMAG magnetic features"),
@@ -244,6 +507,12 @@ def list_wrecks(
         where.append("latitude IS NOT NULL")
     elif has_coords is False:
         where.append("latitude IS NULL")
+    if pin_class:
+        where.append("pin_class=?")
+        params.append(pin_class)
+    if record_tier:
+        where.append("record_tier=?")
+        params.append(record_tier)
     if is_steel is True:
         where.append("is_steel_freighter=1")
     elif is_steel is False:
@@ -276,7 +545,7 @@ def list_wrecks(
             f"SELECT id,name,date,latitude,longitude,depth,feature_type,source,"
             f"magnetic_potential,is_steel_freighter,is_iron_ore_carrier,"
             f"hull_material,size_category,salvage_status,"
-            f"mag_mean,mag_label,training_confidence,coord_quality "
+            f"mag_mean,mag_label,training_confidence,coord_quality,pin_class,record_tier "
             f"FROM features {where_clause} ORDER BY id LIMIT ? OFFSET ?",
             params + [limit, offset]
         )
@@ -2700,8 +2969,16 @@ def get_work_dir():
 def agent_request(body: _AgentRequestBody):
     """Web-mode equivalent of Tauri ai_direct_request — runs ai_director.py."""
     args = ["--request", body.request, "--execute"]
-    # Native providers need --provider flag; qwen/koboldcpp/github_sdk use env vars
-    if body.provider and body.provider not in ("qwen", "koboldcpp", "github_sdk"):
+    # Native providers need --provider flag; local OpenAI-compatible providers use env vars.
+    if body.provider and body.provider not in (
+        "qwen",
+        "koboldcpp",
+        "llama_cpp",
+        "llama_server",
+        "vllm",
+        "vlm",
+        "github_sdk",
+    ):
         args += ["--provider", body.provider]
     return _run_script("ai_director.py", args)
 
@@ -2751,6 +3028,27 @@ def agent_provider_status_web(
         base = _env("KOBOLDCPP_BASE_URL") or f"http://{ts_ip}:5001/v1"
         model = m or _env("KOBOLDCPP_MODEL") or "DeepSeek-R1-Distill-Qwen-7B"
         has_key = bool(_env("KOBOLDCPP_API_KEY"))
+    elif p in ("llama_cpp", "llama.cpp", "llama_server", "llama-server"):
+        ts_ip = _env("LLAMA_CPP_TAILSCALE_IP") or _env("I7_TAILSCALE") or "100.85.138.4"
+        base = (
+            _env("LLAMA_CPP_BASE_URL")
+            or _env("LLAMA_SERVER_BASE_URL")
+            or _env("KOBOLDCPP_BASE_URL")
+            or f"http://{ts_ip}:5001/v1"
+        )
+        model = (
+            m
+            or _env("LLAMA_CPP_MODEL")
+            or _env("LLAMA_SERVER_MODEL")
+            or _env("KOBOLDCPP_MODEL")
+            or "Gemma-4-26B-MoE-IQ4_XS.gguf"
+        )
+        # local OpenAI-compatible endpoints usually do not require keys
+        has_key = bool(_env("LLAMA_CPP_API_KEY") or _env("LLAMA_SERVER_API_KEY") or _env("KOBOLDCPP_API_KEY"))
+    elif p in ("vllm", "vlm"):
+        base = _env("VLLM_BASE_URL") or "http://127.0.0.1:8000/v1"
+        model = m or _env("VLLM_MODEL") or "Qwen/Qwen2.5-72B-Instruct"
+        has_key = bool(_env("VLLM_API_KEY"))
     elif p == "github_sdk":
         base = _env("GITHUB_MODELS_BASE_URL") or "https://models.inference.ai.azure.com"
         model = m or _env("GITHUB_MODEL") or "gpt-4.1"

@@ -40,18 +40,29 @@ pub fn normalize(raw_output: &str) -> NormalizedMessage {
 
     // Check for empty after stripping
     if stripped.trim().is_empty() {
-        // Was it think-only?
-        if raw_output.contains("<think>") || raw_output.contains("<reasoning>") {
-            let think_content = extract_think_content(raw_output);
-            // For Qwen3.6: thinking IS working. Return the think content as valid output.
-            // The loop engine will feed it back and let the model continue to a tool call.
-            if think_content.len() > 30 {
-                return NormalizedMessage {
-                    content: think_content,
+        // Tool call may live inside a thinking block — parse from raw before think-only handling.
+        if let Some(tc) = extract_tool_call(raw_output) {
+            return match tc {
+                Ok(tool) => NormalizedMessage {
+                    content: String::new(),
+                    tool_call: Some(tool),
+                    failure: None,
+                },
+                Err(_) => NormalizedMessage {
+                    content: String::new(),
                     tool_call: None,
-                    failure: None, // NOT a failure — model is reasoning
-                };
-            }
+                    failure: Some(FailureType::MalformedToolCall),
+                },
+            };
+        }
+
+        // Think-only: loop engine continues (diagnostics / nudges), not a final answer.
+        if raw_output.contains("<think>")
+            || raw_output.contains("<reasoning>")
+            || raw_output.contains("<|channel>thought")
+            || raw_output.to_lowercase().contains("here's a thinking process")
+        {
+            let think_content = extract_think_content(raw_output);
             return NormalizedMessage {
                 content: think_content,
                 tool_call: None,
@@ -128,6 +139,25 @@ pub fn detect_output_loop(history: &[String], current: &str) -> bool {
 fn strip_artifacts(raw: &str) -> String {
     let mut s = raw.to_string();
 
+    // Gemma 4 MoE channel framing from llama-server (e.g. <|channel>thought + <channel|>answer)
+    let channel_hdr = Regex::new(r"(?is)<\|channel>[a-zA-Z_]*\s*").unwrap();
+    s = channel_hdr.replace_all(&s, "").to_string();
+    s = s.replace("<channel|>", "");
+    // Bare channel label lines (completions API sometimes repeats "OK.\nOK.\n…")
+    let channel_line = Regex::new(r"(?m)^(?:final|answer|thought|commentary)\s*$").unwrap();
+    s = channel_line.replace_all(&s, "").to_string();
+    s = collapse_repeated_lines(&s);
+
+    // Leftover channel label when <|channel> was partially stripped (e.g. "_thought")
+    let thought_line = Regex::new(r"(?m)^_thought\s*\n?").unwrap();
+    s = thought_line.replace_all(&s, "").to_string();
+
+    // Alternate tool-call closers: <tool_call|> / <|tool_call|>
+    let tool_close = Regex::new(r"</?\|?tool_call\|?>").unwrap();
+    s = tool_close.replace_all(&s, "</tool_call>").to_string();
+    let tool_open = Regex::new(r"<\|tool_call>").unwrap();
+    s = tool_open.replace_all(&s, "<tool_call>").to_string();
+
     // Remove <think>...</think> blocks
     let think_re = Regex::new(r"(?s)<think>.*?</think>").unwrap();
     s = think_re.replace_all(&s, "").to_string();
@@ -136,12 +166,52 @@ fn strip_artifacts(raw: &str) -> String {
     let reason_re = Regex::new(r"(?s)<reasoning>.*?</reasoning>").unwrap();
     s = reason_re.replace_all(&s, "").to_string();
 
+    // Gemma / channel thought tags (often leak into user-visible replies)
+    let thought_tag = Regex::new(r"(?is)<thought>.*?</thought>").unwrap();
+    s = thought_tag.replace_all(&s, "").to_string();
+    s = s.replace("<thought>", "");
+    s = s.replace("</thought>", "");
+
     // Remove prompt leak tokens
     s = s.replace("<|im_start|>", "");
     s = s.replace("<|im_end|>", "");
     s = s.replace("<|endoftext|>", "");
 
+    // Qwen3.6 MXFP4 MoE: reasoning-only completions often start with this preamble
+    let think_preamble =
+        Regex::new(r"(?is)^here'?s a thinking process:\s*").unwrap();
+    s = think_preamble.replace(&s, "").to_string();
+
     s.trim().to_string()
+}
+
+/// Strip model artifacts before showing text to the user in Forge chat.
+pub fn sanitize_for_user(raw: &str) -> String {
+    strip_artifacts(raw)
+}
+
+/// Collapse runaway single-line repetition from Gemma channel/completions glitches.
+fn collapse_repeated_lines(s: &str) -> String {
+    let lines: Vec<&str> = s.lines().collect();
+    if lines.len() < 4 {
+        return s.to_string();
+    }
+    let mut out: Vec<&str> = Vec::new();
+    for line in lines {
+        let t = line.trim();
+        if t.is_empty() {
+            if out.last().map(|l| l.trim().is_empty()).unwrap_or(false) {
+                continue;
+            }
+            out.push(line);
+            continue;
+        }
+        if out.iter().filter(|l| l.trim() == t).count() >= 2 {
+            continue;
+        }
+        out.push(line);
+    }
+    out.join("\n")
 }
 
 fn extract_think_content(raw: &str) -> String {
@@ -165,7 +235,7 @@ fn has_prompt_leak(text: &str) -> bool {
 }
 
 fn extract_tool_call(text: &str) -> Option<Result<ToolCall, String>> {
-    // Try <tool_call>JSON</tool_call> format (preferred)
+    // Try <tool_call>...</tool_call> (also Gemma <|tool_call> / <tool_call|> after strip_artifacts)
     let re = Regex::new(r"(?s)<tool_call>\s*(.*?)\s*</tool_call>").unwrap();
     if let Some(cap) = re.captures(text) {
         let json_str = cap[1].trim();
@@ -200,7 +270,35 @@ fn extract_tool_call(text: &str) -> Option<Result<ToolCall, String>> {
         return Some(parse_tool_json(trimmed));
     }
 
+    // FALLBACK 3: Gemma-style `call:think_harder{query: "..."}` (not valid JSON)
+    if let Some(tc) = parse_call_colon_tool(text) {
+        return Some(Ok(tc));
+    }
+
     None
+}
+
+/// Parse `call:tool_name{key: "value", ...}` emitted by some coders without XML tags.
+fn parse_call_colon_tool(text: &str) -> Option<ToolCall> {
+    let re = Regex::new(r"(?is)call\s*:\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\{([^}]*)\}").ok()?;
+    let cap = re.captures(text)?;
+    let name = cap[1].to_string();
+    let inner = cap[2].trim();
+    let mut args = serde_json::Map::new();
+    let kv_re = Regex::new(r#"(?is)([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*"([^"]*)""#).ok()?;
+    for kv in kv_re.captures_iter(inner) {
+        args.insert(
+            kv[1].to_string(),
+            serde_json::Value::String(kv[2].to_string()),
+        );
+    }
+    if args.is_empty() && !inner.is_empty() {
+        args.insert("raw".to_string(), serde_json::Value::String(inner.to_string()));
+    }
+    Some(ToolCall {
+        name,
+        arguments: serde_json::Value::Object(args),
+    })
 }
 
 /// Find the index of the matching closing brace for a string starting with '{'.
@@ -291,5 +389,34 @@ fn fix_qwen_json(json_str: &str) -> String {
         re2.replace(json_str, r#"$1, "arguments": {"#).to_string()
     } else {
         fixed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strip_gemma_channel_answer() {
+        let raw = "<|channel>thought\n<channel|>Pong\n";
+        let n = normalize(raw);
+        assert_eq!(n.content.trim(), "Pong");
+        assert!(n.tool_call.is_none());
+        assert!(n.failure.is_none());
+    }
+
+    #[test]
+    fn strip_leftover_thought_line() {
+        let raw = "_thought\npong\n";
+        let n = normalize(raw);
+        assert_eq!(n.content.trim(), "pong");
+    }
+
+    #[test]
+    fn parse_gemma_call_colon_tool() {
+        let raw = "<|channel>thought\n<channel|><tool_call>call:think_harder{query: \"x\"}</tool_call>";
+        let n = normalize(raw);
+        assert!(n.tool_call.is_some());
+        assert_eq!(n.tool_call.as_ref().unwrap().name, "think_harder");
     }
 }

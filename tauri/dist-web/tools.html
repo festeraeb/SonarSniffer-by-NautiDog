@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CESARops | Tools &amp; Endpoints</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">⚓</div>
+      <span>CESARops · Tools</span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="wrecks.html">Wreck DB</a>
+      <a href="tools.html" class="active">Tools</a>
+      <a href="mission-control/index.html">Mission Control</a>
+      <button id="refresh-health" class="btn btn-ghost" type="button" style="padding:0.4rem 0.9rem;font-size:0.85rem">Refresh status</button>
+    </nav>
+  </header>
+
+  <main class="hero" style="padding-bottom:1rem">
+    <h1>Cluster dashboard</h1>
+    <p class="lead">Quick links to Forge, inference workers, admin consoles, and ops tools. Green dots = reachable from this browser (public URLs only). LAN links work on your home network or Tailscale.</p>
+  </main>
+
+  <h2 class="section-title">Forge health</h2>
+  <section class="forge-health-panel">
+    <div id="forge-health-banner" class="forge-banner pending">Checking Forge…</div>
+    <p id="forge-health-meta" class="forge-meta"></p>
+    <div id="forge-gpu-grid" class="gpu-grid"></div>
+    <div class="forge-subgrid">
+      <article class="card">
+        <h3>LLM throughput</h3>
+        <p class="forge-muted">Live token/s from <code>/validate/ping</code> (not TFLOPS — use GPU cards for compute estimates).</p>
+        <div id="forge-engines"></div>
+      </article>
+      <article class="card">
+        <h3>Cluster discover</h3>
+        <div id="forge-discover"><p class="forge-muted">Loading…</p></div>
+      </article>
+    </div>
+  </section>
+
+  <h2 class="section-title">Public web &amp; API</h2>
+  <section class="grid">
+    <article class="card">
+      <h3>Edge / tunnel</h3>
+      <div id="public-tools"></div>
+    </article>
+    <article class="card">
+      <h3>Admin consoles</h3>
+      <div id="admin-tools"></div>
+    </article>
+    <article class="card">
+      <h3>Front-end apps</h3>
+      <div id="app-tools"></div>
+    </article>
+  </section>
+
+  <h2 class="section-title">T440 — primary node (10.0.0.61)</h2>
+  <section class="grid">
+    <article class="card">
+      <h3>Forge &amp; orchestration</h3>
+      <div id="t440-forge"></div>
+    </article>
+    <article class="card">
+      <h3>LLM workers (P100)</h3>
+      <div id="t440-llm"></div>
+    </article>
+    <article class="card">
+      <h3>Detection &amp; ops</h3>
+      <div id="t440-ops"></div>
+    </article>
+  </section>
+
+  <h2 class="section-title">cesarops2 — augment (ML350e Gen8)</h2>
+  <section class="grid">
+    <article class="card">
+      <h3>LLM (remote brain offload)</h3>
+      <div id="c2-llm"></div>
+    </article>
+    <article class="card">
+      <h3>Vision &amp; detection</h3>
+      <div id="c2-det"></div>
+    </article>
+    <article class="card">
+      <h3>Node &amp; tools</h3>
+      <div id="c2-node"></div>
+    </article>
+  </section>
+
+  <h2 class="section-title">Projects &amp; repos</h2>
+  <section class="grid">
+    <article class="card">
+      <h3>Software</h3>
+      <div id="project-tools"></div>
+    </article>
+  </section>
+
+  <p class="note">Tailscale T440: <code>100.72.182.77</code> · cesarops3 retired · Update this page in <code>tauri/dist-web/tools.html</code></p>
+
+  <footer>
+    <p><a href="index.html">← Back to CESARops home</a></p>
+  </footer>
+
+  <script type="module">
+    import { requireOpsGate } from "./assets/ops-gate.js";
+    if (!requireOpsGate("Fleet health monitor")) throw new Error("gate");
+  </script>
+  <script type="module" src="assets/forge-health.js"></script>
+  <script type="module" src="assets/health.js"></script>
+  <script type="module">
+    const tools = {
+      public: [
+        { name: "Forge API (HTTPS)", url: "https://api.cesarops.org/health", badge: "public", probe: "forge-api" },
+        { name: "App host", url: "https://app.cesarops.org/", badge: "public", probe: "app" },
+        { name: "IONOS site (this)", url: "https://cesarops.com/wh2000/", badge: "public" },
+      ],
+      admin: [
+        { name: "Cloudflare dashboard", url: "https://dash.cloudflare.com/", badge: "public" },
+        { name: "Tailscale admin", url: "https://login.tailscale.com/admin/machines", badge: "public" },
+        { name: "Tailscale T440", url: "http://100.72.182.77:9090/", badge: "tailscale", note: "Cockpit if enabled" },
+      ],
+      apps: [
+        { name: "Mission Control", url: "mission-control/index.html", badge: "public" },
+        { name: "Tools dashboard", url: "tools.html", badge: "public" },
+      ],
+      t440Forge: [
+        { name: "Forge UI/API (LAN)", url: "http://10.0.0.61:9100/", badge: "lan" },
+        { name: "Forge (Tailscale)", url: "http://100.72.182.77:9100/", badge: "tailscale" },
+        { name: "Cockpit", url: "https://10.0.0.61:9090/", badge: "lan" },
+        { name: "NFS exports", url: "nfs://10.0.0.61/codebase", badge: "lan" },
+      ],
+      t440Llm: [
+        { name: "Coder / MoE", url: "http://10.0.0.61:5001/v1/models", badge: "lan" },
+        { name: "Thinker / big model", url: "http://10.0.0.61:5002/v1/models", badge: "lan" },
+        { name: "Thinker alt", url: "http://10.0.0.61:5010/v1/models", badge: "lan" },
+      ],
+      t440Ops: [
+        { name: "Detection orchestrator", url: "http://10.0.0.61:5580/health", badge: "lan" },
+        { name: "Scout CPU sim", url: "http://10.0.0.61:5570/health", badge: "lan" },
+        { name: "Validator CPU sim", url: "http://10.0.0.61:5572/health", badge: "lan" },
+        { name: "Jitter CPU sim", url: "http://10.0.0.61:8080/health", badge: "lan" },
+      ],
+      c2Llm: [
+        { name: "Thinker 7B (2060)", url: "http://10.0.0.201:5200/v1/models", badge: "lan" },
+        { name: "Draft Phi-3 (1070)", url: "http://10.0.0.201:5571/v1/models", badge: "lan" },
+        { name: "Thinker (alt NIC)", url: "http://10.0.0.200:5200/v1/models", badge: "lan" },
+      ],
+      c2Det: [
+        { name: "Detection :5580", url: "http://10.0.0.201:5580/health", badge: "lan" },
+        { name: "Scout (localhost on c2)", url: "http://10.0.0.201:5570/health", badge: "lan", note: "127.0.0.1 only on box" },
+      ],
+      c2Node: [
+        { name: "cesarops-node", url: "http://10.0.0.201:5500/status", badge: "lan" },
+        { name: "MCP tool worker", url: "http://10.0.0.201:8090/health", badge: "lan" },
+        { name: "Cockpit", url: "https://10.0.0.201:9090/", badge: "lan" },
+      ],
+      projects: [
+        { name: "Wreckhunter repo (NFS)", url: "https://github.com/AceOmni/wreckhunter2000-1", badge: "public" },
+        { name: "SonarSniffer (repo crate)", url: "https://github.com/AceOmni/SonarSniffer-by-NautiDog", badge: "public" },
+        { name: "Wayfinder", url: "https://github.com/AceOmni/wayfinder", badge: "public" },
+        { name: "nauticuvs (crates.io)", url: "https://crates.io/crates/nauticuvs", badge: "public" },
+      ],
+    };
+
+    function row(item) {
+      const probe = item.probe ? `<span class="status-dot pending" data-probe="${item.probe}" title="checking…"></span>` : `<span class="status-dot" title="manual"></span>`;
+      const note = item.note ? `<div class="tool-url">${item.note}</div>` : "";
+      return `<div class="tool-row">${probe}<div class="tool-meta"><div class="tool-name"><a href="${item.url}" target="_blank" rel="noopener">${item.name}</a></div><div class="tool-url">${item.url}</div>${note}</div><span class="badge ${item.badge}">${item.badge}</span></div>`;
+    }
+
+    function render(id, items) {
+      document.getElementById(id).innerHTML = items.map(row).join("");
+    }
+
+    render("public-tools", tools.public);
+    render("admin-tools", tools.admin);
+    render("app-tools", tools.apps);
+    render("t440-forge", tools.t440Forge);
+    render("t440-llm", tools.t440Llm);
+    render("t440-ops", tools.t440Ops);
+    render("c2-llm", tools.c2Llm);
+    render("c2-det", tools.c2Det);
+    render("c2-node", tools.c2Node);
+    render("project-tools", tools.projects);
+  </script>
+  <link rel="stylesheet" href="assets/forge-hud.css">
+  <script src="assets/forge-hud.js" defer></script>
+</body>
+</html>

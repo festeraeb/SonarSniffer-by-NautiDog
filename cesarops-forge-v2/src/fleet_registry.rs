@@ -67,21 +67,9 @@ impl FleetRegistry {
                     online: false,
                 },
                 FleetMember {
-                    name: "deepseek-coder-v2".into(),
-                    endpoint: "http://100.102.158.111:5555".into(),
-                    hardware: "cesarops2 1070+P1000".into(),
-                    model_id: "DeepSeek-Coder-V2-Lite-Q4_K_M".into(),
-                    specialties: vec![
-                        TaskType::JsonRepair, TaskType::Translation,
-                        TaskType::LoopJudgment, TaskType::RustCode,
-                    ],
-                    est_tps: 22.0,
-                    online: false,
-                },
-                FleetMember {
                     name: "deepseek-r1-7b".into(),
-                    endpoint: "http://100.105.77.74:5100".into(),
-                    hardware: "cesarops3 P106-100".into(),
+                    endpoint: "http://10.0.0.201:5200".into(),
+                    hardware: "cesarops2 RTX 2060".into(),
                     model_id: "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M".into(),
                     specialties: vec![
                         TaskType::Research, TaskType::Analysis,
@@ -90,10 +78,10 @@ impl FleetRegistry {
                     online: false,
                 },
                 FleetMember {
-                    name: "tinyllama-validator".into(),
-                    endpoint: "http://100.102.158.111:5571".into(),
-                    hardware: "cesarops2 P1000".into(),
-                    model_id: "TinyLlama-1.1B-Chat-v1.0-Q4_K_M".into(),
+                    name: "phi3-draft".into(),
+                    endpoint: "http://10.0.0.201:5571".into(),
+                    hardware: "cesarops2 GTX 1070".into(),
+                    model_id: "Phi-3-mini-4k-instruct-Q4_K_M".into(),
                     specialties: vec![],
                     est_tps: 35.0,
                     online: false,

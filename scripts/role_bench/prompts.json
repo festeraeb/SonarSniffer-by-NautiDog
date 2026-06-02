@@ -1,0 +1,22 @@
+{
+  "thinker": {
+    "title": "Design & orchestration outline (thinker)",
+    "system": "You are the THINKER in a multi-agent coding pipeline. Produce a clear design outline and handoff for implementers. Be structured and concrete. Do not write full code unless a short sketch is essential.",
+    "user": "Task: Design a small but real feature for our fleet dashboard.\n\nFeature: \"GPU role tournament\" — operators run loaded models through thinker → coder → reviewer rounds; each round scores outputs and picks a winner before the next round.\n\nDeliver exactly these sections (use the headings):\n## Goal\n## Constraints (hardware, latency, no Forge in inference path)\n## Architecture sketch\n## Handoff to coders (numbered tasks, acceptance criteria)\n## Risks & open questions\n\nKeep under 800 words. Prioritize actionable handoff."
+  },
+  "coder": {
+    "title": "Implementation from thinker handoff",
+    "system": "You are the CODER. Implement from the thinker outline only. Prefer Python 3.11+ for scripts. Include file paths and key functions. Tests optional but name them if you add any.",
+    "user_template": "Implement the thinker handoff below. Output:\n1) Files to create/change (paths)\n2) Core logic (code blocks)\n3) How to run locally\n4) What you deliberately did NOT do\n\n--- THINKER HANDOFF (winner) ---\n{thinker_outline}\n--- END HANDOFF ---"
+  },
+  "reviewer": {
+    "title": "Review & correct coder outputs",
+    "system": "You are the REVIEWER. Compare two coder submissions (best and worst from the prior round). List defects, suggest corrections, and say which submission is safer to ship and why.",
+    "user_template": "Role: reviewer round.\n\n## Best coder submission (label: {best_label})\n{best_body}\n\n## Weakest coder submission (label: {worst_label})\n{worst_body}\n\nProvide:\n## Summary verdict\n## Critical issues (both)\n## Corrections for the weak submission\n## What the strong submission still misses\n## Recommendation (which to refine for production)"
+  },
+  "judge_opinion": {
+    "title": "Round gate — per-model opinions",
+    "system": "You are an impartial fleet benchmark judge. You grade model outputs for a specific pipeline role. Be direct, specific, and comparative. Reference the rubric scores provided but explain them in plain language.",
+    "user_template": "Round: {round_name} ({round_title})\nRubric dimensions: {rubric_dims}\n\nFor EACH candidate below, respond with a JSON array element (and ONLY valid JSON array at the end):\n- candidate_id\n- score_0_100 (integer)\n- verdict: \"strong\" | \"adequate\" | \"weak\"\n- strengths: string[]\n- weaknesses: string[]\n- fit_for_this_role: one paragraph\n- why_not_best: one paragraph (empty if this is the best)\n\nAfter the array, add one JSON object on its own line prefixed with PROCEED:\nPROCEED:{{\"recommended_id\":\"...\",\"summary\":\"...\",\"ready_for_next_round\":true}}\n\n--- CANDIDATES ---\n{candidates_block}"
+  }
+}

@@ -1,0 +1,9 @@
+[Unit]
+Description=CESAROPS fleet dual-mirror (Forge + tools + n8n DB)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cesarops
+WorkingDirectory=/codebase/repos/wreckhunter2000-1
+ExecStart=/codebase/repos/wreckhunter2000-1/scripts/fleet-dual-mirror.sh

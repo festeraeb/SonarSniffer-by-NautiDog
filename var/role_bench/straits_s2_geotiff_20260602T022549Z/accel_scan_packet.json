@@ -1,0 +1,410 @@
+{
+  "mission": "sunken_ship_anchor_hunt",
+  "files_scanned": 4,
+  "scans": [
+    {
+      "source_file": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TER_20260516_0_L2A.red.tif",
+      "glint_band": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TER_20260516_0_L2A.red.tif",
+      "tile_id": "S2B_16TER_20260516_0_L2A",
+      "coordinates": {
+        "lat": 5045100.0,
+        "lon": 554880.0
+      },
+      "thermal_timeseries": [
+        "blue",
+        "green",
+        "nir",
+        "nir08",
+        "red",
+        "scl",
+        "swir16",
+        "swir22"
+      ],
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 0,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 1,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 2,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 3,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 4,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 5,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 6,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 7,
+            "row": 0,
+            "score": 0.0
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 0.574
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.855,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.069,
+        "thermal_delta_c": 0.6,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.869,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.849,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      },
+      "scene_id": "S2B_16TER_20260516_0_L2A",
+      "bands": [
+        "S2B_16TER_20260516_0_L2A.blue.tif",
+        "S2B_16TER_20260516_0_L2A.green.tif",
+        "S2B_16TER_20260516_0_L2A.nir.tif",
+        "S2B_16TER_20260516_0_L2A.nir08.tif",
+        "S2B_16TER_20260516_0_L2A.red.tif",
+        "S2B_16TER_20260516_0_L2A.scl.tif",
+        "S2B_16TER_20260516_0_L2A.swir16.tif",
+        "S2B_16TER_20260516_0_L2A.swir22.tif"
+      ]
+    },
+    {
+      "source_file": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TFS_20260516_0_L2A.red.tif",
+      "glint_band": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TFS_20260516_0_L2A.red.tif",
+      "tile_id": "S2B_16TFS_20260516_0_L2A",
+      "coordinates": {
+        "lat": 5145120.0,
+        "lon": 654900.0
+      },
+      "thermal_timeseries": [
+        "blue",
+        "green",
+        "nir",
+        "nir08",
+        "red",
+        "scl",
+        "swir16",
+        "swir22"
+      ],
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 0,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 1,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 2,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 3,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 4,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 5,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 6,
+            "row": 0,
+            "score": 1.0
+          },
+          {
+            "col": 7,
+            "row": 0,
+            "score": 1.0
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 0.3739
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.901,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.056,
+        "thermal_delta_c": 0.67,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.906,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.886,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      },
+      "scene_id": "S2B_16TFS_20260516_0_L2A",
+      "bands": [
+        "S2B_16TFS_20260516_0_L2A.blue.tif",
+        "S2B_16TFS_20260516_0_L2A.green.tif",
+        "S2B_16TFS_20260516_0_L2A.nir.tif",
+        "S2B_16TFS_20260516_0_L2A.nir08.tif",
+        "S2B_16TFS_20260516_0_L2A.red.tif",
+        "S2B_16TFS_20260516_0_L2A.scl.tif",
+        "S2B_16TFS_20260516_0_L2A.swir16.tif",
+        "S2B_16TFS_20260516_0_L2A.swir22.tif"
+      ]
+    },
+    {
+      "source_file": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TGR_20260429_0_L2A.red.tif",
+      "glint_band": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TGR_20260429_0_L2A.red.tif",
+      "tile_id": "S2B_16TGR_20260429_0_L2A",
+      "coordinates": {
+        "lat": 5045100.0,
+        "lon": 754860.0
+      },
+      "thermal_timeseries": [
+        "blue",
+        "green",
+        "nir",
+        "nir08",
+        "red",
+        "scl",
+        "swir16",
+        "swir22"
+      ],
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 0,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 1,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 2,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 3,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 4,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 5,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 6,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 7,
+            "row": 0,
+            "score": 0.0
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 0.3684
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.061,
+        "thermal_delta_c": 1.38,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.95,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.97,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      },
+      "scene_id": "S2B_16TGR_20260429_0_L2A",
+      "bands": [
+        "S2B_16TGR_20260429_0_L2A.blue.tif",
+        "S2B_16TGR_20260429_0_L2A.green.tif",
+        "S2B_16TGR_20260429_0_L2A.nir.tif",
+        "S2B_16TGR_20260429_0_L2A.nir08.tif",
+        "S2B_16TGR_20260429_0_L2A.red.tif",
+        "S2B_16TGR_20260429_0_L2A.scl.tif",
+        "S2B_16TGR_20260429_0_L2A.swir16.tif",
+        "S2B_16TGR_20260429_0_L2A.swir22.tif"
+      ]
+    },
+    {
+      "source_file": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TGR_20260519_0_L2A.red.tif",
+      "glint_band": "/codebase/projects/pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/S2B_16TGR_20260519_0_L2A.red.tif",
+      "tile_id": "S2B_16TGR_20260519_0_L2A",
+      "coordinates": {
+        "lat": 5045100.0,
+        "lon": 754860.0
+      },
+      "thermal_timeseries": [
+        "blue",
+        "green",
+        "nir",
+        "nir08",
+        "red",
+        "scl",
+        "swir16",
+        "swir22"
+      ],
+      "tpu_scan": {
+        "detection_count": 100,
+        "top_detections": [
+          {
+            "col": 0,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 1,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 2,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 3,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 4,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 5,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 6,
+            "row": 0,
+            "score": 0.0
+          },
+          {
+            "col": 7,
+            "row": 0,
+            "score": 0.0
+          }
+        ],
+        "used_tpu": false,
+        "took_s": 0.3712
+      },
+      "jitter_signature": {
+        "material": "ferrous_composite",
+        "certainty": 0.99,
+        "depth_estimate_ft": 137.8,
+        "jitter_frequency_hz": 0.066,
+        "thermal_delta_c": 0.99,
+        "classification": "confirmed_structure",
+        "validation": [
+          {
+            "device": "movidius_ncs2",
+            "agreement": 0.95,
+            "agreed": true,
+            "backend": "myriad_fp16"
+          },
+          {
+            "device": "coral_edgetpu",
+            "agreement": 0.97,
+            "agreed": true,
+            "backend": "stub_rule"
+          }
+        ],
+        "primary_backend": "cpu_thermal"
+      },
+      "scene_id": "S2B_16TGR_20260519_0_L2A",
+      "bands": [
+        "S2B_16TGR_20260519_0_L2A.blue.tif",
+        "S2B_16TGR_20260519_0_L2A.green.tif",
+        "S2B_16TGR_20260519_0_L2A.nir.tif",
+        "S2B_16TGR_20260519_0_L2A.nir08.tif",
+        "S2B_16TGR_20260519_0_L2A.red.tif",
+        "S2B_16TGR_20260519_0_L2A.scl.tif",
+        "S2B_16TGR_20260519_0_L2A.swir16.tif",
+        "S2B_16TGR_20260519_0_L2A.swir22.tif"
+      ]
+    }
+  ],
+  "coordinates": {
+    "lat": 5045100.0,
+    "lon": 554880.0
+  }
+}

@@ -1,12 +1,10 @@
 #!/bin/bash
-# Run THIS on cesarops3 (10.0.0.41, the 1060 6GB box).
-# Mounts T440 model share, launches a 7B coder/thinker (DeepSeek-R1-Distill-Qwen-7B Q4_K_M)
-# on port 5570. Picked because it fits 6GB w/ headroom and is great at reasoning tasks
-# the orchestrator routes to it.
+# Run THIS on cesarops3 (P106-100 6GB). Launches llama-server (not Kobold).
 set -u
 
-T440_IP="10.0.0.61"
+T440_IP="${T440_IP:-10.0.0.61}"
 SHARE_MOUNT="/mnt/cesarops-models"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "[1/4] Mount T440 model share via cifs"
 sudo mkdir -p "$SHARE_MOUNT"
@@ -27,20 +25,14 @@ if [[ ! -f "$MODEL" ]]; then
 fi
 echo "  ok: $(ls -lh "$MODEL" | awk '{print $5}')"
 
-echo "[3/4] Stop any existing koboldcpp on 5570"
+echo "[3/4] Stop existing inference on 5570"
 pkill -f "koboldcpp.*5570" 2>/dev/null || true
+pkill -f "llama-server.*--port 5570" 2>/dev/null || true
 sleep 1
 
-echo "[4/4] Launch DeepSeek-R1 7B on GTX 1060 (port 5570)"
-nohup koboldcpp \
-    --model "$MODEL" \
-    --port 5570 \
-    --usecublas 0 \
-    --gpulayers 999 \
-    --contextsize 4096 \
-    --threads 4 \
-    --quiet \
-    > /tmp/kobold-r1-7b.log 2>&1 &
-PID=$!
-echo "  launched PID=$PID, log=/tmp/kobold-r1-7b.log"
-echo "  wait ~30-60s, then: curl http://localhost:5570/api/extra/version"
+echo "[4/4] Launch DeepSeek-R1 7B on GTX 1060 (port 5570, llama-server)"
+MODEL="$MODEL" PORT=5570 DEV=CUDA0 CTX=4096 NGL=99 THREADS=4 \
+  LOG=/tmp/llama-r1-7b.log \
+  bash "$SCRIPT_DIR/launch_llama_remote.sh"
+
+echo "  wait ~30-60s, then: curl http://localhost:5570/v1/models"

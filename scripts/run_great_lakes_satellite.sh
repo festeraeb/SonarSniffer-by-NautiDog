@@ -9,6 +9,11 @@
 set -euo pipefail
 
 REPO="${REPO:-/codebase/repos/wreckhunter2000-1}"
+# Earthdata: repo .env (canonical), /data/cesarops/repo/.env, credentials.sh, ~/.ssh/*
+[[ -f /data/cesarops/repo/.env ]] && set -a && source /data/cesarops/repo/.env && set +a
+[[ -f "$REPO/.env" ]] && set -a && source "$REPO/.env" && set +a
+[[ -f "$REPO/scripts/credentials.sh" ]] && source "$REPO/scripts/credentials.sh"
+python3 -c "import sys; sys.path.insert(0,'$REPO'); from universal_downloader import bootstrap_credentials; bootstrap_credentials()" >/dev/null 2>&1 || true
 PIPE="${PIPE:-/codebase/projects/pipelines}"
 FORGE="${FORGE_URL:-http://127.0.0.1:9100}"
 DETECTION_URL="${DETECTION_URL:-http://10.0.0.201:5580}"

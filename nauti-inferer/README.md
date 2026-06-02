@@ -5,12 +5,22 @@ Default: **avoid P100** when `avoid_p100: true` (thinker workloads go to cesarop
 
 ## Quick start
 
-### Coordinator (T440)
+### Coordinator (cesarops2 — home base)
 
 ```bash
-cd /codebase/repos/wreckhunter2000-1
+cd /mnt/t440/codebase/repos/wreckhunter2000-1
 cargo build --release -p nauti_inferer
 
+bash scripts/cesarops2_qwen36_gemma4_dual.sh start   # or your LLM stack
+bash scripts/cesarops2-forge-edge.sh start
+bash scripts/nauti-inferer-c2.sh start
+```
+
+See `docs/forge-edge-nauti-layout.md` for **edge vs T440 backup** routing.
+
+### Coordinator (T440 — backup / conductor)
+
+```bash
 export FORGE_URL=http://127.0.0.1:9100
 export NAUTI_LISTEN_PORT=8099
 ./target/release/nauti-inferer
@@ -20,7 +30,7 @@ export NAUTI_LISTEN_PORT=8099
 
 ```bash
 export NAUTI_MODE=worker
-export NAUTI_COORDINATOR_URL=http://10.0.0.61:8099
+export NAUTI_COORDINATOR_URL=http://127.0.0.1:8099
 export LOCAL_INFERENCE_URL=http://127.0.0.1:5200
 export NAUTI_WORKER_ID=RTX2060
 export NAUTI_WORKER_ROLE=thinker

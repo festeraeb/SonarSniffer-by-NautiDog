@@ -1,0 +1,54 @@
+{
+  "name": "CESAROPS Specialist — Satellite",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "specialist-satellite",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh-sat-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build a MissionSpec file + CLI args from the incoming plan.\n// Expects: { spec_path?, spec?, knobs?, stages?, dry_run? }\nconst body = items[0].json;\nconst fs = require('fs');\nconst os = require('os');\nconst path = require('path');\n\nlet specPath = body.spec_path;\nif (!specPath && body.spec) {\n  specPath = path.join(os.tmpdir(), `sat_spec_${Date.now()}.json`);\n  fs.writeFileSync(specPath, JSON.stringify(body.spec));\n}\nif (!specPath) {\n  throw new Error('satellite specialist needs spec_path or spec');\n}\n\nconst args = ['run', 'satellite', '--spec', specPath];\nif (body.knobs) { args.push('--knobs', JSON.stringify(body.knobs)); }\nif (Array.isArray(body.stages) && body.stages.length) { args.push('--stages', ...body.stages); }\nif (body.dry_run) { args.push('--dry-run'); }\n\nreturn [{ json: { argv: args.join(' '), runner: $env.CESAROPS_RUNNER || '/home/cesarops/wreckhunter2000-1/n8n/pipeline_runner.sh' } }];"
+      },
+      "id": "wh-sat-buildcmd",
+      "name": "Build Command",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=bash {{$json[\"runner\"]}} {{$json[\"argv\"]}}"
+      },
+      "id": "wh-sat-exec",
+      "name": "Run sat-run",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse the MissionReport JSON from stdout and surface candidates.\nconst out = items[0].json.stdout || '{}';\nlet report;\ntry { report = JSON.parse(out); } catch (e) { return [{ json: { error: 'bad JSON from sat-run', raw: out.slice(0, 500) } }]; }\nconst cands = report.candidates || [];\nreturn [{ json: {\n  pipeline: 'satellite',\n  status: report.status,\n  mission_id: report.mission_id,\n  runtime_seconds: report.runtime_seconds,\n  n_candidates: cands.length,\n  top: cands.slice(0, 10),\n  report\n} }];"
+      },
+      "id": "wh-sat-parse",
+      "name": "Parse Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build Command", "type": "main", "index": 0 }]] },
+    "Build Command": { "main": [[{ "node": "Run sat-run", "type": "main", "index": 0 }]] },
+    "Run sat-run": { "main": [[{ "node": "Parse Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": {}
+}

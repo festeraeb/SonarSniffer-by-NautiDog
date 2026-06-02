@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll fleet activity every 60s for idle cake_fleet switch
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+Unit=cesarops-activity-watch.service
+
+[Install]
+WantedBy=timers.target

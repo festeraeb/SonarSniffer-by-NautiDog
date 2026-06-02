@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OperatorSpec",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "title",
+    "architecture_overview",
+    "constraints",
+    "ordered_tasks",
+    "needs_user_approval"
+  ],
+  "properties": {
+    "spec_version": { "type": "integer", "const": 1 },
+    "title": { "type": "string", "minLength": 3 },
+    "architecture_overview": { "type": "string", "minLength": 20 },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "repo_root": { "type": "string" },
+    "ordered_tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "target_file_path",
+          "injected_context_files",
+          "explicit_steps",
+          "done_condition"
+        ],
+        "properties": {
+          "target_file_path": { "type": "string", "minLength": 1 },
+          "injected_context_files": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "explicit_steps": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 3 },
+            "minItems": 1
+          },
+          "done_condition": { "type": "string", "minLength": 5 }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "needs_user_approval": { "type": "boolean", "const": true }
+  }
+}

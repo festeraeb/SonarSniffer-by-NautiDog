@@ -1,0 +1,1858 @@
+{
+  "scanned_at": "2026-06-01T13:02:31Z",
+  "host": "cesarops2",
+  "repo": "/mnt/t440/repo",
+  "count": 185,
+  "scripts": [
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_fortytwo_q6k_retry.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_fortytwo_q6k_retry.sh",
+      "host_scan": "cesarops2",
+      "bytes": 6217,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_fortytwo_q6k.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_fortytwo_q6k.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2131,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_qwen_pipeline_cache.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_qwen_pipeline_cache.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2023,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round2_p100_gemma.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round2_p100_gemma.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2365,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round2_p100_qwen.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round2_p100_qwen.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2320,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round3_gemma_pushconst.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round3_gemma_pushconst.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3005,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round3_p1000_canary.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round3_p1000_canary.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1046,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round4_gemma_matvec_bias_pc.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round4_gemma_matvec_bias_pc.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2668,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round4_qwen_attention_pc.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round4_qwen_attention_pc.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2671,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round5_gemma_q6k_matvec_fused.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round5_gemma_q6k_matvec_fused.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3353,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round5_qwen_pipeline_cache_wire.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round5_qwen_pipeline_cache_wire.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3634,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round6_gemma_attention_pc_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round6_gemma_attention_pc_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4535,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round6_picasso_cmd_replay.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round6_picasso_cmd_replay.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1407,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round6_qwen_q6k_fused.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round6_qwen_q6k_fused.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3888,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round6_scout_qkv_rope_fused.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round6_scout_qkv_rope_fused.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3484,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/dispatch_round7_gemma_bench_review.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/dispatch_round7_gemma_bench_review.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3105,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/launch_laptop_m2200.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/launch_laptop_m2200.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3318,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/launch_llama_remote.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/launch_llama_remote.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1167,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/mcp-stack-up.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/mcp-stack-up.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1700,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/remote_setup_cesarops2.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/remote_setup_cesarops2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1449,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/remote_setup_cesarops3.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/remote_setup_cesarops3.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1305,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/remote_setup_m2200.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/remote_setup_m2200.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2059,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "cesarops-forge-v2/scripts/remote_setup_picasso_p1000.sh",
+      "abs_path": "/mnt/t440/repo/cesarops-forge-v2/scripts/remote_setup_picasso_p1000.sh",
+      "host_scan": "cesarops2",
+      "bytes": 553,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "config/cesarops2-fr/bootstrap-from-t440.sh",
+      "abs_path": "/mnt/t440/repo/config/cesarops2-fr/bootstrap-from-t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1440,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "config/cesarops2-fr/staging/bootstrap-from-t440.sh",
+      "abs_path": "/mnt/t440/repo/config/cesarops2-fr/staging/bootstrap-from-t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1440,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": "config/cesarops2-fr/bootstrap-from-t440.sh"
+    },
+    {
+      "path": "fleet-env.sh",
+      "abs_path": "/mnt/t440/repo/fleet-env.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1772,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "fleet-job-runner.sh",
+      "abs_path": "/mnt/t440/repo/fleet-job-runner.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2329,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "fleet-n8n-dispatch.sh",
+      "abs_path": "/mnt/t440/repo/fleet-n8n-dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1640,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "infra/nomad/rclone/rclone-state-sync.sh",
+      "abs_path": "/mnt/t440/repo/infra/nomad/rclone/rclone-state-sync.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1136,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "infra/nomad/scripts/bootstrap_client.sh",
+      "abs_path": "/mnt/t440/repo/infra/nomad/scripts/bootstrap_client.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5113,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "infra/nomad/scripts/bootstrap_t440.sh",
+      "abs_path": "/mnt/t440/repo/infra/nomad/scripts/bootstrap_t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2538,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "infra/nomad/scripts/require_mounted_repo.sh",
+      "abs_path": "/mnt/t440/repo/infra/nomad/scripts/require_mounted_repo.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1168,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/agent_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/agent_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1057,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/blueprint_audit_deep_watchdog.sh",
+      "abs_path": "/mnt/t440/repo/scripts/blueprint_audit_deep_watchdog.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4112,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/build_sonarsniffer_all.sh",
+      "abs_path": "/mnt/t440/repo/scripts/build_sonarsniffer_all.sh",
+      "host_scan": "cesarops2",
+      "bytes": 609,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/build_sonarsniffer_bundle_common.sh",
+      "abs_path": "/mnt/t440/repo/scripts/build_sonarsniffer_bundle_common.sh",
+      "host_scan": "cesarops2",
+      "bytes": 938,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/build_sonarsniffer_linux.sh",
+      "abs_path": "/mnt/t440/repo/scripts/build_sonarsniffer_linux.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1205,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/build_sonarsniffer_macos.sh",
+      "abs_path": "/mnt/t440/repo/scripts/build_sonarsniffer_macos.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2750,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/build_sonarsniffer_windows.sh",
+      "abs_path": "/mnt/t440/repo/scripts/build_sonarsniffer_windows.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1825,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/diagnose-moe-c2.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/diagnose-moe-c2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2751,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/fleet-env.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/fleet-env.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3410,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": "fleet-env.sh"
+    },
+    {
+      "path": "scripts/cake/install_cake_fleet.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/install_cake_fleet.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4284,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": "scripts/install_cake_fleet.sh"
+    },
+    {
+      "path": "scripts/cake/install_cake_for_cap.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/install_cake_for_cap.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1872,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/install_cake_p100.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/install_cake_p100.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1057,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/install_cake_pascal_fleet.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/install_cake_pascal_fleet.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1328,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/install_cake_sm75_c2.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/install_cake_sm75_c2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 974,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/launch-fleet-after-pascal-build.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/launch-fleet-after-pascal-build.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1789,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/launch_laptop_m2200_cake_worker.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/launch_laptop_m2200_cake_worker.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1346,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/monitor-70b-live.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/monitor-70b-live.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2434,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/patch_candle_kernels_pascal.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/patch_candle_kernels_pascal.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5795,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/prep-c2-hetero-workers.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/prep-c2-hetero-workers.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3476,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/prep-t440-70b.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/prep-t440-70b.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2671,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake_pull_fleet_models.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake_pull_fleet_models.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1430,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/run-70b-task-live.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/run-70b-task-live.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2781,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/run-qwen72b-inference-fix.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/run-qwen72b-inference-fix.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3466,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-cake-c2-hybrid.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-cake-c2-hybrid.sh",
+      "host_scan": "cesarops2",
+      "bytes": 7337,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-cake-pool.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-cake-pool.sh",
+      "host_scan": "cesarops2",
+      "bytes": 606,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-cake-r1-c2.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-cake-r1-c2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4635,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-fleet-70b-no-p100.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-fleet-70b-no-p100.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2934,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-fleet-cluster.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-fleet-cluster.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3147,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": "start-fleet-cluster.sh"
+    },
+    {
+      "path": "scripts/cake/start-fleet-hetero-70b.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-fleet-hetero-70b.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5254,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-master-when-c2-ready.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-master-when-c2-ready.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2455,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/start-worker-local.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/start-worker-local.sh",
+      "host_scan": "cesarops2",
+      "bytes": 848,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": "start-worker-local.sh"
+    },
+    {
+      "path": "scripts/cake/status-70b-fleet.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/status-70b-fleet.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1158,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cake/stop-fleet-cluster.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/stop-fleet-cluster.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1256,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": "stop-fleet-cluster.sh"
+    },
+    {
+      "path": "scripts/cake/wait-r1-then-cake.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cake/wait-r1-then-cake.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1331,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2_coder_rust_dual.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2_coder_rust_dual.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4371,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2-disk-cleanup.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2-disk-cleanup.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2337,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2-forge-edge.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2-forge-edge.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2973,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2-free-workers.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2-free-workers.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1446,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2-isolate-from-t440.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2-isolate-from-t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1971,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2-mount-check.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2-mount-check.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1886,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2_qwen14b_coder.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2_qwen14b_coder.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4117,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2_qwen36_gemma4_dual.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2_qwen36_gemma4_dual.sh",
+      "host_scan": "cesarops2",
+      "bytes": 6735,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2_research_lab.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2_research_lab.sh",
+      "host_scan": "cesarops2",
+      "bytes": 8580,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2-storage-paths.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2-storage-paths.sh",
+      "host_scan": "cesarops2",
+      "bytes": 995,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops2_triple_gpu_llama.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops2_triple_gpu_llama.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4881,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops-activity-watch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops-activity-watch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1498,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops-cake-audit-loop.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops-cake-audit-loop.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1469,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops-fleet-mode.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops-fleet-mode.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2478,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cesarops-intake-sentinel.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cesarops-intake-sentinel.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1291,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cleanup-ephemeral-scripts.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cleanup-ephemeral-scripts.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2576,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cluster-exec-t440.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cluster-exec-t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1664,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/cluster-verify-rclone.sh",
+      "abs_path": "/mnt/t440/repo/scripts/cluster-verify-rclone.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2000,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/conductor_ship_search.sh",
+      "abs_path": "/mnt/t440/repo/scripts/conductor_ship_search.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5117,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/credentials.sh",
+      "abs_path": "/mnt/t440/repo/scripts/credentials.sh",
+      "host_scan": "cesarops2",
+      "bytes": 9426,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/deliver_holloway_kmz_p1002.sh",
+      "abs_path": "/mnt/t440/repo/scripts/deliver_holloway_kmz_p1002.sh",
+      "host_scan": "cesarops2",
+      "bytes": 781,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/deploy_configs_to_cesarops2_fr.sh",
+      "abs_path": "/mnt/t440/repo/scripts/deploy_configs_to_cesarops2_fr.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1193,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/deploy_forge.sh",
+      "abs_path": "/mnt/t440/repo/scripts/deploy_forge.sh",
+      "host_scan": "cesarops2",
+      "bytes": 700,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/deploy_native_search.sh",
+      "abs_path": "/mnt/t440/repo/scripts/deploy_native_search.sh",
+      "host_scan": "cesarops2",
+      "bytes": 15777,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/deploy_searxng.sh",
+      "abs_path": "/mnt/t440/repo/scripts/deploy_searxng.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2884,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/dispatch_satellite_gaps.sh",
+      "abs_path": "/mnt/t440/repo/scripts/dispatch_satellite_gaps.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3670,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/download_32b_t440.sh",
+      "abs_path": "/mnt/t440/repo/scripts/download_32b_t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1927,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/download_cluster_models.sh",
+      "abs_path": "/mnt/t440/repo/scripts/download_cluster_models.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3424,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/download-deepseek-r1.sh",
+      "abs_path": "/mnt/t440/repo/scripts/download-deepseek-r1.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2858,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/download_model_candidates_20260531.sh",
+      "abs_path": "/mnt/t440/repo/scripts/download_model_candidates_20260531.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1811,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/e2e_forge_holloway.sh",
+      "abs_path": "/mnt/t440/repo/scripts/e2e_forge_holloway.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4387,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/ensure_n8n_watchdog.sh",
+      "abs_path": "/mnt/t440/repo/scripts/ensure_n8n_watchdog.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2757,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/finish_worthy_stubs.sh",
+      "abs_path": "/mnt/t440/repo/scripts/finish_worthy_stubs.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3030,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/fleet-clean-junk.sh",
+      "abs_path": "/mnt/t440/repo/scripts/fleet-clean-junk.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1044,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/fleet-dual-mirror.sh",
+      "abs_path": "/mnt/t440/repo/scripts/fleet-dual-mirror.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3643,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/fleet-job-runner.sh",
+      "abs_path": "/mnt/t440/repo/scripts/fleet-job-runner.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4603,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": "fleet-job-runner.sh"
+    },
+    {
+      "path": "scripts/fleet-n8n-dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/fleet-n8n-dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2157,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": "fleet-n8n-dispatch.sh"
+    },
+    {
+      "path": "scripts/fleet-route-health.sh",
+      "abs_path": "/mnt/t440/repo/scripts/fleet-route-health.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4177,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/fleet-sync-cesarops2-llm.sh",
+      "abs_path": "/mnt/t440/repo/scripts/fleet-sync-cesarops2-llm.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1304,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_apply_cesarops_geo.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_apply_cesarops_geo.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1832,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_apply_dual_coder_zaya.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_apply_dual_coder_zaya.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1138,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_apply_p100_gemma_r1.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_apply_p100_gemma_r1.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1438,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_corrector_tune_report.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_corrector_tune_report.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1867,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge-health-probe.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge-health-probe.sh",
+      "host_scan": "cesarops2",
+      "bytes": 6324,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge-health-recover.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge-health-recover.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2736,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_overnight_watch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_overnight_watch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 10125,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_role_monitor.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_role_monitor.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5434,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge-routing-switch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge-routing-switch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3644,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_run_until_green.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_run_until_green.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4855,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge-sync-state.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge-sync-state.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1309,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/forge_watch_run.sh",
+      "abs_path": "/mnt/t440/repo/scripts/forge_watch_run.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1463,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/import_n8n_health_workflows.sh",
+      "abs_path": "/mnt/t440/repo/scripts/import_n8n_health_workflows.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2574,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/install_cake_fleet.sh",
+      "abs_path": "/mnt/t440/repo/scripts/install_cake_fleet.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4465,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/integrate/run_bgrade_enhance_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/integrate/run_bgrade_enhance_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1129,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/integrate/run_c2_rust_port_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/integrate/run_c2_rust_port_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 950,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/integrate/run_forge_rust_port_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/integrate/run_forge_rust_port_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1319,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/integrate/run_manifest_rust_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/integrate/run_manifest_rust_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 462,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/launch_strand_bf16.sh",
+      "abs_path": "/mnt/t440/repo/scripts/launch_strand_bf16.sh",
+      "host_scan": "cesarops2",
+      "bytes": 726,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/launch_t440_dashboard.sh",
+      "abs_path": "/mnt/t440/repo/scripts/launch_t440_dashboard.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2044,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/lib/cesarops-host.sh",
+      "abs_path": "/mnt/t440/repo/scripts/lib/cesarops-host.sh",
+      "host_scan": "cesarops2",
+      "bytes": 522,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/mission_service_watchdog.sh",
+      "abs_path": "/mnt/t440/repo/scripts/mission_service_watchdog.sh",
+      "host_scan": "cesarops2",
+      "bytes": 21554,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/n8n_activate_fleet_workflows.sh",
+      "abs_path": "/mnt/t440/repo/scripts/n8n_activate_fleet_workflows.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4030,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/n8n-watchdog.sh",
+      "abs_path": "/mnt/t440/repo/scripts/n8n-watchdog.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4567,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/nauti-inferer-c2.sh",
+      "abs_path": "/mnt/t440/repo/scripts/nauti-inferer-c2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2846,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p100_cycle.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p100_cycle.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3356,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p100_dispatch_integrate.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p100_dispatch_integrate.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2029,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p100_gemma_r1_dual.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p100_gemma_r1_dual.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4711,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p100_integrate_dual.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p100_integrate_dual.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1237,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p100_stop_cake_download.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p100_stop_cake_download.sh",
+      "host_scan": "cesarops2",
+      "bytes": 439,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p100_vulkan_review.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p100_vulkan_review.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1724,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/p106_metrics_ingest.sh",
+      "abs_path": "/mnt/t440/repo/scripts/p106_metrics_ingest.sh",
+      "host_scan": "cesarops2",
+      "bytes": 715,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/patch_cluster_config_cesarops2_fr.sh",
+      "abs_path": "/mnt/t440/repo/scripts/patch_cluster_config_cesarops2_fr.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1614,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/prep_n8n_fleet_live.sh",
+      "abs_path": "/mnt/t440/repo/scripts/prep_n8n_fleet_live.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1335,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/prep_post_pipeline.sh",
+      "abs_path": "/mnt/t440/repo/scripts/prep_post_pipeline.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1818,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/rclone-setup-t440.sh",
+      "abs_path": "/mnt/t440/repo/scripts/rclone-setup-t440.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1658,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/resume_satellite_pipeline.sh",
+      "abs_path": "/mnt/t440/repo/scripts/resume_satellite_pipeline.sh",
+      "host_scan": "cesarops2",
+      "bytes": 8153,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/run_baseline_golden.sh",
+      "abs_path": "/mnt/t440/repo/scripts/run_baseline_golden.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1537,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/run_great_lakes_satellite.sh",
+      "abs_path": "/mnt/t440/repo/scripts/run_great_lakes_satellite.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5223,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/run_wreck_news_batch_c2.sh",
+      "abs_path": "/mnt/t440/repo/scripts/run_wreck_news_batch_c2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 888,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/safe-n8n-run.sh",
+      "abs_path": "/mnt/t440/repo/scripts/safe-n8n-run.sh",
+      "host_scan": "cesarops2",
+      "bytes": 507,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/scan-script-inventory.sh",
+      "abs_path": "/mnt/t440/repo/scripts/scan-script-inventory.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5787,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_cesarops2_fleet_recovery.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_cesarops2_fleet_recovery.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3795,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_cesarops2_fr_tailscale.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_cesarops2_fr_tailscale.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1991,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_cesarops2_mag_data.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_cesarops2_mag_data.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3833,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_cesarops2_ml350e.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_cesarops2_ml350e.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2273,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_cesarops_tunnel.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_cesarops_tunnel.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3165,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_samba.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_samba.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2448,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_t440_nfs_exports.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_t440_nfs_exports.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3929,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/setup_thought_engine.sh",
+      "abs_path": "/mnt/t440/repo/scripts/setup_thought_engine.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2707,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/start_marvin.sh",
+      "abs_path": "/mnt/t440/repo/scripts/start_marvin.sh",
+      "host_scan": "cesarops2",
+      "bytes": 506,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/start_n8n.sh",
+      "abs_path": "/mnt/t440/repo/scripts/start_n8n.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1336,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/start_picasso.sh",
+      "abs_path": "/mnt/t440/repo/scripts/start_picasso.sh",
+      "host_scan": "cesarops2",
+      "bytes": 415,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/start_scout.sh",
+      "abs_path": "/mnt/t440/repo/scripts/start_scout.sh",
+      "host_scan": "cesarops2",
+      "bytes": 357,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/start_vision_workers.sh",
+      "abs_path": "/mnt/t440/repo/scripts/start_vision_workers.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3336,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/swap_model.sh",
+      "abs_path": "/mnt/t440/repo/scripts/swap_model.sh",
+      "host_scan": "cesarops2",
+      "bytes": 7025,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/swap_to_moe.sh",
+      "abs_path": "/mnt/t440/repo/scripts/swap_to_moe.sh",
+      "host_scan": "cesarops2",
+      "bytes": 555,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/switch_kobold_preset.sh",
+      "abs_path": "/mnt/t440/repo/scripts/switch_kobold_preset.sh",
+      "host_scan": "cesarops2",
+      "bytes": 3159,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/t440-disable-deprecated-forge.sh",
+      "abs_path": "/mnt/t440/repo/scripts/t440-disable-deprecated-forge.sh",
+      "host_scan": "cesarops2",
+      "bytes": 134,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/t440-remove-forge.sh",
+      "abs_path": "/mnt/t440/repo/scripts/t440-remove-forge.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2527,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/test_orchestrator_pipeline.sh",
+      "abs_path": "/mnt/t440/repo/scripts/test_orchestrator_pipeline.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1570,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/test_searxng.sh",
+      "abs_path": "/mnt/t440/repo/scripts/test_searxng.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2172,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/watch_cesarops2_fr_join.sh",
+      "abs_path": "/mnt/t440/repo/scripts/watch_cesarops2_fr_join.sh",
+      "host_scan": "cesarops2",
+      "bytes": 960,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/download_zaya_models.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/download_zaya_models.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1092,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/download_zaya_nf4.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/download_zaya_nf4.sh",
+      "host_scan": "cesarops2",
+      "bytes": 780,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/install_zaya_transformers_p100.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/install_zaya_transformers_p100.sh",
+      "host_scan": "cesarops2",
+      "bytes": 746,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/install_zaya_vllm_c2.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/install_zaya_vllm_c2.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1496,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/install_zaya_vllm_p100.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/install_zaya_vllm_p100.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1475,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/install_zaya_vl_transformers.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/install_zaya_vl_transformers.sh",
+      "host_scan": "cesarops2",
+      "bytes": 935,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/run_zaya_api_2060.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/run_zaya_api_2060.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2384,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/run_zaya_api_cu126_2060_1070.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/run_zaya_api_cu126_2060_1070.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1933,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/run_zaya_integrate_dispatch.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/run_zaya_integrate_dispatch.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1272,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/serve_zaya_2060_1070.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/serve_zaya_2060_1070.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1441,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/serve_zaya_p100.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/serve_zaya_p100.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2423,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "scripts/zaya/start_zaya_p100_vulkan.sh",
+      "abs_path": "/mnt/t440/repo/scripts/zaya/start_zaya_p100_vulkan.sh",
+      "host_scan": "cesarops2",
+      "bytes": 4375,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "start-fleet-cluster.sh",
+      "abs_path": "/mnt/t440/repo/start-fleet-cluster.sh",
+      "host_scan": "cesarops2",
+      "bytes": 2525,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "start_forge.sh",
+      "abs_path": "/mnt/t440/repo/start_forge.sh",
+      "host_scan": "cesarops2",
+      "bytes": 249,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "start-worker-local.sh",
+      "abs_path": "/mnt/t440/repo/start-worker-local.sh",
+      "host_scan": "cesarops2",
+      "bytes": 742,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "stop-fleet-cluster.sh",
+      "abs_path": "/mnt/t440/repo/stop-fleet-cluster.sh",
+      "host_scan": "cesarops2",
+      "bytes": 1048,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "keep",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    },
+    {
+      "path": "t440-disk-emergency.sh",
+      "abs_path": "/mnt/t440/repo/t440-disk-emergency.sh",
+      "host_scan": "cesarops2",
+      "bytes": 5221,
+      "mtime_utc": "2026-06-01T13:02:31Z",
+      "tier_guess": "review",
+      "ephemeral_header": false,
+      "duplicate_of": null
+    }
+  ]
+}

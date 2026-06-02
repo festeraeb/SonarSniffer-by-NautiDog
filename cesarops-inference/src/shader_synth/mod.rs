@@ -24,6 +24,7 @@ pub mod ir_graph;
 pub mod microbench;
 pub mod simt_sim;
 pub mod hil_trainer;
+pub mod coopmat_probe;
 
 /// Shader IR operations — the intermediate representation
 /// between high-level intent and low-level GPU instructions.

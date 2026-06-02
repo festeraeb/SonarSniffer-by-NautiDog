@@ -14,6 +14,7 @@ pub mod probing;
 pub mod egn;
 pub mod adaptive_tvg;
 pub mod outputs;
+pub mod overlay_align;
 pub mod mosaic;
 pub mod curvelet_diag;
 pub mod lowrance_parser;

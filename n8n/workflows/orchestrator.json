@@ -1,0 +1,86 @@
+{
+  "name": "CESAROPS Orchestrator — Wreck Search",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wreck-search",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh-orch-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [220, 320]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Load the cached tool catalog so the LLM knows every pipeline's knobs+stages.\nconst fs = require('fs');\nconst catalogPath = $env.CESAROPS_CATALOG || '/home/cesarops/wreckhunter2000-1/n8n/tool_catalog.json';\nlet catalog = {};\ntry { catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8')); } catch (e) {}\nconst body = items[0].json.body || items[0].json;\nreturn [{ json: { query: body.query || '', dry_run: !!body.dry_run, catalog } }];"
+      },
+      "id": "wh-orch-loadcat",
+      "name": "Load Tool Catalog",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LLM_BASE_URL || 'http://100.72.182.77:5001/v1'}}/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"local\",\n  \"temperature\": 0.1,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"You are the CESAROPS search router. Given a user query and a tool catalog of detection pipelines (satellite, aeromagnetic, bag), choose which pipeline(s) to run and the knob/stage overrides. Reply ONLY with compact JSON: {\\\"plan\\\":[{\\\"pipeline\\\":\\\"satellite|aeromag|bag\\\",\\\"reason\\\":\\\"...\\\",\\\"knobs\\\":{},\\\"stages\\\":[],\\\"inputs\\\":{}}]}. Use the catalog knob names exactly. Do not invent knobs.\"},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify('QUERY: ' + $json.query + '\\n\\nCATALOG:\\n' + JSON.stringify($json.catalog)) }} }\n  ]\n}",
+        "options": {}
+      },
+      "id": "wh-orch-llm",
+      "name": "LLM Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [660, 320]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract the JSON plan from the LLM response; carry dry_run through.\nconst resp = items[0].json;\nlet content = '';\ntry { content = resp.choices[0].message.content; } catch (e) { content = ''; }\nlet plan = { plan: [] };\nconst m = content.match(/\\{[\\s\\S]*\\}/);\nif (m) { try { plan = JSON.parse(m[0]); } catch (e) {} }\n// Attach dry_run from the original webhook (kept on the items meta if present).\nconst dry = $('Load Tool Catalog').first().json.dry_run;\nfor (const step of (plan.plan || [])) {\n  step.inputs = step.inputs || {};\n  if (dry) { step.inputs.dry_run = true; }\n}\nreturn (plan.plan || []).map(step => ({ json: step }));"
+      },
+      "id": "wh-orch-parseplan",
+      "name": "Parse Plan",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [880, 320]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Route each plan step to its specialist webhook. Returns the URL + payload.\nconst base = $env.N8N_WEBHOOK_BASE || 'http://127.0.0.1:5678/webhook';\nconst step = items[0].json;\nconst map = {\n  satellite: 'specialist-satellite',\n  aeromag: 'specialist-aeromag', aeromagnetic: 'specialist-aeromag', mag: 'specialist-aeromag',\n  bag: 'specialist-bag'\n};\nconst path = map[step.pipeline];\nif (!path) { return [{ json: { error: 'unknown pipeline in plan', step } }]; }\nconst payload = Object.assign({}, step.inputs, { knobs: step.knobs, stages: step.stages });\nreturn [{ json: { url: `${base}/${path}`, payload, pipeline: step.pipeline, reason: step.reason } }];"
+      },
+      "id": "wh-orch-route",
+      "name": "Route To Specialist",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1100, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json[\"url\"]}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json[\"payload\"]) }}",
+        "options": {}
+      },
+      "id": "wh-orch-dispatch",
+      "name": "Dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1320, 320]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Load Tool Catalog", "type": "main", "index": 0 }]] },
+    "Load Tool Catalog": { "main": [[{ "node": "LLM Plan", "type": "main", "index": 0 }]] },
+    "LLM Plan": { "main": [[{ "node": "Parse Plan", "type": "main", "index": 0 }]] },
+    "Parse Plan": { "main": [[{ "node": "Route To Specialist", "type": "main", "index": 0 }]] },
+    "Route To Specialist": { "main": [[{ "node": "Dispatch", "type": "main", "index": 0 }]] }
+  },
+  "settings": {}
+}

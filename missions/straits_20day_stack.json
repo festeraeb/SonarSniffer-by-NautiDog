@@ -1,0 +1,24 @@
+{
+  "mission_id": "straits_20day_stack",
+  "target_name": "Straits of Mackinac — 20-day low-cloud stack",
+  "bbox": [45.70, -84.95, 45.92, -84.55],
+  "days_back": 30,
+  "stages": ["download", "target_known", "temporal_stack", "validate_gt", "report"],
+  "knobs": {
+    "sensors": "sentinel2",
+    "concepts": "all",
+    "max_download_results": 20,
+    "max_cloud": 15.0,
+    "max_wrecks": 30,
+    "temporal_max_scenes": 20,
+    "stack_window_days": 20,
+    "auto_low_water_years": 0,
+    "scan_intent": "recent_sinking",
+    "gt_min_confidence": 0.0
+  },
+  "paths": {
+    "known_wrecks_json": "/codebase/repos/wreckhunter2000-1/data/known_wrecks_straits.json",
+    "download_dir": "/codebase/repos/wreckhunter2000-1/data/straits_20day_stack/downloads",
+    "output_dir": "/codebase/repos/wreckhunter2000-1/data/straits_20day_stack"
+  }
+}

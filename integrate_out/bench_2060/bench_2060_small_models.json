@@ -1,0 +1,149 @@
+{
+  "generated_at": "2026-05-27 14:49:30",
+  "host": "10.0.0.201",
+  "port": 5200,
+  "results": [
+    {
+      "model": "TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf",
+      "boot_ok": true,
+      "boot_note": "started:TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 1.36,
+      "code_score": 6,
+      "code_preview": "```rust\nfn parse_bbox(s: &str) -> Result<(f64, f64, f64, f64), String> {\n    let mut bbox = [0.0; 6];\n    let mut pos = 0;\n\n    for c in s.chars() {\n        match c {\n            ' ' => {}\n            'x' => bbox[pos] = 1.0, pos += 1;\n            '+' => bbox[pos] = 1.0, pos += 1;",
+      "tool_ok": true,
+      "tool_elapsed_s": 0.66,
+      "tool_score": 3,
+      "tool_preview": "To fix the broken code, we can modify the `parse_lat` function to use the `unwrap` method instead of unwrapping the `x.parse::<f64>()` expression. This will avoid the panic and return an error instead. Here's the modified code:\n\n```rust\nfn parse_lat(x: &str) -> Result<f64, String",
+      "total_score": 9
+    },
+    {
+      "model": "qwen2.5-coder-1.5b-instruct-q6_k.gguf",
+      "boot_ok": true,
+      "boot_note": "started:qwen2.5-coder-1.5b-instruct-q6_k.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 2.04,
+      "code_score": 5,
+      "code_preview": "```rust\nuse std::str::FromStr;\n\n/// Parses a bounding box string into a tuple of four floats.\n/// The bounding box string is expected to be in the format \"x1 y1 x2 y2\",\n/// where x1, y1, x2, and y2 are floating-point numbers representing the coordinates of the bounding box.\n///\n/",
+      "tool_ok": true,
+      "tool_elapsed_s": 0.38,
+      "tool_score": 3,
+      "tool_preview": "```rust\nfn parse_lat(x: &str) -> Result<f64, &'static str> {\n    x.parse::<f64>().map_err(|_| \"invalid latitude\")\n}\n```",
+      "total_score": 8
+    },
+    {
+      "model": "Phi-3-mini-4k-instruct-Q4_K_M.gguf",
+      "boot_ok": true,
+      "boot_note": "started:Phi-3-mini-4k-instruct-Q4_K_M.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 2.93,
+      "code_score": 8,
+      "code_preview": "```rust\nuse std::str::FromStr;\n\nfn parse_bbox(s: &str) -> Result<(f64, f64, f64, f64), String> {\n    s.trim().split_whitespace().next().map(|coord| {\n        let coords = coord.split(',').map(|num| num.parse().map_err(|_| \"Invalid coordinate format\".to_string())?);\n        if coo",
+      "tool_ok": true,
+      "tool_elapsed_s": 1.54,
+      "tool_score": 3,
+      "tool_preview": "```rust\nfn parse_lat(x: &str) -> Result<f64, &'static str> {\n    x.parse::<f64>().map_err(|_| \"invalid latitude\")\n}\n```",
+      "total_score": 11
+    },
+    {
+      "model": "DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M.gguf",
+      "boot_ok": true,
+      "boot_note": "started:DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 4.45,
+      "code_score": 1,
+      "code_preview": "Okay, I need to write a Rust function called parse_bbox that takes a string and returns a Result containing four f64 values representing the bounding box, or an error string if the input is invalid. The function should parse the string into the format \"x1,y1,x2,y2\".\n\nFirst, I'll ",
+      "tool_ok": true,
+      "tool_elapsed_s": 4.19,
+      "tool_score": 4,
+      "tool_preview": "Alright, I'm trying to fix this Rust parser bug. Let's see what the problem is.\n\nThe original code is:\n\n```rust\nfn parse_lat(x: &str) -> f64 { x.parse::<f64>().unwrap() }\n```\n\nThe issue here is that `parse::<f64>()` can panic if the input string is not a valid number. In the test",
+      "total_score": 5
+    },
+    {
+      "model": "Qwen3.5-9B-DeepSeek-V4-Flash-MTP-Q4_K_M.gguf",
+      "boot_ok": true,
+      "boot_note": "started:Qwen3.5-9B-DeepSeek-V4-Flash-MTP-Q4_K_M.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 5.39,
+      "code_score": 2,
+      "code_preview": "We need to write a Rust function `parse_bbox(s: &str) -> Result<(f64,f64,f64,f64), String>` and 2 unit tests. The function likely parses a bounding box string into four f64 values. The problem statement doesn't specify the format of the input string. We need to infer or make a re",
+      "tool_ok": true,
+      "tool_elapsed_s": 4.98,
+      "tool_score": 4,
+      "tool_preview": "We need to fix the Rust parser bug. The broken code is:\n\n```rust\nfn parse_lat(x: &str) -> f64 { x.parse::<f64>().unwrap() }\n```\n\nThe tool context says:\n- read_file: parser.rs has panic on invalid numeric input.\n- run_tests: failing test expects Err(\"invalid latitude\") on bad inpu",
+      "total_score": 6
+    },
+    {
+      "model": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "boot_ok": true,
+      "boot_note": "started:gemma-4-E4B-it-Q4_K_M.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 4.12,
+      "code_score": 6,
+      "code_preview": "```rust\n/// Parses a bounding box string in the format \"x_min,y_min,x_max,y_max\".\n///\n/// # Arguments\n///\n/// * `s` - The string slice containing the bounding box coordinates.\n///\n/// # Returns\n///\n/// A `Result` containing a tuple `(x_min, y_min, x_max, y_max)` if parsing is suc",
+      "tool_ok": true,
+      "tool_elapsed_s": 1.04,
+      "tool_score": 3,
+      "tool_preview": "```rust\nfn parse_lat(x: &str) -> Result<f64, String> {\n    x.parse::<f64>().map_err(|_| \"invalid latitude\".to_string())\n}\n```",
+      "total_score": 9
+    },
+    {
+      "model": "Qwen3.6-35B-A3B-MXFP4_MOE.gguf",
+      "boot_ok": true,
+      "boot_note": "started:Qwen3.6-35B-A3B-MXFP4_MOE.gguf",
+      "code_ok": true,
+      "code_elapsed_s": 71.95,
+      "code_score": 8,
+      "code_preview": "```rust\nfn parse_bbox(s: &str) -> Result<(f64, f64, f64, f64), String> {\n    let parts: Vec<&str> = s.split(',').collect();\n    if parts.len() != 4 {\n        return Err(format!(\"Expected 4 comma-separated values, got {}\", parts.len()));\n    }\n\n    let mut values = Vec::new();\n   ",
+      "tool_ok": true,
+      "tool_elapsed_s": 16.12,
+      "tool_score": 3,
+      "tool_preview": "```rust\nfn parse_lat(x: &str) -> Result<f64, String> {\n    x.parse::<f64>().map_err(|_| \"invalid latitude\".to_string())\n}\n```",
+      "total_score": 11
+    }
+  ],
+  "ranking": [
+    {
+      "model": "Phi-3-mini-4k-instruct-Q4_K_M.gguf",
+      "total_score": 11,
+      "code_elapsed_s": 2.93,
+      "tool_elapsed_s": 1.54
+    },
+    {
+      "model": "Qwen3.6-35B-A3B-MXFP4_MOE.gguf",
+      "total_score": 11,
+      "code_elapsed_s": 71.95,
+      "tool_elapsed_s": 16.12
+    },
+    {
+      "model": "TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf",
+      "total_score": 9,
+      "code_elapsed_s": 1.36,
+      "tool_elapsed_s": 0.66
+    },
+    {
+      "model": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "total_score": 9,
+      "code_elapsed_s": 4.12,
+      "tool_elapsed_s": 1.04
+    },
+    {
+      "model": "qwen2.5-coder-1.5b-instruct-q6_k.gguf",
+      "total_score": 8,
+      "code_elapsed_s": 2.04,
+      "tool_elapsed_s": 0.38
+    },
+    {
+      "model": "Qwen3.5-9B-DeepSeek-V4-Flash-MTP-Q4_K_M.gguf",
+      "total_score": 6,
+      "code_elapsed_s": 5.39,
+      "tool_elapsed_s": 4.98
+    },
+    {
+      "model": "DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M.gguf",
+      "total_score": 5,
+      "code_elapsed_s": 4.45,
+      "tool_elapsed_s": 4.19
+    }
+  ]
+}

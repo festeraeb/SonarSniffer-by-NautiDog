@@ -1,0 +1,308 @@
+[
+  {
+    "source_py": "audit_wrecks_db.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tools/audit_wrecks_db.py",
+    "rust_path": "cesarops-inference/src/integrate/audit_wrecks_db.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__audit_wrecks_db.md"
+  },
+  {
+    "source_py": "b02_download.py",
+    "python_path": "/codebase/projects/pipelines/satellite/b02_download.py",
+    "rust_path": "cesarops-inference/src/integrate/hls_b02_download.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__b02_download.md"
+  },
+  {
+    "source_py": "batch_download_manager.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/batch_download_manager.py",
+    "rust_path": "cesarops-inference/src/integrate/batch_download_manager.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__batch_download_manager.md"
+  },
+  {
+    "source_py": "bridge_calibrate.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/bridge_calibrate.py",
+    "rust_path": "cesarops-inference/src/integrate/bridge_calibrate.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__bridge_calibrate.md"
+  },
+  {
+    "source_py": "cuda_env.py",
+    "python_path": "/codebase/projects/pipelines/tools/cuda_env.py",
+    "rust_path": "cesarops-inference/src/integrate/cuda_env.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__cuda_env.md"
+  },
+  {
+    "source_py": "cuda_test_kmz.py",
+    "python_path": "/codebase/projects/pipelines/tests/benchmarks/cuda_test_kmz.py",
+    "rust_path": "cesarops-inference/src/integrate/cuda_test_kmz.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__cuda_test_kmz.md"
+  },
+  {
+    "source_py": "database_connector.py",
+    "python_path": "/codebase/projects/pipelines/utils/database_connector.py",
+    "rust_path": "cesarops-inference/src/integrate/database_connector.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__database_connector.md"
+  },
+  {
+    "source_py": "db_ingestor.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/db_ingestor.py",
+    "rust_path": "cesarops-inference/src/integrate/db_ingestor.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__db_ingestor.md"
+  },
+  {
+    "source_py": "download_erie_multiyear.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/download_erie_multiyear.py",
+    "rust_path": "cesarops-inference/src/integrate/erie_multiyear_downloader.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__download_erie_multiyear.md"
+  },
+  {
+    "source_py": "extract_oil_spills_kmz.py",
+    "python_path": "/codebase/projects/pipelines/leaking_boat/extract_oil_spills_kmz.py",
+    "rust_path": "cesarops-inference/src/integrate/extract_oil_spills_kmz.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__extract_oil_spills_kmz.md"
+  },
+  {
+    "source_py": "fetcher.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/fetcher.py",
+    "rust_path": "cesarops-inference/src/integrate/fetcher.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__fetcher.md"
+  },
+  {
+    "source_py": "find_swot_dates.py",
+    "python_path": "/codebase/projects/pipelines/satellite/swot/find_swot_dates.py",
+    "rust_path": "cesarops-inference/src/integrate/find_swot_dates.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__find_swot_dates.md"
+  },
+  {
+    "source_py": "full_lake_michigan_run.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/full_lake_michigan_run.py",
+    "rust_path": "cesarops-inference/src/integrate/full_lake_michigan_run.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__full_lake_michigan_run.md"
+  },
+  {
+    "source_py": "full_scan.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/full_scan.py",
+    "rust_path": "cesarops-inference/src/integrate/full_scan.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__full_scan.md"
+  },
+  {
+    "source_py": "generate_db_master_key.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tools/generate_db_master_key.py",
+    "rust_path": "cesarops-inference/src/integrate/generate_db_master_key.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__generate_db_master_key.md"
+  },
+  {
+    "source_py": "global_controls.py",
+    "python_path": "/codebase/projects/pipelines/global_controls.py",
+    "rust_path": "cesarops-inference/src/integrate/global_controls.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__global_controls.md"
+  },
+  {
+    "source_py": "gpu_stress_test.py",
+    "python_path": "/codebase/projects/pipelines/benchmarks/gpu_stress_test.py",
+    "rust_path": "cesarops-inference/src/integrate/gpu_stress_test.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__gpu_stress_test.md"
+  },
+  {
+    "source_py": "init_database.py",
+    "python_path": "/codebase/projects/pipelines/cesarops/db/init_database.py",
+    "rust_path": "cesarops-inference/src/integrate/init_database.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__init_database.md"
+  },
+  {
+    "source_py": "inventory_all_files.py",
+    "python_path": "/codebase/projects/archives/wreckhunter_recovery/inventory_all_files.py",
+    "rust_path": "cesarops-inference/src/integrate/file_inventory.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__inventory_all_files.md"
+  },
+  {
+    "source_py": "inventory_geotiffs.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tasks/inventory_geotiffs.py",
+    "rust_path": "cesarops-inference/src/integrate/geotiff_inventory.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__inventory_geotiffs.md"
+  },
+  {
+    "source_py": "iowa_202_analysis.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/iowa_202_analysis.py",
+    "rust_path": "cesarops-inference/src/integrate/iowa_202_analysis.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__iowa_202_analysis.md"
+  },
+  {
+    "source_py": "live_feed_server.py",
+    "python_path": "/codebase/projects/pipelines/cesarops/live_feed_server.py",
+    "rust_path": "cesarops-inference/src/integrate/live_feed_server.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__live_feed_server.md"
+  },
+  {
+    "source_py": "monster_analysis.py",
+    "python_path": "/codebase/projects/pipelines/analysis/monster_site_analysis.py",
+    "rust_path": "cesarops-inference/src/integrate/monster_analysis.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__monster_analysis.md"
+  },
+  {
+    "source_py": "monster_candidate.py",
+    "python_path": "/codebase/projects/pipelines/analysis/monster_candidate.py",
+    "rust_path": "cesarops-inference/src/integrate/monster_candidate.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__monster_candidate.md"
+  },
+  {
+    "source_py": "populate_database.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/populate_database.py",
+    "rust_path": "cesarops-inference/src/integrate/lake_michigan/populate_database.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__populate_database.md"
+  },
+  {
+    "source_py": "prioritized_satellite_pull.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/prioritized_satellite_pull.py",
+    "rust_path": "cesarops-inference/src/integrate/prioritized_satellite_pull.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__prioritized_satellite_pull.md"
+  },
+  {
+    "source_py": "process_tiles.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/process_tiles.py",
+    "rust_path": "cesarops-inference/src/integrate/laptopdump_wreckhunter_build/process_tiles.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__process_tiles.md"
+  },
+  {
+    "source_py": "process_with_coordinates.py",
+    "python_path": "/codebase/projects/pipelines/processing/anomaly_extractor.py",
+    "rust_path": "cesarops-inference/src/integrate/unmapped/laptopdump_wreckhunter_build/process_with_coordinates.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__process_with_coordinates.md"
+  },
+  {
+    "source_py": "pull_altimetry_anonymous.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/pull_altimetry_anonymous.py",
+    "rust_path": "cesarops-inference/src/integrate/pull_altimetry_anonymous.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__pull_altimetry_anonymous.md"
+  },
+  {
+    "source_py": "raw_scan_reprocess.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tools/raw_scan_reprocess.py",
+    "rust_path": "cesarops-inference/src/integrate/raw_scan_reprocess.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__raw_scan_reprocess.md"
+  },
+  {
+    "source_py": "repeatability_check.py",
+    "python_path": "/codebase/projects/pipelines/tools/repeatability_check.py",
+    "rust_path": "cesarops-inference/src/integrate/repeatability_check.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__repeatability_check.md"
+  },
+  {
+    "source_py": "run_configured_pipeline.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/run_configured_pipeline.py",
+    "rust_path": "cesarops-inference/src/integrate/run_configured_pipeline.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__run_configured_pipeline.md"
+  },
+  {
+    "source_py": "run_straits_fox.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/straits_fox_runner.py",
+    "rust_path": "cesarops-inference/src/integrate/straits_fox_pipeline.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__run_straits_fox.md"
+  },
+  {
+    "source_py": "run_zero.py",
+    "python_path": "/codebase/projects/pipelines/benchmarks/run_zero.py",
+    "rust_path": "cesarops-inference/src/integrate/run_zero.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__run_zero.md"
+  },
+  {
+    "source_py": "small_batch_test.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/small_batch_anomaly_test.py",
+    "rust_path": "cesarops-inference/src/integrate/small_batch_test.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__small_batch_test.md"
+  },
+  {
+    "source_py": "smart_daily_scan.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/smart_daily_scan.py",
+    "rust_path": "cesarops-inference/src/integrate/smart_daily_scan.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__smart_daily_scan.md"
+  },
+  {
+    "source_py": "start_xenon_db_sync.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/sync_xenon_db.py",
+    "rust_path": "cesarops-inference/src/integrate/xenon_sync.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__start_xenon_db_sync.md"
+  },
+  {
+    "source_py": "sync_to_xenon.py",
+    "python_path": "/codebase/projects/pipelines/deploy_xenon.py",
+    "rust_path": "cesarops-inference/src/integrate/sync_xenon.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__sync_to_xenon.md"
+  },
+  {
+    "source_py": "test_cuda_minimal.py",
+    "python_path": "/codebase/projects/pipelines/tests/hardware/test_cuda_minimal.py",
+    "rust_path": "cesarops-inference/src/integrate/gpu_health.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__test_cuda_minimal.md"
+  },
+  {
+    "source_py": "test_gpu.py",
+    "python_path": "/codebase/projects/pipelines/tests/hardware/test_gpu_validation.py",
+    "rust_path": "cesarops-inference/src/integrate/gpu_detection.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__test_gpu.md"
+  },
+  {
+    "source_py": "test_m2200.py",
+    "python_path": "/codebase/projects/pipelines/gpu_engine/tests/test_m2200_hardware.py",
+    "rust_path": "cesarops-inference/src/integrate/m2200_gpu_test.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__test_m2200.md"
+  },
+  {
+    "source_py": "test_m2200_minimal.py",
+    "python_path": "/codebase/projects/pipelines/cesarops-gpu/tests/test_m2200_minimal.py",
+    "rust_path": "cesarops-inference/src/integrate/gpu_test.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__test_m2200_minimal.md"
+  },
+  {
+    "source_py": "test_pipeline.py",
+    "python_path": "/codebase/projects/pipelines/tests/test_end_to_end_gpu.py",
+    "rust_path": "cesarops-inference/src/integrate/pipeline_test.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__test_pipeline.md"
+  },
+  {
+    "source_py": "test_repeatability.py",
+    "python_path": "/codebase/projects/pipelines/tests/test_repeatability.py",
+    "rust_path": "cesarops-inference/src/integrate/test_repeatability.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__test_repeatability.md"
+  },
+  {
+    "source_py": "three_tile_offset_analysis.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tools/three_tile_offset_analysis.py",
+    "rust_path": "cesarops-inference/src/integrate/three_tile_offset_analysis.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__three_tile_offset_analysis.md"
+  },
+  {
+    "source_py": "tpu_client.py",
+    "python_path": "/codebase/projects/pipelines/utils/tpu_client.py",
+    "rust_path": "cesarops-inference/src/integrate/tpu_client.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__tpu_client.md"
+  },
+  {
+    "source_py": "tpu_server.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tpu_server.py",
+    "rust_path": "cesarops-inference/src/integrate/tpu_server.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__tpu_server.md"
+  },
+  {
+    "source_py": "validate_detection.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/tests/validate_detection.py",
+    "rust_path": "cesarops-inference/src/integrate/thermal_validation.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__validate_detection.md"
+  },
+  {
+    "source_py": "verify_cuda.py",
+    "python_path": "/codebase/projects/pipelines/wreckhunter/utils/verify_cuda.py",
+    "rust_path": "cesarops-inference/src/integrate/cuda_verification.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__verify_cuda.md"
+  },
+  {
+    "source_py": "viirs_multi_year_scan.py",
+    "python_path": "/codebase/projects/pipelines/forensics/viirs_multi_year_scan.py",
+    "rust_path": "cesarops-inference/src/integrate/viirs_multi_year_scan.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__viirs_multi_year_scan.md"
+  },
+  {
+    "source_py": "zion_trench_squeeze.py",
+    "python_path": "/codebase/projects/pipelines/missions/zion_trench_squeeze.py",
+    "rust_path": "cesarops-inference/src/integrate/zion_trench_squeeze.rs",
+    "out_md": "integrate_out/qwen14b_2060/rust__zion_trench_squeeze.md"
+  }
+]

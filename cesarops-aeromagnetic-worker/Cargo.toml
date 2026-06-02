@@ -2,18 +2,27 @@
 name = "cesarops-aeromagnetic-worker"
 version = "0.1.0"
 edition = "2021"
-description = "GPU-accelerated magnetic dipole detector for SAR/wreck detection on Pascal P100"
+description = "Device-agnostic aeromagnetic detection (adaptive + WGPU dipole + curvelet)"
 publish = false
 
 [dependencies]
+ndarray = "0.16"
 bytemuck = { version = "1.25", features = ["derive"] }
+clap = { version = "4.4", features = ["derive"] }
+# OGSr well CSV parsing (well_loader.rs ports erie_wellhead_discriminator.py::load_ogsr_wells).
+csv = "1"
 env_logger = "0.11"
 flume = "0.12"
 log = "0.4"
-pollster = "0.4"
-wgpu = "24"
-ndarray = "0.16"
 num-complex = "0.4"
+pollster = "0.4"
+# FFT for upward/downward continuation (continuation.rs ports
+# wh2k_upward_continuation.py). Same version spec the satellite crate uses.
+rustfft = "6.2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wgpu = "24"
 # Internal nauticuvs (full-precision f64 version, NEVER published to
 # crates.io). The local package is named nauticuvs-full but exposes
 # itself as `nauticuvs` to consumers via the package= alias.

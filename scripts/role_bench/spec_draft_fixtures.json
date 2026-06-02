@@ -1,0 +1,16 @@
+{
+  "fixtures": [
+    {
+      "id": "forge_corrector_cap",
+      "user_prompt": "In cesarops-forge-v2, corrector_hard_repeat_cap=6 should demand a progress report before terminate at 12. Repo at /data/codebase/repos/wreckhunter2000-1. I will approve before any cluster tool run."
+    },
+    {
+      "id": "jitter_rs_health",
+      "user_prompt": "Verify jitter-rs on T440 :8180 and Coral validator on c2 :8190 are healthy. Use SSH host t440. Do not touch P100 LLM ports. Approval required before changes."
+    },
+    {
+      "id": "satellite_spec_smoke",
+      "user_prompt": "Draft a mission spec to run Sentinel-2 GeoTIFF scan under pipelines/detection_runs/satellite/straits_known_wreck_validation/downloads/sentinel2_aws/ using jitter-rs only (no P100 inference). bbox Lake Erie west end. Human approves before download jobs start."
+    }
+  ]
+}

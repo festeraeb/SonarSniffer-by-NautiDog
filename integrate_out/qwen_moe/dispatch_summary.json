@@ -1,0 +1,437 @@
+[
+  {
+    "kind": "reference",
+    "live_key": "pipelines/bag/advanced_bag_scanner_runner.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__bag__advanced_bag_scanner_runner__SIMILAR_TO_LIVE__laptop-code-pipelines__advanced_bag_scanner_runner.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "pipelines/mag/adaptive_background_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__mag__adaptive_background_scan__SIMILAR_TO_LIVE__laptop-code-pipelines__adaptive_background_scan.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "pipelines/mag/erie_wellhead_discriminator.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__mag__erie_wellhead_discriminator__SIMILAR_TO_LIVE__laptop-code-pipelines__erie_wellhead_discriminator.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "pipelines/mag/mag_data_pipeline.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__mag__mag_data_pipeline__SIMILAR_TO_LIVE__laptop-code-pipelines__mag_data_pipeline.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "repo_root/cmr_search.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__repo_root__cmr_search__SIMILAR_TO_LIVE__laptopdump-programming-root__cmr_search.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "repo_root/universal_downloader.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__repo_root__universal_downloader__SIMILAR_TO_LIVE__laptopdump-programming-root__universal_downloader.md"
+  },
+  {
+    "kind": "reference",
+    "live_key": "repo_root/weather_service.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/ref__repo_root__weather_service__SIMILAR_TO_LIVE__laptopdump-programming-root__weather_service.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/analyze_fuel_leaks.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__analyze_fuel_leaks.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/analyze_resolution_comparison.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__analyze_resolution_comparison.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/anchor_lock_display.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__anchor_lock_display.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/andaste_geometry_test.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__andaste_geometry_test.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cesarops_agent_gui.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cesarops_agent_gui.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cesarops_cli.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__cesarops_cli.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cesarops_engine.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cesarops_engine.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/check_xenon_cuda.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__check_xenon_cuda.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cleanup_and_organize.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cleanup_and_organize.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/config_agent.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__config_agent.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cuda_direct.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cuda_direct.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cuda_test_kmz.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__cuda_test_kmz.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/daily_satellite_pull.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__daily_satellite_pull.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/daily_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__daily_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/database_connector.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__database_connector.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/deep_wreck_validation.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__deep_wreck_validation.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/detailed_analysis.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__detailed_analysis.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/detection_sorter.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__detection_sorter.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/diagnose_gpu.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__diagnose_gpu.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/drive_identity.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__drive_identity.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/dual_scan_downloader.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__dual_scan_downloader.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/dynamic_db_key.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__dynamic_db_key.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/extract_oil_spills_kmz.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__extract_oil_spills_kmz.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/fast_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__fast_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/fetcher.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__fetcher.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/find_swot_dates.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__find_swot_dates.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/full_basin_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__full_basin_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/full_lake_michigan_run.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__full_lake_michigan_run.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/full_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__full_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/generate_db_master_key.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__generate_db_master_key.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/global_controls.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__global_controls.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/gpu_stress_test.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__gpu_stress_test.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/hard_pixel_audit.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__hard_pixel_audit.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/init_database.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__init_database.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/integrated_forensic_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__integrated_forensic_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/inventory_all_files.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__inventory_all_files.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/inventory_geotiffs.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__inventory_geotiffs.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/iowa_202_analysis.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__iowa_202_analysis.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/lake_michigan_full_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__lake_michigan_full_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/lake_michigan_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__lake_michigan_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/live_feed_server.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__live_feed_server.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/monster_analysis.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__monster_analysis.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/monster_candidate.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__monster_candidate.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/monster_material_audit.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__monster_material_audit.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/multi_sensor_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__multi_sensor_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/populate_database.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__populate_database.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/prioritized_pull_v2.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__prioritized_pull_v2.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/prioritized_satellite_pull.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__prioritized_satellite_pull.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/process_tiles.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__process_tiles.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/process_with_coordinates.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__process_with_coordinates.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/pull_altimetry_anonymous.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__pull_altimetry_anonymous.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/raw_scan_reprocess.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__raw_scan_reprocess.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/repeatability_check.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__repeatability_check.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/run_configured_pipeline.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__run_configured_pipeline.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/run_straits_fox.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__run_straits_fox.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/run_zero.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__run_zero.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/small_batch_test.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__small_batch_test.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/smart_daily_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__smart_daily_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/start_xenon_db_sync.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__start_xenon_db_sync.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/sync_to_xenon.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__sync_to_xenon.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_ai_callable.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__test_ai_callable.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_cuda_minimal.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__test_cuda_minimal.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_cuda_simple.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__test_cuda_simple.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_gpu.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__test_gpu.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_m2200.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__test_m2200.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_m2200_minimal.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__test_m2200_minimal.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_pipeline.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__test_pipeline.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_repeatability.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__test_repeatability.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/three_tile_offset_analysis.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__three_tile_offset_analysis.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/tpu_client.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__tpu_client.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/tpu_server.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__tpu_server.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/triple_lock_fusion.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__triple_lock_fusion.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/validate_detection.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__validate_detection.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/verify_cuda.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__verify_cuda.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/viirs_multi_year_scan.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__viirs_multi_year_scan.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/wipe_database.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__wipe_database.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/zion_trench_squeeze.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__zion_trench_squeeze.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/ai_director.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__ai_director.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/analyze_crossref.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__analyze_crossref.md"
+  },
+  {
+    "kind": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/andaste_geometry_test.py",
+    "out": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__andaste_geometry_test.md"
+  }
+]

@@ -7,6 +7,7 @@ mod memory;
 mod hardware;
 mod prompts;
 mod loop_engine;
+mod loop_tuning;
 mod agent_dispatch;
 mod validator;
 mod corrector_preset;
@@ -15,13 +16,31 @@ mod fleet_registry;
 mod orchestrator;
 mod routing;
 mod inference_client;
+mod inference_config;
 mod paths;
 mod mcp_delegate;
+mod orchestration;
+mod model_command;
+mod stream_sources;
+mod cluster_store;
+mod cluster_gpus;
+mod stream_lanes;
+mod tool_telemetry;
+mod operator_spec;
 
-use axum::{extract::{Json, State}, response::Html, routing::{get, post}, Router};
+use axum::{
+    body::Body,
+    extract::{Json, Path, State},
+    http::{header, HeaderMap, HeaderValue, StatusCode},
+    response::{Html, IntoResponse, Response},
+    routing::{get, post},
+    Router,
+};
 use serde::{Deserialize, Serialize};
+use tower_http::cors::{Any, CorsLayer};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use tokio::time::{timeout, Duration};
 use tracing::{info, warn};
 
 #[derive(Clone)]
@@ -29,11 +48,21 @@ pub struct AppState {
     pub conversation: Arc<Mutex<Vec<translator::Message>>>,
     pub config: Arc<RwLock<ForgeConfig>>,
     pub interrupt: Arc<std::sync::atomic::AtomicBool>,
+    /// Only one `/send` loop at a time (avoids queued requests that never hit the GPU).
+    pub send_busy: Arc<std::sync::atomic::AtomicBool>,
     pub steering: Arc<Mutex<Vec<String>>>,
     /// DII node registry — populated by cesarops-node heartbeats.
     pub node_registry: Arc<Mutex<std::collections::HashMap<String, NodeRegistration>>>,
     /// Mission history — populated by webhook intake + orchestrator execute.
     pub missions: Arc<Mutex<Vec<MissionRecord>>>,
+    /// Live activity lines for `/streams/activity` SSE on the main Forge page.
+    pub stream_log: stream_sources::StreamLog,
+    /// Per-lane conversations + cross-lane activity (3-path Forge UI).
+    pub lanes: stream_lanes::LaneStore,
+    /// In-process tool call telemetry for auditing and MCP parity checks.
+    pub tool_telemetry: Arc<Mutex<tool_telemetry::ToolTelemetry>>,
+    /// OperatorSpec draft → human approve → /send (see operator_spec.rs).
+    pub spec_gate: operator_spec::SharedSpecGate,
 }
 
 /// A mission submitted via webhook or direct execute.
@@ -75,6 +104,7 @@ pub struct NodeHeartbeat {
 #[derive(Clone)]
 pub struct ForgeConfig {
     pub coder_url: String,
+    pub reviewer_url: String,
     pub thinker_url: String,
     pub corrector_url: String,
     pub nautivecs_url: String,
@@ -86,6 +116,12 @@ pub struct ForgeConfig {
     /// Prompt template: qwen2.5 | gemma | deepseek-r1 | llama3
     pub chat_template: String,
     pub chat_model: String,
+    /// Parallel coder + reviewer with thinker grade (routing_preset.parallel_dual_grade).
+    pub parallel_dual_grade: bool,
+    /// Two coders (coder + draft/validator URL) with reviewer round-2 handoff.
+    pub parallel_dual_coders: bool,
+    /// Tool-loop rounds for parallel grade (e.g. [1, 3]).
+    pub parallel_dual_grade_rounds: Vec<u32>,
 }
 
 impl AppState {
@@ -94,35 +130,598 @@ impl AppState {
         let resolved = routing::resolve_endpoints();
         let mut cfg = self.config.write().await;
         cfg.coder_url = resolved.coder_url;
+        cfg.reviewer_url = resolved.reviewer_url;
         cfg.thinker_url = resolved.thinker_url;
         cfg.corrector_url = resolved.corrector_url;
         cfg.validator_url = resolved.validator_url;
         cfg.chat_agent = resolved.chat_agent;
         cfg.chat_template = resolved.chat_template;
         cfg.chat_model = resolved.chat_model;
+        cfg.parallel_dual_grade = resolved.parallel_dual_grade;
+        cfg.parallel_dual_coders = resolved.parallel_dual_coders;
+        cfg.parallel_dual_grade_rounds = resolved.parallel_dual_grade_rounds.clone();
     }
 }
 
 #[derive(Deserialize)]
-struct SendRequest { message: String }
+struct SendRequest {
+    message: String,
+    #[serde(default)]
+    lane: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct SpecDraftRequest {
+    intent: String,
+    #[serde(default)]
+    context: String,
+    #[serde(default)]
+    local_only: bool,
+}
+
+#[derive(Deserialize)]
+struct SpecApproveRequest {
+    #[serde(default = "default_true")]
+    approved: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Deserialize)]
+struct LaneRoleRequest {
+    role: String,
+}
 
 #[derive(Serialize)]
 struct SendResponse {
     response: String,
     tool_actions: Vec<String>,
     diagnosis: Option<String>,
+    /// True when the agent loop continues server-side (client should poll conversation).
+    #[serde(default)]
+    accepted: bool,
 }
 
-async fn index() -> Html<&'static str> {
-    Html(include_str!("index.html"))
+async fn index() -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store, max-age=0")],
+        Html(include_str!("index.html")),
+    )
 }
 
-async fn cluster_panel() -> Html<&'static str> {
-    Html(include_str!("cluster_panel.html"))
+async fn dash_page() -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store, max-age=0")],
+        Html(include_str!("dash.html")),
+    )
 }
 
-async fn health() -> &'static str {
-    r#"{"status":"ok","service":"cesarops-forge-v2","mode":"self-healing-translator"}"#
+async fn cluster_panel() -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store, max-age=0")],
+        Html(include_str!("cluster_panel.html")),
+    )
+}
+
+async fn api_docs_page() -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store, max-age=0")],
+        Html(include_str!("api-docs.html")),
+    )
+}
+
+async fn mcp_ui_page() -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store, max-age=0")],
+        Html(include_str!("mcp-ui.html")),
+    )
+}
+
+async fn dash_bench() -> Json<serde_json::Value> {
+    let p = "/codebase/repos/wreckhunter2000-1/integrate_out/bench_2060/bench_2060_small_models.json";
+    let payload = std::fs::read_to_string(p)
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .unwrap_or_else(|| {
+            serde_json::json!({
+                "error": "bench file missing or invalid",
+                "path": p,
+            })
+        });
+    Json(payload)
+}
+
+async fn forge_hud_css() -> impl IntoResponse {
+    (
+        [
+            (header::CONTENT_TYPE, "text/css; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store, max-age=0"),
+        ],
+        include_str!("forge-hud.css"),
+    )
+}
+
+async fn forge_hud_js() -> impl IntoResponse {
+    (
+        [
+            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store, max-age=0"),
+        ],
+        include_str!("forge-hud.js"),
+    )
+}
+
+async fn health() -> Json<serde_json::Value> {
+    let gpu = hardware::query_gpu_metrics().await;
+    Json(serde_json::json!({
+        "status": "ok",
+        "service": "cesarops-forge-v2",
+        "mode": "self-healing-translator",
+        "gpu_count": gpu.gpus.len(),
+        "gpus": gpu.gpus,
+        "gpu_error": gpu.error,
+    }))
+}
+
+fn touch_fleet_activity() {
+    let script = "/codebase/repos/wreckhunter2000-1/scripts/cesarops-activity-watch.sh";
+    if std::path::Path::new(script).exists() {
+        let _ = std::process::Command::new("bash").arg(script).arg("touch").spawn();
+    }
+}
+
+fn response_has_fail_markers(response: &str) -> bool {
+    response.contains("| FAIL |")
+        || response.contains("|FAIL|")
+        || response.contains("\nFAIL\n")
+}
+
+/// Mission task got a generic detection-verify table (false PASS) — tuner should intervene.
+fn response_task_mismatch(user_task: &str, response: &str) -> bool {
+    let task_l = user_task.to_lowercase();
+    let resp_l = response.to_lowercase();
+    let mission_keys = [
+        "satellite",
+        "sattelite",
+        "shipwreck",
+        "downloader",
+        "lake mi",
+        "lake michigan",
+        "10 day",
+        "images",
+        "wreckhunter",
+    ];
+    let is_mission = mission_keys.iter().any(|k| task_l.contains(k));
+    if !is_mission {
+        return false;
+    }
+    let addressed = [
+        "sat_mission",
+        "universal_downloader",
+        "pipelines/satellite",
+        "download_satellite",
+        "lake_michigan",
+        "shipwreck",
+    ];
+    let addressed_any = addressed.iter().any(|k| resp_l.contains(k));
+    let generic_verify_only = resp_l.contains("cesarops-detection")
+        && (resp_l.contains("5580/health") || resp_l.contains("cargo check"))
+        && !addressed_any;
+    generic_verify_only
+}
+
+fn response_needs_intervention(user_task: &str, response: &str) -> bool {
+    response_has_fail_markers(response) || response_task_mismatch(user_task, response)
+}
+
+async fn fetch_tuned_prompt(
+    mode: &str,
+    lane_id: &str,
+    lane_role: &str,
+    task: &str,
+    latest_report: Option<&str>,
+) -> Result<String, String> {
+    let orch = orchestration::load_orchestration();
+    let base = orch
+        .n8n_fleet_url
+        .trim_end_matches("/webhook/fleet-ops")
+        .trim_end_matches('/');
+    let url = if mode == "initial" {
+        format!("{}/webhook/prompt-tuner-initial", base)
+    } else {
+        format!("{}/webhook/prompt-tuner-failed", base)
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+    let mut payload = serde_json::json!({
+        "lane": lane_id,
+        "phase": if lane_role == "coding" { "EXECUTE" } else { "VERIFY" },
+        "task": task,
+    });
+    if let Some(report) = latest_report {
+        payload["latest_report"] = serde_json::json!(report);
+    }
+    let resp = client
+        .post(&url)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("request failed to {}: {}", url, e))?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {} at {}", resp.status(), url));
+    }
+    let body = resp.json::<serde_json::Value>().await.unwrap_or_default();
+    body.get("tuned_prompt")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| format!("missing tuned_prompt in {}", body))
+}
+
+async fn background_run_failed(
+    state: &AppState,
+    lane_id: &str,
+    lane_role: &str,
+    user_task: &str,
+    err: &str,
+) {
+    state.lanes.log(lane_id, "done", err).await;
+    stream_sources::log_send(
+        state,
+        "done",
+        &format!("[{}] background failed: {}", lane_id, err),
+    )
+    .await;
+
+    let mut report = format!(
+        "[Forge] Background run failed:\n{}\n\n\
+         Check: journalctl -u cesarops-forge-v2 -n 60 --no-pager\n",
+        err
+    );
+    let mut resp = SendResponse {
+        response: report.clone(),
+        tool_actions: vec!["background_crash".to_string()],
+        diagnosis: None,
+        accepted: false,
+    };
+    apply_auto_retune(state, lane_id, lane_role, user_task, &mut resp, "background crash")
+        .await;
+    report = resp.response;
+
+    let mut conv = state.lanes.get_conversation(lane_id).await;
+    conv.push(translator::Message {
+        role: "assistant".to_string(),
+        content: report,
+    });
+    state.lanes.set_conversation(lane_id, conv).await;
+}
+
+struct SendBusyGuard(Arc<std::sync::atomic::AtomicBool>);
+impl Drop for SendBusyGuard {
+    fn drop(&mut self) {
+        self.0
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+fn spawn_background_guarded<F>(
+    state: AppState,
+    lane_id: String,
+    lane_role: String,
+    user_task: String,
+    busy: SendBusyGuard,
+    run: F,
+) where
+    F: std::future::Future<Output = ()> + Send + 'static,
+{
+    tokio::spawn(async move {
+        let _busy = busy;
+        let join = tokio::spawn(run);
+        if let Err(e) = join.await {
+            let msg = if e.is_panic() {
+                "Agent task panicked (tool/UTF-8 bug — redeployed fix; retry /tune or /send)"
+            } else {
+                "Agent task was cancelled before completion"
+            };
+            background_run_failed(&state, &lane_id, &lane_role, &user_task, msg).await;
+        }
+    });
+}
+
+fn is_blueprint_audit_dispatch_task(text: &str) -> bool {
+    let low = text.to_lowercase();
+    low.contains("llm_dispatch_batches.json")
+        || (low.contains("blueprint") && low.contains("audit") && low.contains("batch"))
+}
+
+async fn run_blueprint_audit_fallback() -> SendResponse {
+    let mut cmd = tokio::process::Command::new("python3");
+    cmd.arg("/codebase/repos/wreckhunter2000-1/scripts/blueprint_audit_process_batches.py");
+    match cmd.output().await {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            if out.status.success() {
+                SendResponse {
+                    response: format!(
+                        "[Forge fallback] blueprint audit batch processor completed.\n\n{}",
+                        stdout
+                    ),
+                    tool_actions: vec![
+                        "background_fallback_blueprint_audit".to_string(),
+                        "run_command".to_string(),
+                    ],
+                    diagnosis: if stderr.trim().is_empty() {
+                        None
+                    } else {
+                        Some(format!("fallback stderr: {}", stderr))
+                    },
+                    accepted: false,
+                }
+            } else {
+                SendResponse {
+                    response: format!(
+                        "[Forge fallback] blueprint audit batch processor failed.\n\nstdout:\n{}\n\nstderr:\n{}",
+                        stdout, stderr
+                    ),
+                    tool_actions: vec!["background_fallback_blueprint_audit".to_string()],
+                    diagnosis: Some(format!("fallback exit status: {}", out.status)),
+                    accepted: false,
+                }
+            }
+        }
+        Err(e) => SendResponse {
+            response: format!(
+                "[Forge fallback] failed to execute blueprint audit processor: {}",
+                e
+            ),
+            tool_actions: vec!["background_fallback_blueprint_audit".to_string()],
+            diagnosis: Some("spawn_error".to_string()),
+            accepted: false,
+        },
+    }
+}
+
+async fn run_lane_task_background(
+    state: AppState,
+    lane_id: String,
+    lane_role: String,
+    message: String,
+    user_task: String,
+    coder_url: String,
+    saved_coder: String,
+) {
+    {
+        let mut cfg = state.config.write().await;
+        if !cfg.parallel_dual_coders {
+            cfg.coder_url = coder_url;
+        }
+    }
+    state
+        .lanes
+        .log(&lane_id, "sys", "[Forge] background run started")
+        .await;
+    stream_sources::log_send(
+        &state,
+        "running",
+        &format!("[{}] background run", lane_id),
+    )
+    .await;
+
+    // No Forge-side wall-clock kill: n8n forge-health-probe decides stalled vs broken.
+    let loop_message = if is_blueprint_audit_dispatch_task(&user_task) {
+        format!("/fast {}", message)
+    } else {
+        message.clone()
+    };
+    let mut result = loop_engine::run(&state, &loop_message).await;
+
+    if is_blueprint_audit_dispatch_task(&user_task)
+        && result.tool_actions.is_empty()
+        && !result.response.to_lowercase().contains("llm_results")
+    {
+        warn!("blueprint audit task produced no actionable output; running fallback");
+        result = run_blueprint_audit_fallback().await;
+    }
+
+    if response_needs_intervention(&user_task, &result.response) {
+        let reason = if response_task_mismatch(&user_task, &result.response) {
+            "task mismatch (wrong work completed)"
+        } else {
+            "FAIL in pass/fail table"
+        };
+        apply_auto_retune(&state, &lane_id, &lane_role, &user_task, &mut result, reason).await;
+    }
+
+    {
+        let msgs = state.conversation.lock().await.clone();
+        state.lanes.set_conversation(&lane_id, msgs).await;
+    }
+    state
+        .lanes
+        .log(
+            &lane_id,
+            "done",
+            &result.response.chars().take(160).collect::<String>(),
+        )
+        .await;
+    stream_sources::log_send(
+        &state,
+        "done",
+        &format!(
+            "[{}] background done tools={} len={}",
+            lane_id,
+            result.tool_actions.len(),
+            result.response.len()
+        ),
+    )
+    .await;
+
+    let mut conv = state.lanes.get_conversation(&lane_id).await;
+    conv.push(translator::Message {
+        role: "assistant".to_string(),
+        content: result.response,
+    });
+    state.lanes.set_conversation(&lane_id, conv).await;
+
+    {
+        let mut cfg = state.config.write().await;
+        cfg.coder_url = saved_coder;
+    }
+}
+
+async fn run_tune_autorun_background(
+    state: AppState,
+    lane_id: String,
+    lane_role: String,
+    task: String,
+    tuned_prompt: String,
+    coder_url: String,
+    saved_coder: String,
+) {
+    {
+        let mut cfg = state.config.write().await;
+        cfg.coder_url = coder_url;
+    }
+    state
+        .lanes
+        .log(&lane_id, "sys", "[/tune] auto-run started (background)")
+        .await;
+    stream_sources::log_send(
+        &state,
+        "running",
+        &format!("[{}] /tune auto-run", lane_id),
+    )
+    .await;
+
+    let mut run_result = loop_engine::run(&state, &tuned_prompt).await;
+    if response_needs_intervention(&task, &run_result.response) {
+        let reason = if response_task_mismatch(&task, &run_result.response) {
+            "task mismatch (generic verify PASS, mission not run)"
+        } else {
+            "FAIL in pass/fail table"
+        };
+        apply_auto_retune(&state, &lane_id, &lane_role, &task, &mut run_result, reason).await;
+    }
+
+    let full_response = format!(
+        "[/tune initial]\n{}\n\n[/tune auto-run]\n{}",
+        tuned_prompt, run_result.response
+    );
+    let preview: String = full_response.chars().take(160).collect();
+    state.lanes.log(&lane_id, "done", &preview).await;
+    stream_sources::log_send(
+        &state,
+        "done",
+        &format!("[{}] /tune+run len={}", lane_id, full_response.len()),
+    )
+    .await;
+
+    let mut conv = state.lanes.get_conversation(&lane_id).await;
+    conv.push(translator::Message {
+        role: "assistant".to_string(),
+        content: full_response,
+    });
+    state.lanes.set_conversation(&lane_id, conv).await;
+
+    {
+        let mut cfg = state.config.write().await;
+        cfg.coder_url = saved_coder;
+    }
+}
+
+async fn apply_auto_retune(
+    state: &AppState,
+    lane_id: &str,
+    lane_role: &str,
+    user_task: &str,
+    result: &mut SendResponse,
+    reason: &str,
+) {
+    match fetch_tuned_prompt("failed", lane_id, lane_role, user_task, Some(&result.response)).await
+    {
+        Ok(tuned) => {
+            result.response.push_str(&format!("\n\n[auto-retune: {}]\n", reason));
+            result.response.push_str(&tuned);
+            result
+                .tool_actions
+                .push("n8n_prompt_tuner_failed".to_string());
+        }
+        Err(e) => {
+            result
+                .response
+                .push_str(&format!("\n\n[auto-retune] failed-tuner error: {}", e));
+        }
+    }
+}
+
+async fn spec_draft(
+    State(state): State<AppState>,
+    Json(req): Json<SpecDraftRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let cfg = operator_spec::load_config();
+    if !cfg.enabled {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "spec_draft disabled in cluster_config.toml".to_string(),
+        ));
+    }
+    let mut cfg_run = cfg.clone();
+    if req.local_only {
+        cfg_run.thinker = "local".to_string();
+    }
+    let record = operator_spec::run_spec_draft(&req.intent, &req.context, &cfg_run)
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e))?;
+    let title = record.title.clone();
+    {
+        let mut gate = state.spec_gate.lock().await;
+        gate.pending = Some(record.clone());
+    }
+    stream_sources::log_send(&state, "spec", &format!("draft: {title}")).await;
+    Ok(Json(serde_json::json!({
+        "ok": true,
+        "title": record.title,
+        "path": record.path,
+        "approved": record.approved,
+        "source": record.source,
+        "spec": record.spec,
+        "message": "Review operator_spec.json then POST /spec/approve before /send runs tools."
+    })))
+}
+
+async fn spec_status(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let cfg = operator_spec::load_config();
+    let gate = state.spec_gate.lock().await;
+    Json(operator_spec::status_json(&gate, &cfg))
+}
+
+async fn spec_approve(
+    State(state): State<AppState>,
+    Json(req): Json<SpecApproveRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut gate = state.spec_gate.lock().await;
+    let pending = gate
+        .pending
+        .as_mut()
+        .ok_or((StatusCode::NOT_FOUND, "no pending operator spec".to_string()))?;
+    pending.approved = req.approved;
+    let title = pending.title.clone();
+    Ok(Json(serde_json::json!({
+        "ok": true,
+        "approved": req.approved,
+        "title": title,
+        "path": pending.path,
+    })))
+}
+
+async fn spec_clear(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let mut gate = state.spec_gate.lock().await;
+    gate.pending = None;
+    Json(serde_json::json!({"ok": true, "cleared": true}))
 }
 
 async fn send_message(
@@ -130,24 +729,816 @@ async fn send_message(
     Json(req): Json<SendRequest>,
 ) -> Json<SendResponse> {
     info!("User: {}", &req.message[..req.message.len().min(100)]);
+    stream_sources::log_send(
+        &state,
+        "user",
+        &req.message[..req.message.len().min(120)],
+    )
+    .await;
+    touch_fleet_activity();
+
+    let spec_cfg = operator_spec::load_config();
+    if spec_cfg.enabled && spec_cfg.require_approval_before_send {
+        let blocked = {
+            let gate = state.spec_gate.lock().await;
+            match &gate.pending {
+                Some(p) if !p.approved => Some(p.title.clone()),
+                _ => None,
+            }
+        };
+        if let Some(title) = blocked {
+            if !req.message.trim_start().starts_with("/spec/") {
+                return Json(SendResponse {
+                    response: operator_spec::send_blocked_message(&title),
+                    tool_actions: vec!["spec_gate_blocked".to_string()],
+                    diagnosis: None,
+                    accepted: false,
+                });
+            }
+        }
+    }
+
+    operator_spec::inject_approved_spec(&state.spec_gate, &state.steering).await;
+
+    // New user message — do not inherit Stop from a previous run.
+    state
+        .interrupt
+        .store(false, std::sync::atomic::Ordering::Relaxed);
+
+    if state
+        .send_busy
+        .compare_exchange(
+            false,
+            true,
+            std::sync::atomic::Ordering::AcqRel,
+            std::sync::atomic::Ordering::Relaxed,
+        )
+        .is_err()
+    {
+        return Json(SendResponse {
+            response: "[Forge busy] Another task is still running on the server. \
+                       Wait for it to finish, or click **Clear** / **Stop**, then send again."
+                .to_string(),
+            tool_actions: vec![],
+            diagnosis: None,
+            accepted: false,
+        });
+    }
+
     state.refresh_routing().await;
 
-    let result = loop_engine::run(&state, &req.message).await;
-    
-    info!("Response: {}... (tools: {}, diagnosed: {})",
-        &result.response[..result.response.len().min(80)],
-        result.tool_actions.len(),
-        result.diagnosis.is_some()
+    let mut hold_busy = Some(SendBusyGuard(state.send_busy.clone()));
+
+    let lane_id = req.lane.clone().unwrap_or_else(|| "lane-a".to_string());
+    let lane_role = routing::load_lanes_state()
+        .lane_roles
+        .get(&lane_id)
+        .cloned()
+        .unwrap_or_else(|| "general".to_string());
+    let coder_url = routing::resolve_lane_coder_url(&lane_id);
+
+    {
+        let msgs = state.lanes.get_conversation(&lane_id).await;
+        *state.conversation.lock().await = msgs;
+    }
+
+    let mut cfg = state.config.write().await;
+    let saved_coder = cfg.coder_url.clone();
+    let dual_coders = cfg.parallel_dual_coders;
+    // Lane scorecard must not override preset coder when dual-coder geo layout is active.
+    if !dual_coders {
+        cfg.coder_url = coder_url.clone();
+    }
+    drop(cfg);
+
+    state.lanes.log(&lane_id, "user", &req.message).await;
+
+    // Keep /fast opt-in. Coding lanes run normal reasoning by default.
+    let message = req.message.clone();
+
+    // /tune [task] — tune via n8n (HTTP returns quickly), auto-run in background.
+    if req.message.trim_start().starts_with("/tune") {
+        let requested_task = req
+            .message
+            .trim_start()
+            .trim_start_matches("/tune")
+            .trim()
+            .to_string();
+        let task = if requested_task.is_empty() {
+            "Verify cesarops-detection startup and endpoints.".to_string()
+        } else {
+            requested_task
+        };
+
+        let (response, tool_actions, tune_diagnosis, spawn_autorun) =
+            match fetch_tuned_prompt("initial", &lane_id, &lane_role, &task, None).await {
+                Ok(tuned_prompt) => {
+                    let immediate = format!(
+                        "[/tune initial]\n{}\n\n[/tune] Auto-run started in background — \
+                         watch the Activity panel. Full result will append to this lane when done.",
+                        tuned_prompt
+                    );
+                    (
+                        immediate,
+                        vec![
+                            "n8n_prompt_tuner_initial".to_string(),
+                            "tune_autorun_background".to_string(),
+                        ],
+                        None,
+                        Some(tuned_prompt),
+                    )
+                }
+                Err(e) => (
+                    format!("[/tune] {}\n", e),
+                    vec!["n8n_prompt_tuner_initial".to_string()],
+                    None,
+                    None,
+                ),
+            };
+
+        let tune_autorun = spawn_autorun.is_some();
+        if let Some(tuned_prompt) = spawn_autorun {
+            let user_task_tune = task.clone();
+            let run_fut = {
+                let state_bg = state.clone();
+                let lane_bg = lane_id.clone();
+                let role_bg = lane_role.clone();
+                let task_bg = task.clone();
+                let coder_bg = coder_url.clone();
+                let saved_bg = saved_coder.clone();
+                async move {
+                    run_tune_autorun_background(
+                        state_bg,
+                        lane_bg,
+                        role_bg,
+                        task_bg,
+                        tuned_prompt,
+                        coder_bg,
+                        saved_bg,
+                    )
+                    .await;
+                }
+            };
+            let busy = hold_busy
+                .take()
+                .expect("send_busy guard for /tune autorun");
+            spawn_background_guarded(
+                state.clone(),
+                lane_id.clone(),
+                lane_role.clone(),
+                user_task_tune,
+                busy,
+                run_fut,
+            );
+        }
+
+        let tuned_preview: String = response.chars().take(160).collect();
+        state.lanes.log(&lane_id, "done", &tuned_preview).await;
+        stream_sources::log_send(
+            &state,
+            "done",
+            &format!("[{}] /tune len={}", lane_id, response.len()),
+        )
+        .await;
+        {
+            let mut conv = state.conversation.lock().await;
+            conv.push(translator::Message {
+                role: "user".to_string(),
+                content: req.message.clone(),
+            });
+            conv.push(translator::Message {
+                role: "assistant".to_string(),
+                content: response.clone(),
+            });
+            state.lanes.set_conversation(&lane_id, conv.clone()).await;
+        }
+        {
+            let mut cfg = state.config.write().await;
+            cfg.coder_url = saved_coder;
+        }
+        return Json(SendResponse {
+            response,
+            tool_actions,
+            diagnosis: tune_diagnosis,
+            accepted: tune_autorun,
+        });
+    }
+
+    {
+        let mut conv = state.conversation.lock().await;
+        conv.push(translator::Message {
+            role: "user".to_string(),
+            content: req.message.clone(),
+        });
+        state.lanes.set_conversation(&lane_id, conv.clone()).await;
+    }
+
+    let immediate = format!(
+        "[Forge] Task accepted on **{}** — running in background.\n\
+         Watch **Cross-lane activity** and **Live output** below; the full reply will appear in this lane when done.",
+        lane_id
     );
-    
-    Json(result)
+    {
+        let mut conv = state.conversation.lock().await;
+        conv.push(translator::Message {
+            role: "assistant".to_string(),
+            content: immediate.clone(),
+        });
+        state.lanes.set_conversation(&lane_id, conv.clone()).await;
+    }
+
+    let state_bg = state.clone();
+    let lane_bg = lane_id.clone();
+    let role_bg = lane_role.clone();
+    let msg_bg = message.clone();
+    let task_bg = req.message.clone();
+    let coder_bg = coder_url.clone();
+    let saved_bg = saved_coder.clone();
+    let run_fut = async move {
+        run_lane_task_background(
+            state_bg, lane_bg, role_bg, msg_bg, task_bg, coder_bg, saved_bg,
+        )
+        .await;
+    };
+    let busy = hold_busy
+        .take()
+        .expect("send_busy guard for background run");
+    spawn_background_guarded(
+        state.clone(),
+        lane_id.clone(),
+        lane_role.clone(),
+        req.message.clone(),
+        busy,
+        run_fut,
+    );
+
+    {
+        let mut cfg = state.config.write().await;
+        cfg.coder_url = saved_coder;
+    }
+
+    return Json(SendResponse {
+        response: immediate,
+        tool_actions: vec!["background_run".to_string()],
+        diagnosis: None,
+        accepted: true,
+    });
+}
+
+async fn forge_status(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let send_busy = state.send_busy.load(std::sync::atomic::Ordering::Relaxed);
+    let activity = state.lanes.snapshot().await;
+    let lane_a_last = activity.iter().filter(|a| a.lane == "lane-a").last();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let last_ts = lane_a_last.map(|a| a.ts).unwrap_or(0);
+    let progress_age_sec = now.saturating_sub(last_ts);
+    Json(serde_json::json!({
+        "send_busy": send_busy,
+        "service": "cesarops-forge-v2",
+        "lane_a_last_kind": lane_a_last.map(|a| a.kind.as_str()).unwrap_or("none"),
+        "lane_a_progress_age_sec": progress_age_sec,
+        "monitor": "scripts/forge-health-probe.sh",
+    }))
+}
+
+/// GET /forge/tooling — tool call telemetry + MCP parity coverage.
+async fn forge_tooling(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let forge_tools: Vec<String> = tools::available_tools().iter().map(|s| s.to_string()).collect();
+    let delegatable: Vec<String> = mcp_delegate::delegatable_tools()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let mcp_base = mcp_delegate::mcp_worker_base();
+    let mcp_tools = if let Some(base) = mcp_base.as_deref() {
+        mcp_delegate::fetch_mcp_tools_at(base).await.ok()
+    } else {
+        None
+    };
+
+    let missing_in_mcp = if let Some(ref mcp) = mcp_tools {
+        forge_tools
+            .iter()
+            .filter(|t| !mcp.contains(t))
+            .cloned()
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+    let missing_delegatable = if let Some(ref mcp) = mcp_tools {
+        delegatable
+            .iter()
+            .filter(|t| !mcp.contains(t))
+            .cloned()
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+    let extra_mcp = if let Some(ref mcp) = mcp_tools {
+        mcp.iter()
+            .filter(|t| !forge_tools.contains(t))
+            .cloned()
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+    let telemetry = state.tool_telemetry.lock().await.snapshot();
+
+    Json(serde_json::json!({
+        "forge_tools": forge_tools,
+        "delegatable_tools": delegatable,
+        "mcp_worker_url": mcp_base,
+        "mcp_tools": mcp_tools,
+        "missing_in_mcp": missing_in_mcp,
+        "missing_delegatable_in_mcp": missing_delegatable,
+        "extra_mcp_tools": extra_mcp,
+        "tool_telemetry": telemetry
+    }))
+}
+
+fn mcp_stack_config_json() -> serde_json::Value {
+    let cfg_path = routing::cfg_path();
+    let content = std::fs::read_to_string(&cfg_path).unwrap_or_default();
+    let table: toml::Table = content.parse().unwrap_or_default();
+    let m = table.get("mcp_stack").and_then(|v| v.as_table());
+
+    serde_json::json!({
+        "llm_engine_preferred": m.and_then(|t| t.get("llm_engine_preferred")).and_then(|v| v.as_str()).unwrap_or("llama.cpp"),
+        "engine_agnostic": m.and_then(|t| t.get("engine_agnostic")).and_then(|v| v.as_bool()).unwrap_or(true),
+        "mcp_stack_mode": m.and_then(|t| t.get("mcp_stack_mode")).and_then(|v| v.as_str()).unwrap_or("optional"),
+        "mcp_worker_url": m.and_then(|t| t.get("mcp_worker_url")).and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:8090"),
+        "searxng_url": m.and_then(|t| t.get("searxng_url")).and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:8088"),
+        "context7_url": m.and_then(|t| t.get("context7_url")).and_then(|v| v.as_str()).unwrap_or(""),
+        "crawl4ai_url": m.and_then(|t| t.get("crawl4ai_url")).and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:11235"),
+        "playwright_mcp_url": m.and_then(|t| t.get("playwright_mcp_url")).and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:8931"),
+        "qdrant_url": m.and_then(|t| t.get("qdrant_url")).and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:6333"),
+        "openmemory_url": m.and_then(|t| t.get("openmemory_url")).and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:8765")
+    })
+}
+
+async fn url_up(url: Option<&str>) -> bool {
+    let Some(url) = url else { return false };
+    if url.is_empty() {
+        return false;
+    }
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    client
+        .get(url)
+        .send()
+        .await
+        .map(|r| r.status().as_u16() < 500)
+        .unwrap_or(false)
+}
+
+/// GET /forge/mcp-stack — MCP stack URLs + live status (engine-agnostic, llama.cpp-first).
+async fn forge_mcp_stack() -> Json<serde_json::Value> {
+    let cfg = mcp_stack_config_json();
+    let searxng = cfg.get("searxng_url").and_then(|v| v.as_str());
+    let context7 = cfg.get("context7_url").and_then(|v| v.as_str());
+    let crawl4ai = cfg.get("crawl4ai_url").and_then(|v| v.as_str());
+    let playwright = cfg.get("playwright_mcp_url").and_then(|v| v.as_str());
+    let qdrant = cfg.get("qdrant_url").and_then(|v| v.as_str());
+    let openmemory = cfg.get("openmemory_url").and_then(|v| v.as_str());
+    let mcp_worker = cfg.get("mcp_worker_url").and_then(|v| v.as_str());
+
+    Json(serde_json::json!({
+        "config": cfg,
+        "status": {
+            "mcp_worker": {"url": mcp_worker, "online": url_up(mcp_worker).await},
+            "searxng": {"url": searxng, "online": url_up(searxng).await},
+            "context7": {"url": context7, "online": url_up(context7).await},
+            "crawl4ai": {"url": crawl4ai, "online": url_up(crawl4ai).await},
+            "playwright_mcp": {"url": playwright, "online": url_up(playwright).await},
+            "qdrant": {"url": qdrant, "online": url_up(qdrant).await},
+            "openmemory": {"url": openmemory, "online": url_up(openmemory).await}
+        },
+        "article_alignment": {
+            "target_stack": ["SearXNG", "Context7", "Crawl4AI", "Playwright MCP", "Qdrant", "OpenMemory", "MCP worker"],
+            "llm_runtime": "llama.cpp preferred, MCP stack engine-agnostic"
+        }
+    }))
+}
+
+/// GET /openapi.json — minimal OpenAPI for Forge integration clients.
+async fn openapi_spec() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "openapi": "3.0.3",
+        "info": {
+            "title": "CESAROPS Forge v2 API",
+            "version": "1.0.0"
+        },
+        "servers": [
+            {"url": "http://127.0.0.1:9100", "description": "Local Forge"},
+            {"url": "http://t440-p100.tail08b03a.ts.net:9100", "description": "Tailscale Forge"}
+        ],
+        "paths": {
+            "/health": {"get": {"summary": "Service health"}},
+            "/forge/status": {"get": {"summary": "Forge status"}},
+            "/forge/tooling": {"get": {"summary": "Tooling + MCP parity"}},
+            "/forge/mcp-stack": {"get": {"summary": "MCP stack config + reachability"}},
+            "/cluster/orchestration": {"get": {"summary": "n8n/PAMP orchestration"}},
+            "/send": {"post": {"summary": "Send chat message"}},
+            "/spec/draft": {"post": {"summary": "Draft OperatorSpec (Gemini or local)"}},
+            "/spec/approve": {"post": {"summary": "Approve pending OperatorSpec"}},
+            "/spec/status": {"get": {"summary": "Pending spec gate status"}},
+            "/spec/clear": {"post": {"summary": "Clear pending OperatorSpec"}}
+        }
+    }))
+}
+
+async fn docker_container_running(name: &str) -> bool {
+    tokio::process::Command::new("docker")
+        .args(["inspect", "-f", "{{.State.Running}}", name])
+        .output()
+        .await
+        .map(|o| o.status.success() && String::from_utf8_lossy(&o.stdout).trim() == "true")
+        .unwrap_or(false)
+}
+
+async fn run_shell(cmd: &str) -> (bool, String, String, Option<i32>) {
+    match tokio::process::Command::new("bash")
+        .arg("-lc")
+        .arg(cmd)
+        .output()
+        .await
+    {
+        Ok(out) => (
+            out.status.success(),
+            String::from_utf8_lossy(&out.stdout).trim().to_string(),
+            String::from_utf8_lossy(&out.stderr).trim().to_string(),
+            out.status.code(),
+        ),
+        Err(e) => (false, String::new(), format!("exec failed: {e}"), None),
+    }
+}
+
+async fn mcp_stack_bring_up(service: &str) -> (bool, String, String, Option<i32>) {
+    let script_dir = std::path::PathBuf::from(routing::forge_v2_dir()).join("scripts");
+    let up = script_dir.join("mcp-stack-up.sh");
+    if !up.exists() {
+        return (
+            false,
+            String::new(),
+            format!("missing script: {}", up.display()),
+            None,
+        );
+    }
+    // Full script is idempotent; always safe to re-run for one service.
+    let _ = service;
+    run_shell(&format!("bash \"{}\"", up.display())).await
+}
+
+/// POST /forge/mcp-stack/start — start or restart an MCP service via docker or shell
+async fn mcp_stack_start(
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let service = body.get("service").and_then(|v| v.as_str()).unwrap_or("");
+    let container = body.get("container").and_then(|v| v.as_str()).unwrap_or("");
+    let restart = body.get("restart").and_then(|v| v.as_bool()).unwrap_or(false);
+
+    let (ok, stdout, stderr, exit_code) = match service {
+        "searxng" => {
+            let action = if restart { "restart" } else { "start" };
+            run_shell(&format!("docker {action} cesarops-searxng")).await
+        }
+        "qdrant" => {
+            let action = if restart { "restart" } else { "start" };
+            run_shell(&format!("docker {action} qdrant")).await
+        }
+        "crawl4ai" | "context7" | "openmemory" => {
+            let container_name = match service {
+                "crawl4ai" => "crawl4ai",
+                "context7" => "context7-proxy",
+                "openmemory" => "openmemory-mcp",
+                _ => service,
+            };
+            if restart || !docker_container_running(container_name).await {
+                mcp_stack_bring_up(service).await
+            } else {
+                run_shell(&format!("docker start {container_name}")).await
+            }
+        }
+        "playwright_mcp" => {
+            let unit = "cesarops-playwright-mcp.service";
+            let action = if restart { "restart" } else { "start" };
+            run_shell(&format!("systemctl --user {action} {unit}")).await
+        }
+        "mcp_worker" => {
+            let unit = "cesarops-mcp-worker.service";
+            let action = if restart { "restart" } else { "start" };
+            run_shell(&format!("systemctl --user {action} {unit}")).await
+        }
+        _ if !container.is_empty() => {
+            let action = if restart { "restart" } else { "start" };
+            run_shell(&format!("docker {action} {container}")).await
+        }
+        _ => {
+            return Json(serde_json::json!({
+                "ok": false,
+                "service": service,
+                "error": "Unknown service. Supported: searxng, qdrant, crawl4ai, context7, openmemory, playwright_mcp, mcp_worker",
+            }));
+        }
+    };
+
+    Json(serde_json::json!({
+        "ok": ok,
+        "service": service,
+        "stdout": stdout,
+        "stderr": stderr,
+        "exit_code": exit_code,
+    }))
+}
+
+async fn lane_conversation(
+    State(state): State<AppState>,
+    axum::extract::Path(lane_id): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    let messages = state.lanes.get_conversation(&lane_id).await;
+    Json(serde_json::json!({
+        "lane": lane_id,
+        "messages": messages,
+    }))
+}
+
+async fn list_lanes() -> Json<serde_json::Value> {
+    Json(stream_lanes::list_lanes_json())
+}
+
+async fn lanes_activity(State(state): State<AppState>) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "activity": state.lanes.snapshot().await,
+        "netdata_url": routing::netdata_url(),
+        "netdata_cesarops2_url": routing::netdata_cesarops2_url(),
+        "netdata_local_online": netdata_probe(routing::netdata_url().as_deref()).await,
+        "netdata_cesarops2_online": netdata_probe(routing::netdata_cesarops2_url().as_deref()).await,
+    }))
+}
+
+async fn netdata_probe(url: Option<&str>) -> bool {
+    let Some(url) = url else { return false };
+    let probe = format!("{}/api/v1/info", url.trim_end_matches('/'));
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    client
+        .get(&probe)
+        .send()
+        .await
+        .map(|r| r.status().is_success())
+        .unwrap_or(false)
+}
+
+async fn resolve_netdata_base() -> (Option<String>, bool) {
+    for url in routing::netdata_probe_candidates() {
+        if netdata_probe(Some(&url)).await {
+            return (Some(url), true);
+        }
+    }
+    let fallback = routing::netdata_url()
+        .or_else(routing::netdata_tailscale_url)
+        .or_else(routing::netdata_cesarops2_url);
+    (fallback, false)
+}
+
+/// GET /netdata/status — whether local / cesarops2 Netdata responds (for UI embed).
+async fn netdata_status() -> Json<serde_json::Value> {
+    let local = routing::netdata_url();
+    let tailscale = routing::netdata_tailscale_url();
+    let remote = routing::netdata_cesarops2_url();
+    let (resolved_url, resolved_online) = resolve_netdata_base().await;
+    Json(serde_json::json!({
+        "local": {
+            "url": local,
+            "online": netdata_probe(local.as_deref()).await,
+        },
+        "tailscale": {
+            "url": tailscale,
+            "online": netdata_probe(tailscale.as_deref()).await,
+        },
+        "cesarops2": {
+            "url": remote,
+            "online": netdata_probe(remote.as_deref()).await,
+        },
+        "resolved": {
+            "url": resolved_url,
+            "online": resolved_online,
+        },
+        "embed_base": "/netdata/embed",
+    }))
+}
+
+/// GET /netdata/embed/{*path} — proxy Netdata so iframe embed works (strip frame blockers).
+async fn netdata_embed(Path(path): Path<String>) -> Result<Response, StatusCode> {
+    let (base_opt, online) = resolve_netdata_base().await;
+    let base = if online {
+        base_opt
+    } else {
+        routing::netdata_url()
+    }
+    .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let url = if path.is_empty() {
+        base
+    } else {
+        format!("{}/{}", base.trim_end_matches('/'), path.trim_start_matches('/'))
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let upstream = client.get(&url).send().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let status = StatusCode::from_u16(upstream.status().as_u16())
+        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let headers = upstream.headers().clone();
+    let body = upstream
+        .bytes()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let mut out_headers = HeaderMap::new();
+    for (k, v) in headers.iter() {
+        let name = k.as_str().to_lowercase();
+        if name == "x-frame-options" || name == "content-security-policy" {
+            continue;
+        }
+        if let (Ok(h), Ok(val)) = (
+            header::HeaderName::from_bytes(k.as_str().as_bytes()),
+            HeaderValue::from_bytes(v.as_bytes()),
+        ) {
+            out_headers.insert(h, val);
+        }
+    }
+    let mut resp = Response::new(Body::from(body));
+    *resp.status_mut() = status;
+    resp.headers_mut().extend(out_headers);
+    Ok(resp)
+}
+
+async fn set_lane_role(
+    Path(lane_id): Path<String>,
+    Json(body): Json<LaneRoleRequest>,
+) -> Json<serde_json::Value> {
+    routing::set_lane_role(&lane_id, &body.role);
+    Json(serde_json::json!({
+        "message": format!("{} → role {}", lane_id, body.role),
+        "endpoint": routing::resolve_lane_coder_url(&lane_id),
+    }))
+}
+
+async fn get_gpu_fleet(State(state): State<AppState>) -> Json<serde_json::Value> {
+    Json(cluster_gpus::unified_fleet_json(&state).await)
+}
+
+async fn get_accelerators() -> Json<serde_json::Value> {
+    let repo = std::env::var("CESAROPS_REPO")
+        .unwrap_or_else(|_| "/codebase/repos/wreckhunter2000-1".into());
+    let script = format!("{}/scripts/accelerator_fleet_probe.sh", repo);
+    let out = tokio::process::Command::new("bash")
+        .arg(&script)
+        .env("FORGE_URL", "http://127.0.0.1:9100")
+        .output()
+        .await;
+    match out {
+        Ok(o) if o.status.success() => {
+            let s = String::from_utf8_lossy(&o.stdout);
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                return Json(v);
+            }
+            Json(serde_json::json!({"raw": s}))
+        }
+        Ok(o) => Json(serde_json::json!({
+            "error": String::from_utf8_lossy(&o.stderr),
+            "stdout": String::from_utf8_lossy(&o.stdout),
+        })),
+        Err(e) => Json(serde_json::json!({"error": e.to_string()})),
+    }
+}
+
+async fn sync_gpu_uuids(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let fleet = cluster_gpus::unified_fleet_json(&state).await;
+    let live: Vec<serde_json::Value> = fleet
+        .get("gpus")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    match cluster_store::sync_gpu_uuids_from_live(&live) {
+        Ok(updated) => Json(serde_json::json!({
+            "message": if updated.is_empty() { "already up to date" } else { "synced" },
+            "updated": updated,
+        })),
+        Err(e) => Json(serde_json::json!({ "error": e })),
+    }
+}
+
+async fn apply_gpu(
+    Path(gpu_id): Path<i64>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let role = body.get("role").and_then(|v| v.as_str()).unwrap_or("idle");
+    let model = body.get("model").and_then(|v| v.as_str()).unwrap_or("");
+    let engine = body.get("engine").and_then(|v| v.as_str()).unwrap_or("llama-server");
+    let backend = body.get("backend").and_then(|v| v.as_str()).unwrap_or("cuda");
+    match cluster_store::apply_gpu_binding(gpu_id, role, model, engine, backend) {
+        Ok(msg) => Json(serde_json::json!({"message": msg})),
+        Err(e) => Json(serde_json::json!({"error": e})),
+    }
+}
+
+async fn fleet_clear_all() -> Json<serde_json::Value> {
+    let _ = std::process::Command::new("bash")
+        .arg("-c")
+        .arg("pkill -f 'cesarops-inference.*--backend' ; pkill -f 'llama-server.*--port' ; pkill -f 'koboldcpp.*--model' ; true")
+        .output();
+    match cluster_store::clear_all_fleet_bindings() {
+        Ok(n) => Json(serde_json::json!({
+            "message": format!("Stopped local inference and cleared {} worker bindings to idle", n),
+        })),
+        Err(e) => Json(serde_json::json!({"error": e})),
+    }
+}
+
+async fn launch_candle_big(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let gpu = body.get("gpu_id").and_then(|v| v.as_i64()).unwrap_or(0);
+    let port = body.get("port").and_then(|v| v.as_i64()).unwrap_or(5012);
+    let model = body
+        .get("model")
+        .and_then(|v| v.as_str())
+        .unwrap_or("/data/cesarops/local_models/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf");
+
+    if gpu > 1 {
+        return Json(serde_json::json!({
+            "error": "Candle/native inference only runs on T440 (GPU 0 or 1). Remote nodes use llama-server on cesarops2."
+        }));
+    }
+
+    let bin = "/codebase/repos/wreckhunter2000-1/cesarops-inference/target/release/cesarops-inference";
+    if !std::path::Path::new(bin).exists() {
+        return Json(serde_json::json!({
+            "error": format!("cesarops-inference not built at {}", bin)
+        }));
+    }
+
+    let _ = std::process::Command::new("bash")
+        .arg("-c")
+        .arg(format!("fuser -k {}/tcp 2>/dev/null; true", port))
+        .output();
+
+    let cmd = format!(
+        "nohup {} --model {} --port {} --backend wgpu --gpu {} > /tmp/candle_gpu{}.log 2>&1 &",
+        bin, model, port, gpu, gpu
+    );
+    match std::process::Command::new("bash").arg("-c").arg(&cmd).output() {
+        Ok(_) => Json(serde_json::json!({
+            "message": format!("Candle/wgpu loading {} on GPU {} port {}", model.split('/').last().unwrap_or(model), gpu, port),
+            "endpoint": format!("http://127.0.0.1:{}", port),
+        })),
+        Err(e) => Json(serde_json::json!({"error": format!("Launch failed: {}", e)})),
+    }
+}
+
+async fn worker_status(Path(name): Path<String>) -> Json<serde_json::Value> {
+    let Some((_, row)) = cluster_store::worker_row(&name) else {
+        return Json(serde_json::json!({"error": "worker not found"}));
+    };
+    let host = row.get("host").and_then(|v| v.as_str()).unwrap_or("local");
+    let port = row.get("port").and_then(|v| v.as_integer()).unwrap_or(5001);
+    let ip = if host == "local" {
+        "127.0.0.1".to_string()
+    } else {
+        host.to_string()
+    };
+    Json(cluster_store::probe_endpoint(&format!("http://{}:{}", ip, port)).await)
+}
+
+async fn clear_lane(
+    State(state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let lane = body.get("lane").and_then(|v| v.as_str()).unwrap_or("lane-a");
+    state.lanes.clear_lane(lane).await;
+    Json(serde_json::json!({"message": format!("Lane {} cleared", lane)}))
 }
 
 async fn clear(State(state): State<AppState>) -> &'static str {
     let mut conv = state.conversation.lock().await;
     conv.clear();
+    for lane in stream_lanes::LANE_IDS {
+        state.lanes.clear_lane(lane).await;
+    }
     tools::reset_think_counter();
     state.interrupt.store(false, std::sync::atomic::Ordering::Relaxed);
+    state.send_busy.store(false, std::sync::atomic::Ordering::Relaxed);
     "Conversation cleared"
 }
 
@@ -168,8 +1559,51 @@ async fn steer(State(state): State<AppState>, Json(body): Json<serde_json::Value
     Json(serde_json::json!({"message": format!("Steering queued: {}", msg)}))
 }
 
-async fn monitor() -> Json<serde_json::Value> {
-    Json(hardware::cluster_summary().await)
+pub(crate) async fn collect_node_gpus(state: &AppState) -> Vec<(String, serde_json::Value)> {
+    let registry = state.node_registry.lock().await;
+    registry
+        .values()
+        .filter_map(|n| {
+            let hb_gpus = n
+                .last_heartbeat
+                .as_ref()
+                .and_then(|hb| hb.all_gpus.as_array())
+                .filter(|arr| !arr.is_empty())
+                .map(|arr| serde_json::Value::Array(arr.clone()));
+
+            let hw_gpus = n
+                .hardware
+                .get("all_gpus")
+                .and_then(|v| v.as_array())
+                .filter(|arr| !arr.is_empty())
+                .map(|arr| serde_json::Value::Array(arr.clone()));
+
+            hb_gpus
+                .or(hw_gpus)
+                .map(|gpus| (n.node_id.clone(), gpus))
+        })
+        .collect()
+}
+
+async fn monitor(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let node_gpus = collect_node_gpus(&state).await;
+    Json(hardware::cluster_summary(node_gpus).await)
+}
+
+/// GET /streams — catalog for the main-page live output dropdown.
+async fn list_streams() -> Json<serde_json::Value> {
+    Json(stream_sources::list_streams_json())
+}
+
+/// GET /streams/{id} — SSE tail of logs, GPU text, journal, or forge activity.
+async fn stream_by_id(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, (axum::http::StatusCode, String)> {
+    stream_sources::stream_sse(&id, state)
+        .await
+        .map(IntoResponse::into_response)
+        .map_err(|e| (axum::http::StatusCode::NOT_FOUND, e.to_string()))
 }
 
 // --- Preset API ---
@@ -534,6 +1968,15 @@ async fn route_code_request(
     }
 
     info!("CODING pipeline: task='{}'", &task[..task.len().min(120)]);
+    touch_fleet_activity();
+    orchestration::pamp_shadow_call(&state, &task, "execute").await;
+
+    let orch = orchestration::load_orchestration();
+    if orch.tools_backend == "n8n" && !orch.pamp_shadow {
+        if let Some(pamp) = orchestration::execute_pamp_code_pipeline(&state, &task).await {
+            return Json(pamp);
+        }
+    }
 
     // Stage 1: coder writes
     let coder_resp = call_coder_for_code(&state, &task).await;
@@ -604,24 +2047,32 @@ async fn call_endpoint(url: &str, prompt: &str, max_length: u32, temperature: f3
 }
 
 async fn corrector_connect() -> Json<serde_json::Value> {
-    // Update tuning config to re-enable corrector
-    let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
-    if let Ok(content) = std::fs::read_to_string(config_path) {
-        let updated = content.replace("skip_corrector = true", "skip_corrector = false");
-        let _ = std::fs::write(config_path, updated);
-    }
+    let _ = loop_tuning::save_partial(&serde_json::json!({ "skip_corrector": false }));
     info!("Corrector CONNECTED");
     Json(serde_json::json!({"message": "Corrector connected. Will be used on next request."}))
 }
 
 async fn corrector_disconnect() -> Json<serde_json::Value> {
-    let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
-    if let Ok(content) = std::fs::read_to_string(config_path) {
-        let updated = content.replace("skip_corrector = false", "skip_corrector = true");
-        let _ = std::fs::write(config_path, updated);
-    }
+    let _ = loop_tuning::save_partial(&serde_json::json!({ "skip_corrector": true }));
     info!("Corrector DISCONNECTED");
-    Json(serde_json::json!({"message": "Corrector disconnected. Qwen flies solo."}))
+    Json(serde_json::json!({"message": "Corrector disconnected. Think-only nudges disabled."}))
+}
+
+/// GET /cluster/loop-tuning — loop engine + corrector thresholds for cluster panel
+async fn get_loop_tuning() -> Json<serde_json::Value> {
+    let t = loop_tuning::load();
+    Json(serde_json::to_value(t).unwrap_or(serde_json::json!({})))
+}
+
+/// POST /cluster/loop-tuning — partial update of `[tuning]` corrector fields
+async fn save_loop_tuning(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    match loop_tuning::save_partial(&body) {
+        Ok(t) => Json(serde_json::json!({
+            "message": "Loop tuning saved",
+            "tuning": t,
+        })),
+        Err(e) => Json(serde_json::json!({"error": e})),
+    }
 }
 
 /// Send a task to any GPU endpoint in agent mode (with tools).
@@ -685,6 +2136,7 @@ async fn run_agent_task(Json(body): Json<serde_json::Value>) -> Json<serde_json:
         safe_mode: body.get("safe_mode").and_then(|v| v.as_bool()).unwrap_or(false),
         chat_template: template,
         engine,
+        fleet_delegate_depth: 0,
     };
 
     info!("Agent task dispatched to {}: {}...", endpoint, &message[..message.len().min(80)]);
@@ -800,6 +2252,14 @@ async fn save_cluster_config(Json(body): Json<serde_json::Value>) -> Json<serde_
         Ok(_) => Json(serde_json::json!({"message": "Config saved successfully."})),
         Err(e) => Json(serde_json::json!({"error": format!("Failed to write config: {}", e)})),
     }
+}
+
+async fn cluster_models_loaded() -> Json<serde_json::Value> {
+    Json(model_command::list_loaded_endpoints().await)
+}
+
+async fn cluster_command(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    Json(model_command::send_command(body).await)
 }
 
 async fn list_available_models() -> Json<serde_json::Value> {
@@ -1444,6 +2904,9 @@ async fn get_routing_status() -> Json<serde_json::Value> {
                 "chat_agent": p.chat_agent,
                 "coder_endpoint": p.coder_endpoint,
                 "workers_start": p.workers_start,
+                "fleet_node": p.fleet_node,
+                "fleet_action": p.fleet_action,
+                "baseline_id": p.baseline_id,
             })
         })
         .collect();
@@ -1462,7 +2925,7 @@ async fn get_routing_status() -> Json<serde_json::Value> {
         })
         .collect();
     let gpus: Vec<serde_json::Value> = {
-        let content = std::fs::read_to_string(routing::CFG_PATH).unwrap_or_default();
+        let content = std::fs::read_to_string(routing::cfg_path()).unwrap_or_default();
         let table: toml::Table = content.parse().unwrap_or_default();
         table
             .get("gpu")
@@ -1489,6 +2952,55 @@ async fn get_routing_status() -> Json<serde_json::Value> {
         "gpus": gpus,
         "nicknames": cluster.nicknames,
         "workers": cluster.workers,
+    }))
+}
+
+/// GET /cluster/metrics/scorecard — model scorecard + routing-relevant KPI snapshot.
+async fn get_scorecard_metrics() -> Json<serde_json::Value> {
+    let card = model_scorecard::load();
+    let impact = card.tool_impact_summary();
+    let cluster = routing::load_cluster_routing();
+
+    let mut models: Vec<String> = cluster.agents.iter().map(|a| a.model.clone()).collect();
+    models.sort();
+    models.dedup();
+
+    let tasks = [
+        model_scorecard::TaskType::RustCode,
+        model_scorecard::TaskType::Analysis,
+        model_scorecard::TaskType::Research,
+        model_scorecard::TaskType::JsonRepair,
+    ];
+
+    let picks: Vec<serde_json::Value> = tasks
+        .iter()
+        .map(|task| {
+            let (best, conf) = card.pick_best(&models, *task);
+            serde_json::json!({
+                "task": task.name(),
+                "best_model": best,
+                "confidence": conf,
+                "swap_recommendations": card.swap_recommendations(*task),
+            })
+        })
+        .collect();
+
+    Json(serde_json::json!({
+        "history_count": card.history.len(),
+        "cell_count": card.cells.len(),
+        "tool_impact": {
+            "corrector_engaged": impact.corrector_engaged,
+            "corrector_helped": impact.corrector_helped,
+            "corrector_uplift": impact.corrector_uplift(),
+            "vector_engaged": impact.vector_engaged,
+            "vector_helped": impact.vector_helped,
+            "vector_uplift": impact.vector_uplift(),
+            "translator_engaged": impact.translator_engaged,
+            "translator_helped": impact.translator_helped,
+            "translator_uplift": impact.translator_uplift(),
+        },
+        "task_picks": picks,
+        "scorecard": card,
     }))
 }
 
@@ -1558,11 +3070,258 @@ async fn apply_routing_preset(
         }
     }
 
+    let fleet_result = fleet_dispatch_for_preset(&preset).await;
+
+    let ready = failed.is_empty();
+    let completed_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
     Json(serde_json::json!({
-        "message": format!("Applied routing preset '{}'", preset.name),
+        "message": if ready {
+            format!("Routing preset '{}' applied and ready", preset.name)
+        } else {
+            format!("Routing preset '{}' applied with {} worker issue(s)", preset.name, failed.len())
+        },
         "preset": preset.id,
+        "ready": ready,
+        "completed_at": completed_at,
         "started": started,
         "failed": failed,
+        "fleet_dispatch": fleet_result,
+    }))
+}
+
+async fn fleet_dispatch_for_preset(preset: &routing::RoutingPreset) -> serde_json::Value {
+    if preset.fleet_node.is_empty() || preset.fleet_action.is_empty() {
+        return serde_json::json!({"skipped": true});
+    }
+    orchestration::dispatch_fleet(
+        &preset.fleet_node,
+        &preset.fleet_action,
+        serde_json::json!({
+            "baseline_id": preset.baseline_id,
+            "routing_preset": preset.id,
+        }),
+    )
+    .await
+}
+
+/// GET /cluster/orchestration — n8n + PAMP + fleet wiring
+async fn get_orchestration_config() -> Json<serde_json::Value> {
+    let orch = orchestration::orchestration_json();
+    let n8n_up = orchestration::n8n_reachable(
+        orch.get("n8n_fleet_url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("http://127.0.0.1:5678/webhook/fleet-ops"),
+    )
+    .await;
+    Json(serde_json::json!({
+        "orchestration": orch,
+        "n8n_reachable": n8n_up,
+    }))
+}
+
+/// POST /cluster/orchestration — save orchestration block
+async fn save_orchestration_config(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    match orchestration::save_orchestration(&body) {
+        Ok(()) => Json(serde_json::json!({
+            "message": "Orchestration saved",
+            "orchestration": orchestration::orchestration_json(),
+        })),
+        Err(e) => Json(serde_json::json!({"error": e})),
+    }
+}
+
+/// POST /cluster/fleet/dispatch { "node": "cesarops2", "action": "sync_llm_endpoints" }
+async fn fleet_dispatch_route(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let node = body.get("node").and_then(|v| v.as_str()).unwrap_or("cesarops2");
+    let action = body
+        .get("action")
+        .and_then(|v| v.as_str())
+        .unwrap_or("sync_llm_endpoints");
+    let extra = body
+        .get("extra")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+    Json(orchestration::dispatch_fleet(node, action, extra).await)
+}
+
+/// POST /cluster/test/dispatch — golden + PAMP tests via local agents
+async fn dispatch_test_suite(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+    let suite = body
+        .get("suite")
+        .and_then(|v| v.as_str())
+        .unwrap_or("golden");
+    let baseline = body
+        .get("baseline_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("interactive_fast");
+    let thinker = body
+        .get("endpoint")
+        .and_then(|v| v.as_str())
+        .unwrap_or("http://10.0.0.201:5200");
+
+    let labels: Vec<&str> = match suite {
+        "pamp" => vec!["PAMP"],
+        "cake" => vec!["CAKE"],
+        "b6" => vec!["B6"],
+        "B5" => vec!["B5"],
+        "B3" => vec!["B3"],
+        "B7" => vec!["B7"],
+        "all" => vec!["B5", "B3", "B7", "PAMP", "CAKE", "B6"],
+        _ => vec!["B5", "B3", "B7"],
+    };
+
+    let custom_tasks: Vec<(String, String, String)> = body
+        .get("tasks")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|item| {
+                    let prompt = item.get("prompt").and_then(|v| v.as_str())?.trim().to_string();
+                    if prompt.is_empty() {
+                        return None;
+                    }
+                    let label = item
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("CUSTOM")
+                        .trim()
+                        .to_string();
+                    let base = item
+                        .get("baseline_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(baseline)
+                        .trim()
+                        .to_string();
+                    Some((label, base, prompt))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let use_label_filter = custom_tasks.is_empty();
+    let task_rows: Vec<(String, String, String)> = if use_label_filter {
+        orchestration::golden_test_tasks()
+            .into_iter()
+            .map(|(l, b, p)| (l.to_string(), b.to_string(), p.to_string()))
+            .collect()
+    } else {
+        custom_tasks
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(600))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let mut results = Vec::new();
+    for (label, bl, prompt) in task_rows {
+        if use_label_filter && !labels.contains(&label.as_str()) {
+            continue;
+        }
+        let use_baseline = if baseline.is_empty() {
+            bl.as_str()
+        } else {
+            baseline
+        };
+        let start = std::time::Instant::now();
+
+        if suite == "pamp" || label == "PAMP" {
+            let plan = orchestration::predict_expert_plan(&prompt, "chat", use_baseline, 0, None);
+            let orch = orchestration::load_orchestration();
+            let pamp_body = serde_json::json!({
+                "message": prompt,
+                "mode": "chat",
+                "baseline_id": use_baseline,
+                "shadow": orch.pamp_shadow,
+                "expert_plan": plan,
+            });
+            let pamp_resp = orchestration::post_n8n_pamp(&client, &orch.n8n_pamp_url, &pamp_body).await;
+            results.push(serde_json::json!({
+                "label": label,
+                "baseline": use_baseline,
+                "ms": start.elapsed().as_millis(),
+                "pamp": pamp_resp,
+            }));
+            continue;
+        }
+
+        // Keep dispatch suites lightweight and bounded: probe one or more LLM
+        // endpoints directly with a small token budget and short timeout.
+        let prompt_brief = if prompt.len() > 280 {
+            &prompt[..280]
+        } else {
+            &prompt
+        };
+        let probe_prompt = format!(
+            "[baseline={}] {}\n\nRespond briefly in <= 3 bullet points.",
+            use_baseline, prompt_brief
+        );
+
+        let fallback_thinker = routing::load_routing_state().thinker_endpoint;
+        let fallback_reviewer = routing::resolve_reviewer_endpoint().await;
+
+        let mut probe_urls: Vec<String> = Vec::new();
+        probe_urls.push(thinker.to_string());
+        if fallback_thinker != thinker {
+            probe_urls.push(fallback_thinker);
+        }
+        if !probe_urls.iter().any(|u| u == &fallback_reviewer) {
+            probe_urls.push(fallback_reviewer);
+        }
+
+        let mut last_error = "probe_failed".to_string();
+        let mut chosen = thinker.to_string();
+        let mut response_text: Option<String> = None;
+        for probe_url in probe_urls {
+            chosen = probe_url.clone();
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(25),
+                call_endpoint(&probe_url, &probe_prompt, 96, 0.15),
+            )
+            .await
+            {
+                Ok(Ok(text)) if !text.trim().is_empty() => {
+                    response_text = Some(text);
+                    break;
+                }
+                Ok(Ok(_)) => {
+                    last_error = "empty_response".to_string();
+                }
+                Ok(Err(e)) => {
+                    last_error = e;
+                }
+                Err(_) => {
+                    last_error = "probe_timeout_25s".to_string();
+                }
+            }
+        }
+
+        let agent_json: serde_json::Value = if let Some(text) = response_text {
+            serde_json::json!({
+                "response": text,
+                "endpoint_used": chosen,
+                "mode": "direct_probe"
+            })
+        } else {
+            serde_json::json!({"error": last_error, "endpoint_used": chosen, "mode": "direct_probe"})
+        };
+        results.push(serde_json::json!({
+            "label": label,
+            "baseline": use_baseline,
+            "endpoint": thinker,
+            "ms": start.elapsed().as_millis(),
+            "agent": agent_json,
+        }));
+    }
+
+    Json(serde_json::json!({
+        "suite": suite,
+        "baseline_id": baseline,
+        "results": results,
     }))
 }
 
@@ -1734,36 +3493,100 @@ async fn validate_endpoint(
     Json(serde_json::to_value(&result).unwrap_or_default())
 }
 
-/// GET /validate/ping — quick liveness check of both main engine and P1000.
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Bench tok/s at most every N seconds so HUD polling does not keep GPUs hot.
+const PING_BENCH_INTERVAL_SECS: u64 = 45;
+static PING_BENCH_CACHE: std::sync::Mutex<Option<(u64, serde_json::Value)>> =
+    std::sync::Mutex::new(None);
+
+async fn llm_role_ping(url: &str, role: &str, bench: bool) -> serde_json::Value {
+    let mut slot = routing::endpoint_display(url, role);
+    let online = validator::ping(url).await;
+    slot["online"] = serde_json::json!(online);
+    if online && bench {
+        let tps = validator::benchmark_tps(url, 32).await;
+        slot["tps"] = serde_json::json!(tps);
+    } else {
+        slot["tps"] = serde_json::Value::Null;
+    }
+    slot
+}
+
+/// GET /validate/ping — dynamic coder/reviewer/thinker/draft labels + optional bench.
 async fn validate_ping(State(state): State<AppState>) -> Json<serde_json::Value> {
+    state.refresh_routing().await;
     let cfg = state.config.read().await;
-    let main_up = validator::ping(&cfg.coder_url).await;
-    let p1000_up = validator::ping(&cfg.validator_url).await;
+    let coder_url = cfg.coder_url.clone();
+    let thinker_url = cfg.thinker_url.clone();
+    let draft_url = routing::resolve_draft_url_sync();
+    let reviewer_url = routing::resolve_reviewer_endpoint().await;
+    drop(cfg);
 
-    let main_tps = if main_up {
-        validator::benchmark_tps(&cfg.coder_url, 5).await
-    } else {
-        None
-    };
-    let p1000_tps = if p1000_up {
-        validator::benchmark_tps(&cfg.validator_url, 5).await
-    } else {
-        None
+    let now = unix_now();
+    let do_bench = {
+        let cache = PING_BENCH_CACHE.lock().unwrap();
+        cache
+            .as_ref()
+            .map(|(t, _)| now.saturating_sub(*t) >= PING_BENCH_INTERVAL_SECS)
+            .unwrap_or(true)
     };
 
-    Json(serde_json::json!({
-        "main_engine": {
-            "url": cfg.coder_url,
-            "online": main_up,
-            "tps": main_tps,
+    let coder = llm_role_ping(&coder_url, "coder", do_bench).await;
+    let reviewer = llm_role_ping(&reviewer_url, "reviewer", do_bench).await;
+    let thinker = llm_role_ping(&thinker_url, "thinker", false).await;
+    let draft = llm_role_ping(&draft_url, "draft", false).await;
+
+    let payload = serde_json::json!({
+        "roles": {
+            "coder": coder,
+            "reviewer": reviewer,
+            "thinker": thinker,
+            "draft": draft,
         },
-        "p1000_validator": {
-            "url": cfg.validator_url,
-            "online": p1000_up,
-            "tps": p1000_tps,
+        "bench_interval_secs": PING_BENCH_INTERVAL_SECS,
+        "bench_ran": do_bench,
+        "main_engine": coder,
+        "p1000_validator": reviewer,
+        "status": if coder.get("online").and_then(|v| v.as_bool()).unwrap_or(false) {
+            "ok"
+        } else {
+            "main_engine_down"
         },
-        "status": if main_up { "ok" } else { "main_engine_down" },
-    }))
+    });
+
+    if do_bench {
+        if let Ok(mut cache) = PING_BENCH_CACHE.lock() {
+            *cache = Some((now, payload.clone()));
+        }
+    } else if let Ok(cache) = PING_BENCH_CACHE.lock() {
+        if let Some((t, cached)) = cache.as_ref() {
+            if now.saturating_sub(*t) < PING_BENCH_INTERVAL_SECS {
+                let mut merged = cached.clone();
+                if let Some(roles) = merged.get_mut("roles").and_then(|r| r.as_object_mut()) {
+                    for (key, fresh) in [("coder", &coder), ("reviewer", &reviewer)] {
+                        if let Some(slot) = roles.get_mut(key) {
+                            slot["online"] = fresh.get("online").cloned().unwrap_or(serde_json::Value::Null);
+                        }
+                    }
+                    if let Some(t) = roles.get_mut("thinker") {
+                        t["online"] = thinker.get("online").cloned().unwrap_or(serde_json::Value::Null);
+                    }
+                    if let Some(d) = roles.get_mut("draft") {
+                        d["online"] = draft.get("online").cloned().unwrap_or(serde_json::Value::Null);
+                    }
+                }
+                return Json(merged);
+            }
+        }
+    }
+
+    Json(payload)
 }
 
 // ── IDE Backend Handlers ─────────────────────────────────────────────────────
@@ -1771,6 +3594,185 @@ async fn validate_ping(State(state): State<AppState>) -> Json<serde_json::Value>
 /// GET /ide — serve the IDE HTML page (will be replaced by Gemma's output)
 async fn ide_page() -> Html<&'static str> {
     Html(include_str!("ide.html"))
+}
+
+/// GET /ide/llm-endpoints — LLM workers for IDE chat dropdown (not DII node registry).
+async fn ide_llm_endpoints() -> Json<serde_json::Value> {
+    let config_path = "/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml";
+    let content = std::fs::read_to_string(config_path).unwrap_or_default();
+    let table: toml::Table = content.parse().unwrap_or_default();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let mut endpoints: Vec<serde_json::Value> = Vec::new();
+    let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    async fn push_llm_endpoint(
+        client: &reqwest::Client,
+        endpoints: &mut Vec<serde_json::Value>,
+        seen: &mut std::collections::HashSet<String>,
+        name: &str,
+        url: &str,
+        engine: &str,
+        port: i64,
+        gpu: i64,
+    ) {
+        let url = url.trim_end_matches('/');
+        if url.is_empty() || !seen.insert(url.to_string()) {
+            return;
+        }
+        let online = client
+            .get(format!("{}/v1/models", url))
+            .send()
+            .await
+            .map(|r| r.status().is_success())
+            .unwrap_or(false);
+        endpoints.push(serde_json::json!({
+            "name": name,
+            "url": url,
+            "port": port,
+            "gpu": gpu,
+            "engine": engine,
+            "online": online,
+        }));
+    }
+    if let Some(workers) = table.get("worker").and_then(|v| v.as_array()) {
+        for w in workers {
+            let enabled = w.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true);
+            if !enabled {
+                continue;
+            }
+            let name = w.get("name").and_then(|v| v.as_str()).unwrap_or("worker");
+            let port = w.get("port").and_then(|v| v.as_integer()).unwrap_or(0);
+            let gpu = w.get("gpu").and_then(|v| v.as_integer()).unwrap_or(0);
+            let engine = w
+                .get("engine")
+                .and_then(|v| v.as_str())
+                .unwrap_or("llama-server");
+            if port <= 0 {
+                continue;
+            }
+            let url = format!("http://127.0.0.1:{}", port);
+            push_llm_endpoint(
+                &client,
+                &mut endpoints,
+                &mut seen_urls,
+                &format!("{} (P100 #{}, :{}, {})", name, gpu, port, engine),
+                &url,
+                engine,
+                port,
+                gpu,
+            )
+            .await;
+        }
+    }
+
+    // [[agent]] — fleet routing targets (Gemma :5001, Cake :8081, …)
+    if let Some(agents) = table.get("agent").and_then(|v| v.as_array()) {
+        for a in agents {
+            let t = match a.as_table() {
+                Some(t) => t,
+                None => continue,
+            };
+            let name = t.get("name").and_then(|v| v.as_str()).unwrap_or("agent");
+            let endpoint = t.get("endpoint").and_then(|v| v.as_str()).unwrap_or("");
+            let role = t.get("role").and_then(|v| v.as_str()).unwrap_or("");
+            let model = t.get("model").and_then(|v| v.as_str()).unwrap_or("");
+            if !endpoint.starts_with("http") {
+                continue;
+            }
+            let label = format!("{} — {} ({})", name, role, model);
+            push_llm_endpoint(&client, &mut endpoints, &mut seen_urls, &label, endpoint, "agent", 0, 0)
+                .await;
+        }
+    }
+
+    // [roles] coder / idle(cake)
+    if let Some(roles) = table.get("roles").and_then(|v| v.as_table()) {
+        for (role, url_v) in roles {
+            let url = url_v.as_str().unwrap_or("");
+            if url.is_empty() || !url.starts_with("http") {
+                continue;
+            }
+            push_llm_endpoint(
+                &client,
+                &mut endpoints,
+                &mut seen_urls,
+                &format!("role:{}", role),
+                url,
+                "role",
+                0,
+                0,
+            )
+            .await;
+        }
+    }
+
+    // [endpoint_pool.*] cake + mtp + intake
+    if let Some(pools) = table.get("endpoint_pool").and_then(|v| v.as_table()) {
+        for (pool_name, pool) in pools {
+            let urls = pool
+                .get("urls")
+                .and_then(|v| v.as_array())
+                .into_iter()
+                .flatten();
+            for u in urls {
+                let url = u.as_str().unwrap_or("");
+                if url.is_empty() {
+                    continue;
+                }
+                push_llm_endpoint(
+                    &client,
+                    &mut endpoints,
+                    &mut seen_urls,
+                    &format!("pool:{}", pool_name),
+                    url,
+                    pool_name,
+                    0,
+                    0,
+                )
+                .await;
+            }
+        }
+    }
+
+  // Augment LLM from cluster_config known_nodes ports
+    if let Some(nodes) = table.get("known_nodes").and_then(|v| v.as_array()) {
+        for node in nodes {
+            let node_name = node.get("name").and_then(|v| v.as_str()).unwrap_or("augment");
+            let ip = node
+                .get("ip")
+                .and_then(|v| v.as_str())
+                .unwrap_or("10.0.0.201");
+            if let Some(ports) = node.get("ports").and_then(|v| v.as_array()) {
+                for p in ports {
+                    let port = p.as_integer().unwrap_or(0);
+                    // LLM ports: 5001–5011, Cake API 8081, MCP 8090
+                    let is_llm_port =
+                        (5000..=6000).contains(&port) || port == 8081 || port == 8090;
+                    if !is_llm_port {
+                        continue;
+                    }
+                    let url = format!("http://{}:{}", ip, port);
+                    push_llm_endpoint(
+                        &client,
+                        &mut endpoints,
+                        &mut seen_urls,
+                        &format!("{} :{}", node_name, port),
+                        &url,
+                        "known_node",
+                        port,
+                        0,
+                    )
+                    .await;
+                }
+            }
+        }
+    }
+
+    Json(serde_json::json!({ "endpoints": endpoints }))
 }
 
 /// GET /ide/file?path=/path/to/file — read a file's contents
@@ -2171,6 +4173,338 @@ async fn get_mission(
     }
 }
 
+/// GET /gpu/stream — live NVML metrics (nvtop-class data) for Forge HUD, ~2s cadence.
+async fn gpu_stream(
+    State(state): State<AppState>,
+) -> axum::response::sse::Sse<
+    impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+> {
+    use axum::response::sse::{Event, KeepAlive, Sse};
+    use futures_util::stream;
+    use std::convert::Infallible;
+
+    let stream = stream::unfold(0u64, move |n| {
+        let state = state.clone();
+        async move {
+            let node_gpus = collect_node_gpus(&state).await;
+            let mon = hardware::cluster_summary(node_gpus).await;
+            let payload = serde_json::json!({
+                "tick": n,
+                "monitor": mon,
+            });
+            tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+            Some((
+                Ok::<_, Infallible>(Event::default().event("gpu").data(payload.to_string())),
+                n + 1,
+            ))
+        }
+    });
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+/// GET /hub/stream — SSE heartbeat: GPU temps, fleet mode, cached tok/s.
+async fn hub_stream(
+    State(state): State<AppState>,
+) -> axum::response::sse::Sse<
+    impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+> {
+    use axum::response::sse::{Event, KeepAlive, Sse};
+    use futures_util::stream;
+    use std::convert::Infallible;
+
+    let stream = stream::unfold(0u64, move |n| {
+        let state = state.clone();
+        async move {
+            let node_gpus = collect_node_gpus(&state).await;
+            let mon = hardware::cluster_summary(node_gpus).await;
+            let mode = std::fs::read_to_string("/home/cesarops/.cache/cesarops/fleet_mode")
+                .unwrap_or_else(|_| "normal".into());
+            let payload = serde_json::json!({
+                "tick": n,
+                "fleet_mode": mode.trim(),
+                "monitor": mon,
+                "orch": orchestration::load_orchestration().tools_backend,
+            });
+            tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+            Some((
+                Ok::<_, Infallible>(Event::default().data(payload.to_string())),
+                n + 1,
+            ))
+        }
+    });
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+/// POST /fleet/wake — restore normal mode via n8n fleet-ops (NFS queue fallback).
+async fn fleet_wake() -> Json<serde_json::Value> {
+    let n8n = orchestration::dispatch_fleet("t440", "fleet_wake", serde_json::json!({})).await;
+    let script = "/codebase/repos/wreckhunter2000-1/scripts/cesarops-fleet-mode.sh";
+    let local = std::process::Command::new("bash")
+        .arg(script)
+        .arg("wake")
+        .output();
+    match local {
+        Ok(o) => Json(serde_json::json!({
+            "status": "ok",
+            "n8n": n8n,
+            "stdout": String::from_utf8_lossy(&o.stdout),
+            "stderr": String::from_utf8_lossy(&o.stderr),
+        })),
+        Err(e) => Json(serde_json::json!({"status": "error", "error": e.to_string(), "n8n": n8n})),
+    }
+}
+
+/// Probe configured non-local workers and return (remote_total, remote_online, remote_names).
+async fn remote_worker_probe_snapshot() -> (usize, usize, Vec<String>) {
+    let cfg = cluster_store::full_panel_config();
+    let workers = cfg
+        .get("workers")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let mut remote_total = 0usize;
+    let mut remote_online = 0usize;
+    let mut remote_names: Vec<String> = Vec::new();
+
+    for w in workers {
+        let node_ip = w.get("node_ip").and_then(|v| v.as_str()).unwrap_or("127.0.0.1");
+        if node_ip == "127.0.0.1" || node_ip == "localhost" {
+            continue;
+        }
+        remote_total += 1;
+        let name = w
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("remote")
+            .to_string();
+        remote_names.push(name.clone());
+
+        let port = w.get("port").and_then(|v| v.as_u64()).unwrap_or(0);
+        if port == 0 {
+            continue;
+        }
+        let url = format!("http://{}:{}", node_ip, port);
+        let probed = timeout(Duration::from_secs(4), cluster_store::probe_endpoint(&url)).await;
+        if let Ok(v) = probed {
+            if v.get("online").and_then(|b| b.as_bool()).unwrap_or(false) {
+                remote_online += 1;
+            }
+        }
+    }
+
+    (remote_total, remote_online, remote_names)
+}
+
+fn cesarops2_candidate_hosts() -> Vec<String> {
+    let mut hosts: Vec<String> = Vec::new();
+    let cfg = cluster_store::read_config();
+    if let Some(nodes) = cfg.get("known_nodes").and_then(|v| v.as_array()) {
+        for n in nodes {
+            let Some(t) = n.as_table() else { continue };
+            let name = t
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_lowercase();
+            if !name.contains("cesarops2") {
+                continue;
+            }
+            if let Some(ip) = t.get("ip").and_then(|v| v.as_str()) {
+                hosts.push(ip.to_string());
+            }
+            if let Some(ip) = t.get("alt_ip").and_then(|v| v.as_str()) {
+                hosts.push(ip.to_string());
+            }
+        }
+    }
+    if hosts.is_empty() {
+        hosts.push("10.0.0.201".to_string());
+        hosts.push("100.72.129.86".to_string());
+    }
+    let mut seen = std::collections::HashSet::new();
+    hosts
+        .into_iter()
+        .filter(|h| seen.insert(h.clone()))
+        .collect()
+}
+
+async fn direct_cesarops2_recover_via_ssh() -> serde_json::Value {
+    let hosts = cesarops2_candidate_hosts();
+    let remote_cmd = r#"
+set -e
+REPO=""
+for c in /mnt/t440/codebase/repos/wreckhunter2000-1 /codebase/repos/wreckhunter2000-1 /codebase/wreckhunter2000-1; do
+  if [ -f "$c/scripts/fleet-sync-cesarops2-llm.sh" ]; then REPO="$c"; break; fi
+done
+if [ -z "$REPO" ]; then
+  echo "repo_not_found"
+  exit 2
+fi
+
+if bash "$REPO/scripts/fleet-sync-cesarops2-llm.sh" >/tmp/forge_sync_llm.log 2>&1; then
+  echo "sync_ok"
+  tail -n 12 /tmp/forge_sync_llm.log || true
+  exit 0
+fi
+
+echo "sync_failed_starting_lab"
+if [ -f "$REPO/scripts/cesarops2_research_lab.sh" ]; then
+  bash "$REPO/scripts/cesarops2_research_lab.sh" start >/tmp/forge_lab_start.log 2>&1 || true
+  bash "$REPO/scripts/fleet-sync-cesarops2-llm.sh" || true
+fi
+"#;
+
+    for host in hosts {
+        let ssh_target = format!("cesarops@{}", host);
+        let run = timeout(
+            Duration::from_secs(240),
+            tokio::process::Command::new("ssh")
+                .args([
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-o",
+                    "ConnectTimeout=6",
+                ])
+                .arg(&ssh_target)
+                .arg("bash")
+                .arg("-lc")
+                .arg(remote_cmd)
+                .output(),
+        )
+        .await;
+
+        match run {
+            Ok(Ok(out)) if out.status.success() => {
+                return serde_json::json!({
+                    "ok": true,
+                    "host": host,
+                    "stdout": String::from_utf8_lossy(&out.stdout),
+                });
+            }
+            Ok(Ok(out)) => {
+                warn!(
+                    "autoheal ssh recovery failed on {}: {}",
+                    host,
+                    String::from_utf8_lossy(&out.stderr)
+                );
+            }
+            Ok(Err(e)) => {
+                warn!("autoheal ssh spawn failed on {}: {}", host, e);
+            }
+            Err(_) => {
+                warn!("autoheal ssh recovery timed out on {}", host);
+            }
+        }
+    }
+
+    serde_json::json!({"ok": false, "error": "ssh_recovery_failed_all_hosts"})
+}
+
+/// Self-heal loop: if all configured remote workers are down, trigger cesarops2 fleet sync.
+fn spawn_remote_autoheal_loop(state: AppState) {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(45));
+        let mut last_dispatch_at: u64 = 0;
+        // First pass immediately on boot so outages are not ignored for ~45s.
+        let (remote_total, remote_online, names) = remote_worker_probe_snapshot().await;
+        if remote_total > 0 && remote_online == 0 {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            let reg_hint = {
+                let registry = state.node_registry.lock().await;
+                let mut last_seen = 0u64;
+                for n in registry.values() {
+                    if n.node_id.contains("cesarops2") {
+                        last_seen = last_seen.max(n.last_seen);
+                    }
+                }
+                if last_seen == 0 {
+                    "no registry heartbeat".to_string()
+                } else {
+                    format!("last heartbeat {}s ago", now.saturating_sub(last_seen))
+                }
+            };
+            let resp = orchestration::dispatch_fleet(
+                "cesarops2",
+                "sync_llm_endpoints",
+                serde_json::json!({
+                    "source": "forge_autoheal",
+                    "reason": "startup_all_remote_workers_offline",
+                    "workers": names,
+                    "registry_hint": reg_hint,
+                }),
+            )
+            .await;
+            info!("autoheal startup dispatch response: {}", resp);
+            let ssh_recover = direct_cesarops2_recover_via_ssh().await;
+            info!("autoheal startup ssh recovery response: {}", ssh_recover);
+            last_dispatch_at = now;
+        }
+
+        loop {
+            ticker.tick().await;
+
+            let (remote_total, remote_online, names) = remote_worker_probe_snapshot().await;
+            if remote_total == 0 {
+                continue;
+            }
+            if remote_online > 0 {
+                continue;
+            }
+
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            // Cooldown to avoid flooding n8n/NFS with repeated recovery jobs.
+            if now.saturating_sub(last_dispatch_at) < 300 {
+                continue;
+            }
+
+            let reg_hint = {
+                let registry = state.node_registry.lock().await;
+                let mut last_seen = 0u64;
+                for n in registry.values() {
+                    if n.node_id.contains("cesarops2") {
+                        last_seen = last_seen.max(n.last_seen);
+                    }
+                }
+                if last_seen == 0 {
+                    "no registry heartbeat".to_string()
+                } else {
+                    format!("last heartbeat {}s ago", now.saturating_sub(last_seen))
+                }
+            };
+
+            warn!(
+                "autoheal: remote workers offline ({:?}); dispatching cesarops2 sync ({})",
+                names,
+                reg_hint
+            );
+            let resp = orchestration::dispatch_fleet(
+                "cesarops2",
+                "sync_llm_endpoints",
+                serde_json::json!({
+                    "source": "forge_autoheal",
+                    "reason": "all_remote_workers_offline",
+                    "workers": names,
+                    "registry_hint": reg_hint,
+                }),
+            )
+            .await;
+            info!("autoheal dispatch response: {}", resp);
+            let ssh_recover = direct_cesarops2_recover_via_ssh().await;
+            info!("autoheal ssh recovery response: {}", ssh_recover);
+            last_dispatch_at = now;
+        }
+    });
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -2180,6 +4514,7 @@ async fn main() {
     let resolved = routing::resolve_endpoints();
     let config = ForgeConfig {
         coder_url: resolved.coder_url.clone(),
+        reviewer_url: resolved.reviewer_url.clone(),
         thinker_url: resolved.thinker_url.clone(),
         corrector_url: resolved.corrector_url.clone(),
         nautivecs_url: "http://127.0.0.1:5003/query".to_string(),
@@ -2189,22 +4524,40 @@ async fn main() {
         chat_agent: resolved.chat_agent.clone(),
         chat_template: resolved.chat_template.clone(),
         chat_model: resolved.chat_model.clone(),
+        parallel_dual_grade: resolved.parallel_dual_grade,
+        parallel_dual_coders: resolved.parallel_dual_coders,
+        parallel_dual_grade_rounds: resolved.parallel_dual_grade_rounds,
     };
 
     let state = AppState {
         conversation: Arc::new(Mutex::new(Vec::new())),
         config: Arc::new(RwLock::new(config)),
         interrupt: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        send_busy: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         steering: Arc::new(Mutex::new(Vec::new())),
         node_registry: Arc::new(Mutex::new(std::collections::HashMap::new())),
         missions: Arc::new(Mutex::new(Vec::new())),
+        stream_log: stream_sources::StreamLog::new(),
+        lanes: stream_lanes::LaneStore::new(),
+        tool_telemetry: Arc::new(Mutex::new(tool_telemetry::ToolTelemetry::default())),
+        spec_gate: Arc::new(Mutex::new(operator_spec::OperatorSpecGate::default())),
     };
+
+    // Keep remote nodes (e.g., cesarops2) self-healing without manual button clicks.
+    spawn_remote_autoheal_loop(state.clone());
 
     let app = Router::new()
         .route("/", get(index))
+        .route("/dash", get(dash_page))
+        .route("/dash/bench", get(dash_bench))
         .route("/cluster", get(cluster_panel))
+        .route("/api-docs", get(api_docs_page))
+        .route("/mcp-ui", get(mcp_ui_page))
+        .route("/assets/forge-hud.css", get(forge_hud_css))
+        .route("/assets/forge-hud.js", get(forge_hud_js))
         // ── IDE routes ───────────────────────────────────────────────────
         .route("/ide", get(ide_page))
+        .route("/ide/llm-endpoints", get(ide_llm_endpoints))
         .route("/ide/file", get(ide_read_file).post(ide_write_file))
         .route("/ide/tree", get(ide_file_tree))
         .route("/ide/exec", post(ide_exec))
@@ -2215,13 +4568,34 @@ async fn main() {
         .route("/webhook/missions", get(list_missions))
         .route("/webhook/missions/{id}", get(get_mission))
         .route("/health", get(health))
+        .route("/openapi.json", get(openapi_spec))
         .route("/send", post(send_message))
+        .route("/spec/draft", post(spec_draft))
+        .route("/spec/status", get(spec_status))
+        .route("/spec/approve", post(spec_approve))
+        .route("/spec/clear", post(spec_clear))
+        .route("/lanes", get(list_lanes))
+        .route("/lanes/activity", get(lanes_activity))
+        .route("/lanes/{lane_id}/conversation", get(lane_conversation))
+        .route("/forge/status", get(forge_status))
+        .route("/forge/tooling", get(forge_tooling))
+        .route("/forge/mcp-stack", get(forge_mcp_stack))
+        .route("/forge/mcp-stack/start", post(mcp_stack_start))
+        .route("/netdata/status", get(netdata_status))
+        .route("/netdata/embed/{*path}", get(netdata_embed))
+        .route("/lanes/{lane_id}/role", post(set_lane_role))
         .route("/clear", post(clear))
+        .route("/clear/lane", post(clear_lane))
         .route("/interrupt", post(interrupt))
         .route("/steer", post(steer))
         .route("/monitor", get(monitor))
+        .route("/streams", get(list_streams))
+        .route("/streams/{id}", get(stream_by_id))
+        .route("/gpu/stream", get(gpu_stream))
         .route("/cluster/config", get(get_cluster_config).post(save_cluster_config))
         .route("/cluster/models", get(list_available_models))
+        .route("/cluster/models/loaded", get(cluster_models_loaded))
+        .route("/cluster/command", post(cluster_command))
         .route("/cluster/preset/config", get(get_preset_config).post(save_preset_config))
         .route("/cluster/preset/activate", post(activate_preset))
         .route("/cluster/preset/launch", post(launch_preset))
@@ -2237,6 +4611,8 @@ async fn main() {
         .route("/cluster/corrector/disconnect", post(corrector_disconnect))
         .route("/validate", post(validate_endpoint))
         .route("/validate/ping", get(validate_ping))
+        .route("/hub/stream", get(hub_stream))
+        .route("/fleet/wake", post(fleet_wake))
         .route("/cluster/worker/{idx}/start", post(start_worker))
         .route("/cluster/worker/{idx}/stop", post(stop_worker))
         .route("/cluster/start-all", post(start_all_workers))
@@ -2251,16 +4627,34 @@ async fn main() {
         .route("/cluster/worker/{name}/set_injection", post(worker_set_injection))
         .route("/cluster/worker/{name}/set_backend",   post(worker_set_backend))
         .route("/cluster/corrector/set_function",      post(corrector_set_function))
+        .route("/cluster/loop-tuning",                  get(get_loop_tuning).post(save_loop_tuning))
         .route("/cluster/engines",                     get(get_available_engines))
         .route("/cluster/memory_pool/create",          post(memory_pool_create))
         .route("/cluster/config/full",                 get(get_cluster_config_full))
+        .route("/cluster/gpus", get(get_gpu_fleet))
+        .route("/cluster/accelerators", get(get_accelerators))
+        .route("/cluster/gpus/sync-uuids", post(sync_gpu_uuids))
+        .route("/cluster/gpu/{gpu_id}/apply", post(apply_gpu))
+        .route("/cluster/fleet/clear-all", post(fleet_clear_all))
+        .route("/cluster/launch/candle", post(launch_candle_big))
+        .route("/cluster/worker/{name}/status", get(worker_status))
         .route("/cluster/routing",                     get(get_routing_status).post(save_routing_state))
         .route("/cluster/routing/preset/{id}",         post(apply_routing_preset))
+        .route("/cluster/metrics/scorecard",           get(get_scorecard_metrics))
+        .route("/cluster/orchestration",               get(get_orchestration_config).post(save_orchestration_config))
+        .route("/cluster/fleet/dispatch",              post(fleet_dispatch_route))
+        .route("/cluster/test/dispatch",               post(dispatch_test_suite))
         // ── Mission orchestrator (T9 design / T11 implementation) ─────────
         .route("/orchestrator/probe",   get(orchestrator::orchestrator_probe))
         .route("/orchestrator/plan",    post(orchestrator::orchestrator_plan))
         .route("/orchestrator/execute", post(orchestrator::orchestrator_execute))
         .route("/orchestrator/swap",    post(orchestrator_swap_model))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        )
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 9100));

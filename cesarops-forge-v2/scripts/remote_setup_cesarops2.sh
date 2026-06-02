@@ -1,16 +1,14 @@
 #!/bin/bash
-# Run THIS on cesarops2 (10.0.0.129, the 1070+P1000 box).
-# Mounts the T440 samba share with models, then launches FortyTwo Rust 14B
-# on the 1070 (port 5200) with TinyLlama validator already running on P1000.
+# Run THIS on cesarops2 (1070 + P1000). Launches llama-server (not Kobold).
 #
 # Usage on cesarops2:
 #   curl -s http://10.0.0.61/cesarops-forge-v2/scripts/remote_setup_cesarops2.sh -o /tmp/setup.sh
 #   bash /tmp/setup.sh
-# OR scp it over and run.
 set -u
 
-T440_IP="10.0.0.61"
+T440_IP="${T440_IP:-10.0.0.61}"
 SHARE_MOUNT="/mnt/cesarops-models"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "[1/4] Mount T440 model share via cifs"
 sudo mkdir -p "$SHARE_MOUNT"
@@ -31,20 +29,14 @@ if [[ ! -f "$MODEL" ]]; then
 fi
 echo "  ok: $(ls -lh "$MODEL" | awk '{print $5}')"
 
-echo "[3/4] Stop any existing koboldcpp"
+echo "[3/4] Stop existing inference on 5200"
 pkill -f "koboldcpp.*5200" 2>/dev/null || true
+pkill -f "llama-server.*--port 5200" 2>/dev/null || true
 sleep 1
 
-echo "[4/4] Launch FortyTwo Rust 14B on GTX 1070 (port 5200)"
-nohup koboldcpp \
-    --model "$MODEL" \
-    --port 5200 \
-    --usecublas 0 \
-    --gpulayers 999 \
-    --contextsize 8192 \
-    --threads 4 \
-    --quiet \
-    > /tmp/kobold-fortytwo.log 2>&1 &
-PID=$!
-echo "  launched PID=$PID, log=/tmp/kobold-fortytwo.log"
-echo "  wait ~30-90s for load, then: curl http://localhost:5200/api/extra/version"
+echo "[4/4] Launch FortyTwo Rust 14B on GTX 1070 (port 5200, llama-server)"
+MODEL="$MODEL" PORT=5200 DEV=CUDA0 CTX=8192 NGL=99 THREADS=4 \
+  LOG=/tmp/llama-fortytwo.log \
+  bash "$SCRIPT_DIR/launch_llama_remote.sh"
+
+echo "  wait ~30-90s, then: curl http://localhost:5200/v1/models"

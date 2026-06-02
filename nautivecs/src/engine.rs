@@ -126,6 +126,32 @@ impl NautivecsEngine {
         self.store.len()
     }
 
+    /// Ingest a free-form lesson or note (forge `remember` → POST /add).
+    pub async fn ingest_document(
+        &mut self,
+        text: &str,
+        file_path: &str,
+        symbol_name: &str,
+        tags: &str,
+    ) -> Result<usize> {
+        use crate::chunker::chunk_text_file;
+
+        let body = format!("[{}] {}\n{}", tags, symbol_name, text);
+        let mut chunks = chunk_text_file(&body, file_path, 40);
+        if chunks.is_empty() && !body.trim().is_empty() {
+            chunks = chunk_text_file(&body, file_path, 200);
+        }
+        if chunks.is_empty() {
+            return Ok(0);
+        }
+
+        let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
+        let embeddings = self.embeddings.embed_batch(&texts).await?;
+        let inserted = self.store.insert(&chunks, &embeddings);
+        self.store.save()?;
+        Ok(inserted)
+    }
+
     /// Discover all indexable files in a directory.
     fn discover_files(&self, dir: &Path) -> Result<Vec<PathBuf>> {
         let mut files = Vec::new();

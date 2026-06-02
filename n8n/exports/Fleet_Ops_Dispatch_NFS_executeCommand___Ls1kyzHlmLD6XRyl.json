@@ -1,0 +1,234 @@
+{
+  "id": "Ls1kyzHlmLD6XRyl",
+  "name": "Fleet Ops Dispatch (NFS + executeCommand)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fleet-ops",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fleet-ops-webhook",
+      "name": "Fleet Ops Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "webhookId": "fleet-ops"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst node = (body.node || 't440').toLowerCase();\nconst action = body.action || '';\nif (!action) throw new Error('action required');\nconst repo = body.repo || '/codebase/repos/wreckhunter2000-1';\nconst ts = new Date().toISOString().replace(/[:.]/g, '-');\nconst jobId = `job_${ts}_${Math.random().toString(36).slice(2, 8)}`;\nconst jobObj = { ...body, node, action, job_id: jobId, requested_at: new Date().toISOString() };\nconst job = JSON.stringify(jobObj);\nconst queuePath = `${repo}/var/fleet-jobs/pending/${node}/${jobId}.json`;\nconst mcpUrl = body.mcp_url || 'http://10.0.0.201:8090/tool/run_command';\nlet localCmd = '';\nif (node === 't440') {\n  localCmd = `bash ${repo}/scripts/fleet-job-runner.sh`;\n} else {\n  localCmd = `FLEET_DISPATCH=nfs bash ${repo}/scripts/fleet-n8n-dispatch.sh ${node} ${action}`;\n}\nreturn [{ json: { node, action, jobId, queuePath, job, mcpUrl, localCmd, repo } }];"
+      },
+      "id": "parse-fleet-ops",
+      "name": "Parse Fleet Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.node }}",
+              "rightValue": "t440",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "is-t440",
+      "name": "Run on T440?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.localCmd }}"
+      },
+      "id": "exec-t440",
+      "name": "T440 executeCommand",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        920,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.localCmd }}"
+      },
+      "id": "enqueue-c2",
+      "name": "Enqueue cesarops2 (NFS)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        920,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Parse Fleet Job').first().json.mcpUrl }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ cmd: 'bash ' + $('Parse Fleet Job').first().json.repo + '/scripts/fleet-job-runner.sh' }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "mcp-trigger-c2",
+      "name": "MCP run runner (optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1160,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $('Parse Fleet Job').first().json;\nconst out = $input.first().json;\nreturn [{ json: {\n  ok: true,\n  node: j.node,\n  action: j.action,\n  job_id: j.jobId,\n  queue: j.queuePath,\n  dispatch: j.node === 't440' ? 'executeCommand' : 'nfs_enqueue+mcp_optional',\n  stdout: out.stdout || out.result || JSON.stringify(out).slice(0, 2000)\n} }];"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond-fleet",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1620,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Fleet Ops Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Fleet Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Fleet Job": {
+      "main": [
+        [
+          {
+            "node": "Run on T440?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run on T440?": {
+      "main": [
+        [
+          {
+            "node": "T440 executeCommand",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enqueue cesarops2 (NFS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "T440 executeCommand": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enqueue cesarops2 (NFS)": {
+      "main": [
+        [
+          {
+            "node": "MCP run runner (optional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP run runner (optional)": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {},
+  "pinData": {},
+  "meta": {},
+  "createdAt": "2026-05-28 15:43:22.312",
+  "updatedAt": "2026-05-28 15:45:57",
+  "versionId": null,
+  "triggerCount": 1
+}

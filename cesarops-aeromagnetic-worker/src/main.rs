@@ -1,308 +1,296 @@
-use bytemuck::{Pod, Zeroable};
+//! Aeromagnetic detection worker — adaptive, dipole (WGPU), curvelet.
+//! Hardware is auto-selected; tune DetectionLevels per area only.
+
+mod adaptive;
+mod continuation;
+mod curvelet;
+mod datum;
+mod dipole_analysis;
 mod discriminator;
+mod geo;
+mod gpu;
+mod knobs;
+mod known_data;
+mod pipeline;
+mod scoring;
+mod well_loader;
 
-use discriminator::{Wellhead, KnownWreck, CandidateMatch, cross_reference_candidate};
-use std::borrow::Cow;
-use ndarray::Array2;
-use nauticuvs::curvelet_forward;
+use clap::{Parser, Subcommand};
+use geo::GridMeta;
+use knobs::DetectionLevels;
+use pipeline::{run_detection_pipeline, write_candidates_csv};
+use std::path::PathBuf;
+use std::time::Instant;
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-struct Params {
-    width: u32,
-    height: u32,
-    inner_radius: u32,
-    outer_radius: u32,
-    pixel_size_m: f32, // meters per pixel
+#[derive(Parser, Debug)]
+#[command(name = "cesarops-aeromagnetic-worker")]
+struct Cli {
+    #[command(subcommand)]
+    cmd: Commands,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-struct OutPixel {
-    bg_mean: f32,
-    peak_pos: f32,
-    peak_neg: f32,
-    dipole_separation_m: f32,
-    score: f32,
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Full pipeline: adaptive → dipole → curvelet
+    Detect {
+        #[arg(long)]
+        grid: PathBuf,
+        #[arg(long)]
+        meta: PathBuf,
+        #[arg(long)]
+        levels: PathBuf,
+        #[arg(long)]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        output_csv: Option<PathBuf>,
+        #[arg(long, default_value_t = 25.0)]
+        pixel_size: f32,
+        /// Optional OGSr petroleum-well CSV. When provided, wells are loaded
+        /// (Lake Erie–filtered) and fed to the discriminator cross-reference.
+        #[arg(long)]
+        wells: Option<PathBuf>,
+    },
+    /// Legacy dipole-only scan
+    Dipole {
+        #[arg(long)]
+        grid: Option<PathBuf>,
+        #[arg(long)]
+        meta: Option<PathBuf>,
+        #[arg(long, default_value_t = 25.0)]
+        pixel_size: f32,
+        #[arg(long, default_value = "10")]
+        inner: u32,
+        #[arg(long, default_value = "25")]
+        outer: u32,
+        #[arg(long)]
+        width: Option<u32>,
+        #[arg(long)]
+        height: Option<u32>,
+        #[arg(long, default_value_t = 0.5)]
+        min_score: f32,
+        #[arg(long, default_value_t = 100)]
+        top_n: usize,
+        #[arg(long)]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        output_csv: Option<PathBuf>,
+        #[arg(long)]
+        demo: bool,
+    },
+    /// Run built-in self-test on demo grid
+    TestAll {
+        #[arg(long)]
+        levels: Option<PathBuf>,
+    },
+    /// Emit a machine-readable tool catalog (stages, knobs, defaults) as JSON
+    /// for the LLM/n8n orchestrator.
+    Describe,
 }
 
-async fn run_compute() {
-    let instance = wgpu::Instance::default();
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions::default())
-        .await
-        .expect("Failed to find a suitable GPU adapter");
+fn load_f32_grid(
+    grid_path: &PathBuf,
+    meta: &GridMeta,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> (Vec<f32>, u32, u32) {
+    let w = meta.width;
+    let h = meta.height;
+    let w = width.unwrap_or(w);
+    let h = height.unwrap_or(h);
+    let bytes = std::fs::read(grid_path).expect("read grid");
+    let data: Vec<f32> = bytemuck::cast_slice(&bytes).to_vec();
+    assert_eq!(data.len(), (w * h) as usize);
+    (data, w, h)
+}
 
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
-        .await
-        .expect("Failed to create device");
+#[tokio::main]
+async fn main() {
+    env_logger::init();
+    let cli = Cli::parse();
+    match cli.cmd {
+        Commands::Detect {
+            grid,
+            meta,
+            levels,
+            output,
+            output_csv,
+            pixel_size,
+            wells,
+        } => {
+            let meta = GridMeta::load(&meta).expect("meta json");
+            let levels = DetectionLevels::load(&levels).expect("levels json");
+            let (data, w, h) = load_f32_grid(&grid, &meta, None, None);
+            let mpx = pixel_size;
+            // Embedded known wrecks (NIAGARA + ShipwreckWorld, 47 entries) drive
+            // the discriminator cross-reference (erie_wellhead_discriminator.py).
+            let wrecks = known_data::all_known_wrecks();
+            // OGSr wells are loaded (Lake Erie–filtered) only when --wells is
+            // provided; otherwise the wreck cross-reference still activates.
+            let wells: Vec<discriminator::Wellhead> = match wells {
+                Some(path) => well_loader::load_ogsr_wells(&path, true),
+                None => Vec::new(),
+            };
+            let report =
+                run_detection_pipeline(&data, w, h, mpx, &meta, &levels, &wells, &wrecks).await;
+            let source = meta
+                .source_tif
+                .as_ref()
+                .and_then(|s| PathBuf::from(s).file_name().map(|n| n.to_string_lossy().into_owned()))
+                .unwrap_or_else(|| "grid".to_string());
+            if let Some(p) = output_csv {
+                write_candidates_csv(&p, &source, &report.candidates);
+            }
+            let text = serde_json::to_string_pretty(&report).unwrap();
+            if let Some(p) = output {
+                std::fs::write(p, &text).expect("write json");
+            }
+            println!("{text}");
+        }
+        Commands::Dipole { demo: true, .. } => run_dipole_legacy_demo(),
+        Commands::Dipole {
+            grid,
+            meta,
+            pixel_size,
+            inner,
+            outer,
+            width,
+            height,
+            min_score,
+            top_n,
+            output,
+            output_csv,
+            demo,
+        } => {
+            if demo {
+                run_dipole_legacy_demo();
+                return;
+            }
+            dipole_only(grid, meta, pixel_size, inner, outer, width, height, min_score, top_n, output, output_csv).await;
+        }
+        Commands::TestAll { levels } => {
+            let mut lv = levels
+                .map(|p| DetectionLevels::load(&p).expect("levels"))
+                .unwrap_or_default();
+            // Self-test uses permissive gates; production missions use area JSON only.
+            lv.z_thresh = lv.z_thresh.min(0.15);
+            lv.edge_z_thresh = lv.edge_z_thresh.min(0.15);
+            lv.min_pixels = 1;
+            lv.dipole_min_score = lv.dipole_min_score.min(0.05);
+            lv.require_dipolar_pull = false;
+            let t0 = Instant::now();
+            let mut grid = vec![50_000.0f32; 256 * 256];
+            // Synthetic dipole blob (~9 px) so adaptive + WGPU both see a target.
+            for (dy, dx, sign) in [(-6i32, 0, 1.0f32), (6, 0, -1.0)] {
+                for r in -4i32..=4 {
+                    for c in -4i32..=4 {
+                        if r * r + c * c > 16 {
+                            continue;
+                        }
+                        let y = (128 + dy + r) as usize;
+                        let x = (128 + dx + c) as usize;
+                        if y < 256 && x < 256 {
+                            grid[y * 256 + x] += sign * 180.0;
+                        }
+                    }
+                }
+            }
+            let meta = GridMeta {
+                width: 256,
+                height: 256,
+                transform: [0.01, 0.0, -82.0, 0.0, -0.01, 42.0],
+                source_tif: Some("demo.tif".into()),
+            };
+            let report = run_detection_pipeline(&grid, 256, 256, 25.0, &meta, &lv, &[], &[]).await;
+            println!(
+                "test-all: {} candidates in {:.1}ms gpu={}",
+                report.candidates.len(),
+                t0.elapsed().as_secs_f64() * 1000.0,
+                report.gpu_available
+            );
+            if report.candidates.is_empty() {
+                eprintln!("TEST ALL FAILED: no candidates");
+                std::process::exit(1);
+            }
+            println!("TEST ALL PASSED");
+        }
+        Commands::Describe => {
+            println!("{}", describe_catalog());
+        }
+    }
+}
 
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Dipole Shader"),
-        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("dipole_shader.wgsl"))),
+/// Build the machine-readable tool catalog for the LLM / n8n orchestrator.
+///
+/// Emits the pipeline identity, selectable stages, and the full `DetectionLevels`
+/// knob set with defaults (introspected from `DetectionLevels::default()`).
+/// See docs/PIPELINE_UNIFICATION_ARCHITECTURE.md.
+fn describe_catalog() -> String {
+    let knob_defaults = serde_json::to_value(DetectionLevels::default())
+        .unwrap_or(serde_json::Value::Null);
+    let embedded_wreck_count = known_data::all_known_wrecks().len();
+    let catalog = serde_json::json!({
+        "pipeline": "aeromagnetic",
+        "binary": "cesarops-aeromagnetic-worker",
+        "description": "Aeromagnetic anomaly wreck detection (adaptive + dipole + curvelet, basin-aware)",
+        "version": env!("CARGO_PKG_VERSION"),
+        "stages": [
+            { "name": "adaptive",       "desc": "Adaptive local z-score + edge screen + connected-component candidates" },
+            { "name": "dipole_gpu",     "desc": "WGPU dipole lobe scan (fast lobe score)" },
+            { "name": "dipole_cpu",     "desc": "CPU dipole discriminator: flip distance, gradient contrast, aspect, 0-100 man-made score" },
+            { "name": "curvelet",       "desc": "Curvelet structural-energy rescore" },
+            { "name": "cross_reference","desc": "Loran-C warp + wellhead/known-wreck cross-reference" },
+            { "name": "basin_scoring",  "desc": "Lake Erie basin-aware multiplicative score adjustment" },
+            { "name": "disposition",    "desc": "Raised/scrapped/geological false-positive down-rank" },
+            { "name": "merge",          "desc": "Candidate merge/NMS within dipole_merge_radius_m" }
+        ],
+        "knobs": knob_defaults,
+        "inputs": {
+            "grid": "Path to row-major f32 aeromagnetic nT grid (bin)",
+            "meta": "GridMeta JSON (width, height, transform, source_tif)",
+            "levels": "DetectionLevels JSON overlaying any subset of the knobs above",
+            "pixel_size": "Metres per pixel (default 25)",
+            "wells": format!(
+                "Optional OGSr petroleum-well CSV (well_loader.rs). When provided, wells are loaded (Lake Erie-filtered) and cross-referenced; {} known wrecks are always embedded (known_data.rs) and active",
+                embedded_wreck_count
+            )
+        },
+        "output": {
+            "format": "PipelineReport JSON",
+            "fields": ["width", "height", "pixel_size_m", "gpu_available", "candidates[]"]
+        }
     });
+    serde_json::to_string_pretty(&catalog).unwrap_or_default()
+}
 
-    let width = 256;
-    let height = 256;
-    let num_pixels = (width * height) as usize;
+fn run_dipole_legacy_demo() {
+    println!("Use `detect` or `test-all` subcommands for full pipeline");
+}
 
-    let params = Params {
+async fn dipole_only(
+    grid: Option<PathBuf>,
+    meta: Option<PathBuf>,
+    pixel_size: f32,
+    inner: u32,
+    outer: u32,
+    width: Option<u32>,
+    height: Option<u32>,
+    min_score: f32,
+    top_n: usize,
+    output: Option<PathBuf>,
+    output_csv: Option<PathBuf>,
+) {
+    let _ = (
+        grid,
+        meta,
+        pixel_size,
+        inner,
+        outer,
         width,
         height,
-        inner_radius: 10,   // approximate 2000yd inner
-        outer_radius: 25,   // approximate 5000yd outer
-        pixel_size_m: 200.0,
-    };
-
-    // Synthetic magnetic grid (mostly noise/background, with one synthetic dipole)
-    let mut input_data = vec![0.0f32; num_pixels];
-    for y in 0..height {
-        for x in 0..width {
-            input_data[(y * width + x) as usize] = 50000.0 + ((x + y) % 10) as f32 * 0.1;
-        }
-    }
-    // Inject synthetic dipole
-    let cx = width / 2;
-    let cy = height / 2;
-    input_data[((cy - 2) * width + cx) as usize] += 150.0;  // Positive lobe
-    input_data[((cy + 2) * width + cx) as usize] -= 100.0;  // Negative lobe
-
-    use wgpu::util::DeviceExt;
-    let params_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Params Buffer"),
-        contents: bytemuck::bytes_of(&params),
-        usage: wgpu::BufferUsages::UNIFORM,
-    });
-
-    let input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Input Grid Buffer"),
-        contents: bytemuck::cast_slice(&input_data),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-    });
-
-    let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Output Buffer"),
-        size: (num_pixels * std::mem::size_of::<OutPixel>()) as wgpu::BufferAddress,
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-
-    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Bind Group Layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ],
-    });
-
-    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Bind Group"),
-        layout: &bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: params_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: input_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: output_buffer.as_entire_binding(),
-            },
-        ],
-    });
-
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Pipeline Layout"),
-        bind_group_layouts: &[&bind_group_layout],
-        push_constant_ranges: &[],
-    });
-
-    let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("Compute Pipeline"),
-        layout: Some(&pipeline_layout),
-        module: &shader,
-        entry_point: Some("main"),
-        compilation_options: Default::default(),
-        cache: None,
-    });
-
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Command Encoder"),
-    });
-
-    {
-        let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some("Compute Pass"),
-            timestamp_writes: None,
-        });
-        cpass.set_pipeline(&compute_pipeline);
-        cpass.set_bind_group(0, &bind_group, &[]);
-        
-        let workgroup_count_x = (width + 15) / 16;
-        let workgroup_count_y = (height + 15) / 16;
-        cpass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
-    }
-
-    // Read back results
-    let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Staging Buffer"),
-        size: output_buffer.size(),
-        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-
-    encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, output_buffer.size());
-
-    queue.submit(Some(encoder.finish()));
-    
-    let buffer_slice = staging_buffer.slice(..);
-    let (sender, receiver) = flume::bounded(1);
-    buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-    
-    device.poll(wgpu::Maintain::Wait);
-    receiver.recv_async().await.unwrap().unwrap();
-
-    let data = buffer_slice.get_mapped_range();
-    let results: &[OutPixel] = bytemuck::cast_slice(&data);
-
-    let mut best_score = 0.0;
-    let mut best_idx = 0;
-    for (i, p) in results.iter().enumerate() {
-        if p.score > best_score {
-            best_score = p.score;
-            best_idx = i;
-        }
-    }
-
-    let p_x = best_idx as u32 % width;
-    let p_y = best_idx as u32 / width;
-    println!("Best Dipole Found at x: {}, y: {}", p_x, p_y);
-    println!("Features: {:#?}", results[best_idx]);
-
-    // NauticUVs Refinement: Calculate FDCT energy ratio using the user's crate
-    // Create an ndarray from the relevant window around the mag anomaly
-    let mut energy_ratio = 0.0f32;
-    let window_size = 64;
-    let mut window = Array2::<f32>::zeros((window_size, window_size));
-    let x_start = (p_x as i32 - (window_size / 2) as i32).max(0) as u32;
-    let y_start = (p_y as i32 - (window_size / 2) as i32).max(0) as u32;
-
-    for wy in 0..window_size {
-        for wx in 0..window_size {
-            let gx = (x_start + wx as u32).min(width - 1);
-            let gy = (y_start + wy as u32).min(height - 1);
-            window[[wy, wx]] = input_data[(gy * width + gx) as usize];
-        }
-    }
-
-    if let Ok(coeffs) = curvelet_forward(&window, 4) {
-        // Proxy energy ratio as sum of AC scales (detail + fine) vs background
-        let mut total_ac_energy = 0.0f64;
-        
-        // Sum detail scale energy
-        for scale in &coeffs.detail {
-            for subband in scale {
-                total_ac_energy += subband.iter().map(|c| c.norm_sqr()).sum::<f64>();
-            }
-        }
-        
-        // Sum fine scale energy
-        total_ac_energy += coeffs.fine.iter().map(|c| c.norm_sqr()).sum::<f64>();
-
-        energy_ratio = (total_ac_energy as f32 / 1000.0).min(10.0); 
-        println!("NauticUVs Curvelet Energy Proxy: {:.3}", energy_ratio);
-    }
-
-    let mut candidate = CandidateMatch {
-        label_id: 1,
-        center_lat: 42.1,
-        center_lon: -81.2,
-        dipole_score: best_score,
-        dipole_verdict: "Strong".to_string(),
-        ground_truth: "".to_string(),
-        ground_truth_name: "".to_string(),
-        well_distance_m: None,
-        nearest_wellhead: None,
-        wreck_distance_m: None,
-        nearest_known_wreck: None,
-        bonus_score: 0.0,
-        curvelet_energy_ratio: Some(energy_ratio),
-    };
-    
-    let wellheads = vec![
-        Wellhead {
-            well_id: "W1".to_string(),
-            name: "Lake Erie Well A".to_string(),
-            lat: 42.099,
-            lon: -81.201,
-            status: "Active".to_string(),
-            well_type: "Gas".to_string(),
-            township: "".to_string(),
-            county: "".to_string(),
-            target: "".to_string(),
-            is_lake_erie: true,
-        }
-    ];
-    
-    let wrecks = vec![
-        KnownWreck {
-            name: "Colgate".to_string(),
-            lat: 42.105,
-            lon: -81.195,
-            vessel_type: "Schooner".to_string(),
-            length_ft: 100.0,
-            depth_ft: 50.0,
-            source: "DB".to_string(),
-        }
-    ];
-    
-    cross_reference_candidate(&mut candidate, &wellheads, &wrecks);
-    
-println!("Candidate Verdict: {} - Nearest Well: {:?} ({}m) - Nearest Wreck: {:?} ({}m) - Bonus: {:.1}",
-        candidate.ground_truth,
-        candidate.nearest_wellhead,
-        candidate.well_distance_m.unwrap_or(0.0).round(),
-        candidate.nearest_known_wreck,
-        candidate.wreck_distance_m.unwrap_or(0.0).round(),
-        candidate.bonus_score,
+        min_score,
+        top_n,
+        output,
+        output_csv,
     );
+    eprintln!("dipole-only: use `detect` subcommand with --levels");
 }
-
-fn main() {
-    env_logger::init();
-    println!("Starting CESARO aeromagnetic WGPU compute worker...");
-    pollster::block_on(run_compute());
-}
-

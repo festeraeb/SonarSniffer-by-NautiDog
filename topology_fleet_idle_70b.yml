@@ -1,0 +1,32 @@
+# Manual Cake topology — 70B Q4 (Phase 6, promote after 35B idle loop stable)
+# Same exclusion rules as 35B.
+
+t440_p100_0:
+  host: "127.0.0.1:10128"
+  description: "T440 P100 #0"
+  layers:
+    - "model.layers.0-24"
+
+t440_p100_1:
+  host: "127.0.0.1:10129"
+  description: "T440 P100 #1"
+  layers:
+    - "model.layers.25-49"
+
+t440_cpu:
+  host: "127.0.0.1:10130"
+  description: "T440 DDR4 offload"
+  layers:
+    - "model.layers.50-59"
+
+cesarops2_rtx:
+  host: "10.0.0.201:10128"
+  description: "cesarops2 RTX 2060 SUPER"
+  layers:
+    - "model.layers.60-74"
+
+cesarops2_cpu:
+  host: "10.0.0.201:10129"
+  description: "cesarops2 host RAM"
+  layers:
+    - "model.layers.75-79"

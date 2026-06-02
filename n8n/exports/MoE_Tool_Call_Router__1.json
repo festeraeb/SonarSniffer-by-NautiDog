@@ -1,0 +1,366 @@
+{
+  "id": "1",
+  "name": "MoE Tool Call Router",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tool-route",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "tool-route"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize raw LLM tool call output\n// Handles: <tool_call>JSON</tool_call>, naked JSON, markdown-wrapped JSON, or already-structured payload\n\nconst body = $input.first().json.body || $input.first().json;\nconst raw = body?.raw_output || body?.text || '';\nlet toolCall = null;\n\n// Direct structured payload (forge sends this)\nif (body?.tool_call?.name) {\n  toolCall = body.tool_call;\n} else if (body?.name && body?.arguments) {\n  toolCall = body;\n}\n\n// Try <tool_call> tags\nif (!toolCall && raw) {\n  const tagMatch = raw.match(/<tool_call>\\s*([\\s\\S]*?)\\s*<\\/tool_call>/);\n  if (tagMatch) {\n    try { toolCall = JSON.parse(tagMatch[1]); } catch(e) {}\n  }\n}\n\n// Try ```json blocks\nif (!toolCall && raw) {\n  const codeMatch = raw.match(/```(?:json)?\\s*({[\\s\\S]*?})\\s*```/);\n  if (codeMatch) {\n    try { toolCall = JSON.parse(codeMatch[1]); } catch(e) {}\n  }\n}\n\n// Try naked JSON with \"name\" key\nif (!toolCall && raw) {\n  const jsonMatch = raw.match(/({\\s*\"name\"[\\s\\S]*?}\\s*})/);\n  if (jsonMatch) {\n    try { toolCall = JSON.parse(jsonMatch[1]); } catch(e) {}\n  }\n}\n\nif (toolCall && toolCall.name) {\n  return [{ json: { status: 'parsed', tool_name: toolCall.name, arguments: toolCall.arguments || {}, raw_output: raw } }];\n} else {\n  return [{ json: { status: 'no_tool_call', tool_name: 'unknown', arguments: {}, raw_output: raw } }];\n}"
+      },
+      "id": "parse-tool",
+      "name": "Parse Tool Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool_name }}",
+                    "rightValue": "think_harder",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "think_harder"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool_name }}",
+                    "rightValue": "wso_search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "wso_search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool_name }}",
+                    "rightValue": "read_file",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "read_file"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tool_name }}",
+                    "rightValue": "run_command",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "run_command"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "route-switch",
+      "name": "Route Tool",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5003/query",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.arguments.query, top_k: $json.arguments.top_k || 5 }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "nautivecs-query",
+      "name": "Query Nautivecs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5010/search",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.arguments.query, max_results: $json.arguments.max_results || 5 }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "wso-query",
+      "name": "Query WSO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'cat ' + JSON.stringify('/codebase/repos/wreckhunter2000-1/' + $json.arguments.path) }}"
+      },
+      "id": "exec-read-file",
+      "name": "Read File",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        920,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.arguments.cmd }}"
+      },
+      "id": "exec-command",
+      "name": "Run Command",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        920,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format tool result back for the LLM\nconst toolName = $('Parse Tool Call').first().json.tool_name;\nconst input = $input.first().json;\nlet result;\nif (typeof input === 'object' && (input.results || input.data)) {\n  result = JSON.stringify(input.results || input.data, null, 2);\n} else {\n  result = input.stdout || input.body || JSON.stringify(input);\n}\nconst truncated = (result || '').length > 3000 ? result.substring(0, 3000) + '...[truncated]' : result;\nreturn [{ json: { tool_name: toolName, result: truncated, status: 'success' } }];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Tool Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Tool Call": {
+      "main": [
+        [
+          {
+            "node": "Route Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Tool": {
+      "main": [
+        [
+          {
+            "node": "Query Nautivecs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query WSO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Nautivecs": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query WSO": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read File": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Command": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {},
+  "pinData": {},
+  "meta": {},
+  "createdAt": "2026-05-13 06:40:17.012",
+  "updatedAt": "2026-05-22 02:14:32",
+  "versionId": null,
+  "triggerCount": 1
+}

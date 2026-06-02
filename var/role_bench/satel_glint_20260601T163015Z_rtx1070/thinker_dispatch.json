@@ -1,0 +1,13 @@
+{
+  "url": "http://127.0.0.1:5200",
+  "words": 1039,
+  "elapsed_s": 573.4,
+  "usage": {
+    "completion_tokens": 2048,
+    "prompt_tokens": 366,
+    "total_tokens": 2414,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  }
+}

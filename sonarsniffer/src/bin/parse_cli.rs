@@ -112,6 +112,8 @@ fn main() {
         None
     };
 
+    let ping_count = parse_result.pings.len();
+
     if summary_only {
         parse_result.pings.clear();
     } else if let Some(n) = first_n {
@@ -136,7 +138,7 @@ fn main() {
         "input_file": file_name,
         "format": detected.format.to_string(),
         "record_count": parse_result.record_count,
-        "ping_count": parse_result.pings.len(),
+        "ping_count": ping_count,
         "channels": parse_result.channels,
         "outputs": output_summary,
     });

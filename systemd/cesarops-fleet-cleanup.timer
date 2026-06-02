@@ -1,0 +1,11 @@
+[Unit]
+Description=Run fleet cleanup daily
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1d
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

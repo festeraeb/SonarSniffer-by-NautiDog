@@ -1,0 +1,54 @@
+{
+  "name": "CESAROPS Specialist — Aeromagnetic",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "specialist-aeromag",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh-mag-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build CLI args for the aeromag detect command.\n// Expects: { grid, meta, levels, wells?, pixel_size?, output? }\nconst body = items[0].json;\nif (!body.grid || !body.meta || !body.levels) {\n  throw new Error('aeromag specialist needs grid, meta, levels paths');\n}\nconst args = ['run', 'aeromag',\n  '--grid', body.grid,\n  '--meta', body.meta,\n  '--levels', body.levels];\nif (body.pixel_size) { args.push('--pixel-size', String(body.pixel_size)); }\nif (body.wells) { args.push('--wells', body.wells); }\nif (body.output) { args.push('--output', body.output); }\nreturn [{ json: { argv: args.join(' '), runner: $env.CESAROPS_RUNNER || '/home/cesarops/wreckhunter2000-1/n8n/pipeline_runner.sh' } }];"
+      },
+      "id": "wh-mag-buildcmd",
+      "name": "Build Command",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=bash {{$json[\"runner\"]}} {{$json[\"argv\"]}}"
+      },
+      "id": "wh-mag-exec",
+      "name": "Run aeromag",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse PipelineReport JSON; surface ranked candidates with classification.\nconst out = items[0].json.stdout || '{}';\nlet report;\ntry { report = JSON.parse(out); } catch (e) { return [{ json: { error: 'bad JSON from aeromag', raw: out.slice(0, 500) } }]; }\nconst cands = report.candidates || [];\nreturn [{ json: {\n  pipeline: 'aeromagnetic',\n  gpu_available: report.gpu_available,\n  n_candidates: cands.length,\n  top: cands.slice(0, 10).map(c => ({\n    lat: c.center_lat, lon: c.center_lon,\n    score: c.combined_score,\n    manmade: c.score_manmade,\n    classification: c.classification,\n    ground_truth: c.ground_truth,\n    nearest_wreck: c.nearest_known_wreck,\n    basin: c.basin\n  })),\n  report\n} }];"
+      },
+      "id": "wh-mag-parse",
+      "name": "Parse Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build Command", "type": "main", "index": 0 }]] },
+    "Build Command": { "main": [[{ "node": "Run aeromag", "type": "main", "index": 0 }]] },
+    "Run aeromag": { "main": [[{ "node": "Parse Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": {}
+}

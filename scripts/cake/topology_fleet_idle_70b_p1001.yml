@@ -1,0 +1,25 @@
+# 70B fleet — T440 master RAM + P100#1 CUDA + cesarops2 (P100#0 = llama :5001)
+
+t440_p100_1:
+  host: "127.0.0.1:10131"
+  description: "T440 P100 #1 (16GB CUDA) — Cake VRAM shard"
+  layers:
+    - "model.layers.0-24"
+
+t440_cpu:
+  host: "127.0.0.1:8081"
+  description: "T440 master (CPU/RAM) — not a worker port; layers on master process"
+  layers:
+    - "model.layers.25-49"
+
+cesarops2_rtx:
+  host: "10.0.0.201:10128"
+  description: "cesarops2 RTX 2060 SUPER (GPU 1)"
+  layers:
+    - "model.layers.50-72"
+
+cesarops2_cpu:
+  host: "10.0.0.201:10129"
+  description: "cesarops2 host RAM (optional second worker on c2)"
+  layers:
+    - "model.layers.73-79"

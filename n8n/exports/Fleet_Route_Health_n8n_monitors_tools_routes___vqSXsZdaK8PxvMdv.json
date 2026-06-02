@@ -1,0 +1,229 @@
+{
+  "id": "vqSXsZdaK8PxvMdv",
+  "name": "Fleet Route Health (n8n monitors tools + routes)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "route-health-schedule",
+      "name": "Every 3 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "command": "bash /codebase/repos/wreckhunter2000-1/scripts/fleet-route-health.sh 2>&1 | tee /tmp/fleet_route_health.log; echo exit_code:${PIPESTATUS[0]}"
+      },
+      "id": "route-health-probe",
+      "name": "Probe routes",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        360,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = ($input.first().json.stdout || '') + '\\n' + ($input.first().json.stderr || '');\nconst failed = out.includes('FAIL') || /exit_code:([^\\s]+)/.exec(out)?.[1] !== '0';\nconst fails = (out.match(/FAIL/g) || []).length;\nreturn [{ json: {\n  healthy: !failed,\n  fail_count: fails,\n  log_tail: out.slice(-4000),\n  timestamp: new Date().toISOString()\n} }];"
+      },
+      "id": "route-health-parse",
+      "name": "Parse probe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.healthy }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "route-health-if",
+      "name": "Any route down?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/fleet-ops",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ node: 't440', action: 'restart_n8n', repo: '/codebase/repos/wreckhunter2000-1', reason: 'route_health', fail_count: $json.fail_count }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "route-health-restart-n8n",
+      "name": "Fleet-ops restart n8n",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/fleet-ops",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ node: 'cesarops2', action: 'sync_llm_endpoints', repo: '/codebase/repos/wreckhunter2000-1', reason: 'route_health' }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "route-health-sync-llm",
+      "name": "Fleet-ops sync LLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst j = $input.first().json;\nfs.writeFileSync('/tmp/fleet_route_health_last.json', JSON.stringify(j, null, 2));\nreturn [{ json: { written: true, ...j } }];"
+      },
+      "id": "route-health-write",
+      "name": "Write status file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "Every 3 min": {
+      "main": [
+        [
+          {
+            "node": "Probe routes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probe routes": {
+      "main": [
+        [
+          {
+            "node": "Parse probe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse probe": {
+      "main": [
+        [
+          {
+            "node": "Any route down?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any route down?": {
+      "main": [
+        [
+          {
+            "node": "Fleet-ops restart n8n",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fleet-ops sync LLM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write status file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fleet-ops restart n8n": {
+      "main": [
+        [
+          {
+            "node": "Write status file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fleet-ops sync LLM": {
+      "main": [
+        [
+          {
+            "node": "Write status file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Every 3 min": {
+      "recurrenceRules": []
+    }
+  },
+  "pinData": {},
+  "meta": {},
+  "createdAt": "2026-05-28 15:43:29.070",
+  "updatedAt": "2026-05-28 15:46:02",
+  "versionId": null,
+  "triggerCount": 1
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=CESAROPS unified fleet recover tick (MCP, n8n, routing, peer queue)
+After=network-online.target remote-fs.target
+
+[Service]
+Type=oneshot
+User=cesarops
+Environment=REPO=/data/codebase/repos/wreckhunter2000-1
+Environment=FLEET_UNIFIED=1
+ExecStart=/bin/bash -c '[[ -f /data/codebase/repos/wreckhunter2000-1/config/fleet_manifest.json ]] && REPO=/data/codebase/repos/wreckhunter2000-1 bash /data/codebase/repos/wreckhunter2000-1/scripts/fleet recover || REPO=/mnt/t440/repo bash /mnt/t440/repo/scripts/fleet recover'

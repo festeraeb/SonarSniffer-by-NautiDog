@@ -1,0 +1,33 @@
+# 72B hetero — dual T440 P100 + c2 2060/1070 + RAM. P106 out; P100#0 in Cake (not llama :5001).
+# Ports: 10129 c2-rtx | 10130 c2-1070 | 10131 t440-p100-1 | 10133 t440-p100-0 | 10132 t440-ram
+
+t440_p100_0:
+  host: "127.0.0.1:10133"
+  description: "T440 P100 #0 — layers 50-69"
+  layers:
+    - "model.layers.50-69"
+
+t440_p100_1:
+  host: "127.0.0.1:10131"
+  description: "T440 P100 #1 — layers 30-49"
+  layers:
+    - "model.layers.30-49"
+
+t440_ram:
+  host: "127.0.0.1:10132"
+  description: "T440 CPU/RAM — layers 0-9 (ex-P106) + 70-79"
+  layers:
+    - "model.layers.0-9"
+    - "model.layers.70-79"
+
+cesarops2_rtx:
+  host: "10.0.0.201:10129"
+  description: "cesarops2 RTX 2060 SUPER 8GB (device 1) — cake-sm75"
+  layers:
+    - "model.layers.10-19"
+
+cesarops2_1070:
+  host: "10.0.0.201:10130"
+  description: "cesarops2 GTX 1070 8GB (device 2) — cake-sm61"
+  layers:
+    - "model.layers.20-29"

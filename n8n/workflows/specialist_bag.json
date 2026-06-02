@@ -1,0 +1,54 @@
+{
+  "name": "CESAROPS Specialist — BAG",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "specialist-bag",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "wh-bag-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build CLI args for the bag scanner.\n// Expects: { path, knobs?, stages?, enable_redaction_signatures? }\nconst body = items[0].json;\nif (!body.path) { throw new Error('bag specialist needs a .bag path'); }\nconst args = ['run', 'bag', body.path];\nif (body.knobs) { args.push('--knobs', JSON.stringify(body.knobs)); }\nif (body.stages) { args.push('--stages', Array.isArray(body.stages) ? body.stages.join(',') : body.stages); }\nif (body.enable_redaction_signatures) { args.push('--enable-redaction-signatures'); }\nreturn [{ json: { argv: args.join(' '), runner: $env.CESAROPS_RUNNER || '/home/cesarops/wreckhunter2000-1/n8n/pipeline_runner.sh' } }];"
+      },
+      "id": "wh-bag-buildcmd",
+      "name": "Build Command",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=bash {{$json[\"runner\"]}} {{$json[\"argv\"]}}"
+      },
+      "id": "wh-bag-exec",
+      "name": "Run bag-scan",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse MissionReport; split physical wrecks vs masked redactions.\nconst out = items[0].json.stdout || '{}';\nlet report;\ntry { report = JSON.parse(out); } catch (e) { return [{ json: { error: 'bad JSON from bag-scan', raw: out.slice(0, 500) } }]; }\nconst dets = report.detections || [];\nconst wrecks = dets.filter(d => d.signature_type === 'physical_wreck');\nconst redactions = dets.filter(d => d.signature_type === 'masked_redaction_flat');\nreturn [{ json: {\n  pipeline: 'bag',\n  file: report.file,\n  epsg: report.epsg_code,\n  physical_wreck_count: report.physical_wreck_count,\n  masked_redaction_count: report.masked_redaction_count,\n  top_wrecks: wrecks.slice(0, 10),\n  top_redactions: redactions.slice(0, 10),\n  report\n} }];"
+      },
+      "id": "wh-bag-parse",
+      "name": "Parse Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build Command", "type": "main", "index": 0 }]] },
+    "Build Command": { "main": [[{ "node": "Run bag-scan", "type": "main", "index": 0 }]] },
+    "Run bag-scan": { "main": [[{ "node": "Parse Report", "type": "main", "index": 0 }]] }
+  },
+  "settings": {}
+}

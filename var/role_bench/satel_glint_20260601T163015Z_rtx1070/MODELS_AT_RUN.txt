@@ -1,0 +1,7 @@
+# models at run time (bench ports 5210/5212)
+5210 qwen2.5-coder-14b-instruct-q4_k_m.gguf
+5212 Qwen2.5-Coder-7B-Instruct-abliterated-Q8_0.gguf
+index, name, memory.used [MiB]
+0, NVIDIA P106-100, 134 MiB
+1, NVIDIA GeForce RTX 2060 SUPER, 6548 MiB
+2, NVIDIA GeForce GTX 1070, 7707 MiB

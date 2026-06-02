@@ -1,0 +1,10 @@
+# NOT IN USE — WiFi/Tailscale penalty too high for 72B layer traffic.
+# Kept for reference if Nautik9 is on wired LAN later. Use LAPTOP_ONLINE=1 + this file manually.
+
+nautik_m2200:
+  host: "100.110.214.86:10133"
+  description: "Nautik9 ThinkPad Quadro M2200 4GB (Tailscale)"
+  layers:
+    - "model.layers.50-53"
+
+# When using this file, shrink t440_ram to model.layers.54-79 only.

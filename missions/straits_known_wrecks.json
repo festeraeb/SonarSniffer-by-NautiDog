@@ -1,0 +1,19 @@
+{
+  "mission_id": "straits_known_wrecks_gt",
+  "target_name": "Straits of Mackinac — known dive wrecks (ground truth)",
+  "bbox": [45.60, -85.25, 46.00, -84.20],
+  "days_back": 365,
+  "stages": ["download", "target_known", "validate_gt", "report"],
+  "knobs": {
+    "sensors": "sentinel2",
+    "concepts": "all",
+    "max_wrecks": 30,
+    "max_scenes": 12,
+    "min_gt_score": 4.0,
+    "min_gt_hit_rate": 0.25,
+    "gt_min_confidence": 0.0
+  },
+  "paths": {
+    "known_wrecks_json": "/codebase/repos/wreckhunter2000-1/data/known_wrecks_straits.json"
+  }
+}

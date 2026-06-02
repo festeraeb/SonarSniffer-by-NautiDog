@@ -96,9 +96,12 @@ pub struct RoutingPreset {
     /// Baseline id for PAMP / golden tests (interactive_fast, pamp_moe_test, …).
     #[serde(default)]
     pub baseline_id: String,
-    /// Fire coder + reviewer in parallel; thinker on :5200 picks the better draft.
+    /// Fire coder + reviewer in parallel; thinker picks the better draft.
     #[serde(default)]
     pub parallel_dual_grade: bool,
+    /// Two coders in parallel (coder_endpoint + draft_endpoint); reviewer handoff on round 2.
+    #[serde(default)]
+    pub parallel_dual_coders: bool,
     /// Forge tool-loop rounds that run parallel grade (default [1, 3] when empty).
     #[serde(default)]
     pub parallel_dual_grade_rounds: Vec<u32>,
@@ -123,6 +126,7 @@ pub struct ResolvedEndpoints {
     pub chat_template: String,
     pub chat_model: String,
     pub parallel_dual_grade: bool,
+    pub parallel_dual_coders: bool,
     pub parallel_dual_grade_rounds: Vec<u32>,
 }
 
@@ -235,6 +239,10 @@ pub fn load_cluster_routing() -> ClusterRouting {
                             .to_string(),
                         parallel_dual_grade: t
                             .get("parallel_dual_grade")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                        parallel_dual_coders: t
+                            .get("parallel_dual_coders")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false),
                         parallel_dual_grade_rounds: t
@@ -372,17 +380,26 @@ pub fn resolve_endpoints() -> ResolvedEndpoints {
                     })
             });
     }
+    let pinned = strict_dual_routing(&mode_extras);
     let coder_cands = role_candidates("coder", &role_eps, &routing, &mode_extras);
-    coder_url = pick_available_endpoint(&coder_cands, &coder_url);
+    coder_url = if pinned {
+        pick_pinned_endpoint(&coder_url)
+    } else {
+        pick_available_endpoint(&coder_cands, &coder_url)
+    };
 
     let thinker_seed = pick_url(
         &routing.thinker_endpoint,
         mode_extras.get("thinker_endpoint"),
         cluster.nicknames.get("thinker"),
-        "http://10.0.0.201:5200",
+        "http://10.0.0.201:5203",
     );
     let thinker_cands = role_candidates("thinker", &role_eps, &routing, &mode_extras);
-    let thinker_url = pick_available_endpoint(&thinker_cands, &thinker_seed);
+    let thinker_url = if pinned {
+        pick_pinned_endpoint(&thinker_seed)
+    } else {
+        pick_available_endpoint(&thinker_cands, &thinker_seed)
+    };
 
     let corrector_seed = pick_url(
         &routing.corrector_endpoint,
@@ -391,27 +408,39 @@ pub fn resolve_endpoints() -> ResolvedEndpoints {
         "http://127.0.0.1:5002",
     );
     let corrector_cands = role_candidates("corrector", &role_eps, &routing, &mode_extras);
-    let corrector_url = pick_available_endpoint(&corrector_cands, &corrector_seed);
+    let corrector_url = if pinned {
+        pick_pinned_endpoint(&corrector_seed)
+    } else {
+        pick_available_endpoint(&corrector_cands, &corrector_seed)
+    };
 
     let validator_seed = pick_url(
-        "",
+        &routing.draft_endpoint,
         mode_extras.get("draft_endpoint"),
         cluster.nicknames.get("draft"),
-        "http://10.0.0.201:5202",
+        "http://10.0.0.201:5200",
     );
     let validator_cands = role_candidates("validator", &role_eps, &routing, &mode_extras);
-    let validator_url = pick_available_endpoint(&validator_cands, &validator_seed);
+    let validator_url = if pinned {
+        pick_pinned_endpoint(&validator_seed)
+    } else {
+        pick_available_endpoint(&validator_cands, &validator_seed)
+    };
 
     let reviewer_seed = pick_url(
         &routing.reviewer_endpoint,
         mode_extras.get("reviewer_endpoint"),
         cluster.nicknames.get("mtp_reviewer"),
-        "http://10.0.0.201:5202",
+        "http://10.0.0.61:5002",
     );
     let reviewer_cands = role_candidates("reviewer", &role_eps, &routing, &mode_extras);
-    let reviewer_url = pick_available_endpoint(&reviewer_cands, &reviewer_seed);
+    let reviewer_url = if pinned {
+        pick_pinned_endpoint(&reviewer_seed)
+    } else {
+        pick_available_endpoint(&reviewer_cands, &reviewer_seed)
+    };
 
-    let (parallel_dual_grade, parallel_dual_grade_rounds) =
+    let (parallel_dual_grade, parallel_dual_coders, parallel_dual_grade_rounds) =
         active_preset_parallel_dual(&cluster);
 
     // Main /send loop always talks to coder_url — prompt template must match the coder, not chat_agent.
@@ -433,8 +462,8 @@ pub fn resolve_endpoints() -> ResolvedEndpoints {
     }
 
     info!(
-        "Routing resolved: chat_agent={} coder={} reviewer={} thinker={} corrector={} parallel_dual_grade={} template={} model={}",
-        chat_agent, coder_url, reviewer_url, thinker_url, corrector_url, parallel_dual_grade, chat_template, chat_model
+        "Routing resolved: chat_agent={} coder={} reviewer={} thinker={} corrector={} parallel_dual_grade={} parallel_dual_coders={} template={} model={}",
+        chat_agent, coder_url, reviewer_url, thinker_url, corrector_url, parallel_dual_grade, parallel_dual_coders, chat_template, chat_model
     );
 
     ResolvedEndpoints {
@@ -447,12 +476,13 @@ pub fn resolve_endpoints() -> ResolvedEndpoints {
         chat_template,
         chat_model,
         parallel_dual_grade,
+        parallel_dual_coders,
         parallel_dual_grade_rounds,
     }
 }
 
-/// Active preset parallel-grade flag and rounds (default rounds `[1, 3]` when list empty).
-fn active_preset_parallel_dual(cluster: &ClusterRouting) -> (bool, Vec<u32>) {
+/// Active preset parallel-grade flag, dual-coder mode, and rounds (default `[1, 3]` when list empty).
+fn active_preset_parallel_dual(cluster: &ClusterRouting) -> (bool, bool, Vec<u32>) {
     let preset_id = std::fs::read_to_string(mode_state_path())
         .ok()
         .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
@@ -464,7 +494,7 @@ fn active_preset_parallel_dual(cluster: &ClusterRouting) -> (bool, Vec<u32>) {
         })
         .unwrap_or_default();
     if preset_id.is_empty() {
-        return (false, vec![1, 3]);
+        return (false, false, vec![1, 3]);
     }
     cluster
         .presets
@@ -476,9 +506,9 @@ fn active_preset_parallel_dual(cluster: &ClusterRouting) -> (bool, Vec<u32>) {
             } else {
                 p.parallel_dual_grade_rounds.clone()
             };
-            (p.parallel_dual_grade, rounds)
+            (p.parallel_dual_grade, p.parallel_dual_coders, rounds)
         })
-        .unwrap_or((false, vec![1, 3]))
+        .unwrap_or((false, false, vec![1, 3]))
 }
 
 pub fn default_parallel_dual_rounds() -> Vec<u32> {
@@ -551,6 +581,23 @@ fn pick_available_endpoint(candidates: &[String], fallback: &str) -> String {
         }
     }
     fallback.trim_end_matches('/').to_string()
+}
+
+fn strict_dual_routing(mode_extras: &serde_json::Value) -> bool {
+    mode_extras
+        .get("parallel_dual_coders")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
+/// Keep preset-pinned URLs (dual-coder geo layout); do not substitute local MTP pool hits.
+fn pick_pinned_endpoint(seed: &str) -> String {
+    let seed = seed.trim_end_matches('/');
+    if endpoint_port_open(seed) {
+        return seed.to_string();
+    }
+    warn!("pinned endpoint offline (using anyway): {}", seed);
+    seed.to_string()
 }
 
 fn role_candidates(
@@ -692,6 +739,7 @@ pub fn apply_preset_to_state(preset_id: &str) -> Result<RoutingPreset, String> {
             "draft_endpoint": preset.draft_endpoint,
             "routing_preset": preset.id,
             "parallel_dual_grade": preset.parallel_dual_grade,
+            "parallel_dual_coders": preset.parallel_dual_coders,
         }
     });
     let _ = std::fs::write(

@@ -14,7 +14,10 @@ impl KoboldClient {
     pub fn new() -> Self {
         Self {
             client: Client::new(),
-            base_url: std::env::var("KOBOLD_BASE_URL")
+            base_url: std::env::var("LLAMA_CPP_BASE_URL")
+                .or_else(|_| std::env::var("LLAMA_SERVER_BASE_URL"))
+                .or_else(|_| std::env::var("VLLM_BASE_URL"))
+                .or_else(|_| std::env::var("KOBOLD_BASE_URL"))
                 .unwrap_or_else(|_| "http://localhost:5555/v1".to_string()),
         }
     }
@@ -35,24 +38,24 @@ impl KoboldClient {
             .json(&request)
             .send()
             .await
-            .context("Failed to reach KoboldCPP endpoint")?;
+            .context("Failed to reach local OpenAI-compatible endpoint")?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            anyhow::bail!("KoboldCPP returned {}: {}", status, body);
+            anyhow::bail!("Local OpenAI-compatible endpoint returned {}: {}", status, body);
         }
 
         let chat_response: ChatResponse = response
             .json()
             .await
-            .context("Failed to parse KoboldCPP response")?;
+            .context("Failed to parse local OpenAI-compatible response")?;
 
         chat_response
             .choices
             .first()
             .map(|c| c.message.content.clone())
-            .ok_or_else(|| anyhow::anyhow!("KoboldCPP returned empty choices"))
+            .ok_or_else(|| anyhow::anyhow!("Local OpenAI-compatible endpoint returned empty choices"))
     }
 
     pub async fn health_check(&self) -> bool {

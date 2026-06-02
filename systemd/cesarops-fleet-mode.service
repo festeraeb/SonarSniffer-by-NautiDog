@@ -1,0 +1,13 @@
+[Unit]
+Description=CESAROPS fleet mode controller (normal vs cake_fleet)
+After=network.target
+
+[Service]
+Type=oneshot
+User=cesarops
+Environment=REPO=/codebase/repos/wreckhunter2000-1
+ExecStart=/codebase/repos/wreckhunter2000-1/scripts/cesarops-fleet-mode.sh status
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

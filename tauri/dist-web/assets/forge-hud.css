@@ -1,0 +1,133 @@
+/* Fixed corner GPU HUD — included on every Forge / CESARops screen */
+#forge-gpu-hud {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100000;
+  min-width: 168px;
+  max-width: 320px;
+  padding: 8px 10px;
+  font-family: "JetBrains Mono", "Consolas", ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #e8e8e8;
+  background: rgba(15, 15, 26, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  user-select: none;
+}
+
+#forge-gpu-hud.collapsed .forge-hud-body,
+#forge-gpu-hud.collapsed .forge-hud-logs-wrap,
+#forge-gpu-hud.collapsed .forge-hud-llm {
+  display: none;
+}
+
+#forge-gpu-hud .forge-hud-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+#forge-gpu-hud .forge-hud-title {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #00d4ff;
+  font-weight: 700;
+}
+
+#forge-gpu-hud .forge-hud-summary {
+  font-size: 10px;
+  color: #a0a0a0;
+  white-space: nowrap;
+}
+
+#forge-gpu-hud .forge-hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+#forge-gpu-hud .forge-hud-row b {
+  color: #fff;
+  font-weight: 600;
+}
+
+#forge-gpu-hud .forge-hud-row.hot b {
+  color: #ffb74d;
+}
+
+#forge-gpu-hud .forge-hud-llm {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(45, 45, 68, 0.9);
+  color: #8ab4d4;
+  font-size: 9px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+#forge-gpu-hud.offline {
+  border-color: rgba(255, 75, 43, 0.5);
+}
+
+#forge-gpu-hud.offline .forge-hud-title {
+  color: #ff9800;
+}
+
+#forge-gpu-hud .forge-hud-logs-wrap {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(45, 45, 68, 0.9);
+}
+
+#forge-gpu-hud .forge-hud-logs-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+#forge-gpu-hud .forge-hud-logs {
+  max-height: 110px;
+  overflow-y: auto;
+  font-size: 10px;
+  line-height: 1.4;
+  user-select: text;
+}
+
+#forge-gpu-hud .forge-hud-log-line {
+  margin: 0 0 3px;
+  color: #b8b8b8;
+  word-break: break-word;
+}
+
+#forge-gpu-hud .forge-hud-log-line .ts {
+  color: #666;
+}
+
+#forge-gpu-hud .forge-hud-log-line.info {
+  color: #8ab4d4;
+}
+
+#forge-gpu-hud .forge-hud-log-line.ok {
+  color: #4caf50;
+}
+
+#forge-gpu-hud .forge-hud-log-line.warn {
+  color: #ff9800;
+}
+
+#forge-gpu-hud .forge-hud-log-line.err {
+  color: #ff6b4a;
+}

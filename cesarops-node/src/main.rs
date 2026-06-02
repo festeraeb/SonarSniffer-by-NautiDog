@@ -24,6 +24,12 @@ struct NodeConfig {
     listen_port: u16,
     gpu_id: u32,
     backend: String,
+    /// llama-server (default) or koboldcpp (M2200 / legacy only).
+    #[serde(default = "default_engine")]
+    engine: String,
+    #[serde(default)]
+    llama_server_path: String,
+    #[serde(default)]
     koboldcpp_path: String,
     #[serde(default = "default_hb")]
     heartbeat_interval_secs: u64,
@@ -32,8 +38,13 @@ struct NodeConfig {
 }
 
 fn default_port() -> u16 { 5500 }
+fn default_engine() -> String { "llama-server".to_string() }
 fn default_hb() -> u64 { 10 }
 fn default_restarts() -> u32 { 3 }
+
+fn is_kobold_engine(engine: &str) -> bool {
+    engine.trim() == "koboldcpp"
+}
 
 impl NodeConfig {
     fn load(path: &str) -> Result<Self, String> {
@@ -381,21 +392,49 @@ async fn spawn_handler(
 
     *state.state.write().await = NodeState::Loading;
 
-    // Build koboldcpp command with correct per-backend flag.
-    let backend_flag = match state.config.backend.as_str() {
-        "cuda" => "--usecuda".to_string(),
-        "vulkan" => format!("--usevulkan {}", state.config.gpu_id),
-        _ => "--usecpu".to_string(),
+    let mut cmd = if is_kobold_engine(&state.config.engine) {
+        let backend_flag = match state.config.backend.as_str() {
+            "cuda" => "--usecuda".to_string(),
+            "vulkan" => format!("--usevulkan {}", state.config.gpu_id),
+            _ => "--usecpu".to_string(),
+        };
+        let mut c = Command::new(
+            if state.config.koboldcpp_path.is_empty() {
+                "/home/cesarops/koboldcpp"
+            } else {
+                &state.config.koboldcpp_path
+            },
+        );
+        c.arg("--model").arg(&req.model_path)
+            .arg("--port").arg(req.port.to_string())
+            .args(backend_flag.split_whitespace())
+            .arg("--gpulayers").arg(req.gpu_layers.to_string())
+            .arg("--contextsize").arg(req.context_size.to_string())
+            .arg("--quiet")
+            .arg("--maingpu").arg(state.config.gpu_id.to_string());
+        c
+    } else {
+        let llama_bin = if state.config.llama_server_path.is_empty() {
+            format!("{}/llama.cpp/build/bin/llama-server", std::env::var("HOME").unwrap_or_else(|_| "/home/cesarops".to_string()))
+        } else {
+            state.config.llama_server_path.clone()
+        };
+        let dev = match state.config.backend.as_str() {
+            "vulkan" => format!("Vulkan{}", state.config.gpu_id),
+            "cuda" => format!("CUDA{}", state.config.gpu_id),
+            _ => "CPU".to_string(),
+        };
+        let ngl = if req.gpu_layers == 0 { "0".to_string() } else if req.gpu_layers >= 99 { "99".to_string() } else { req.gpu_layers.to_string() };
+        let mut c = Command::new(&llama_bin);
+        c.arg("-m").arg(&req.model_path)
+            .arg("--host").arg("0.0.0.0")
+            .arg("--port").arg(req.port.to_string())
+            .arg("-dev").arg(&dev)
+            .arg("-ngl").arg(&ngl)
+            .arg("-c").arg(req.context_size.to_string())
+            .arg("-t").arg("4");
+        c
     };
-
-    let mut cmd = Command::new(&state.config.koboldcpp_path);
-    cmd.arg("--model").arg(&req.model_path)
-        .arg("--port").arg(req.port.to_string())
-        .args(backend_flag.split_whitespace())
-        .arg("--gpulayers").arg(req.gpu_layers.to_string())
-        .arg("--contextsize").arg(req.context_size.to_string())
-        .arg("--quiet")
-        .arg("--maingpu").arg(state.config.gpu_id.to_string());
 
     let child = match cmd.kill_on_drop(true).spawn() {
         Ok(c) => c,
@@ -418,7 +457,11 @@ async fn spawn_handler(
 
     for _ in 0..120 {
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let url = format!("http://127.0.0.1:{}/api/v1/model", req.port);
+        let url = if is_kobold_engine(&state.config.engine) {
+            format!("http://127.0.0.1:{}/api/v1/model", req.port)
+        } else {
+            format!("http://127.0.0.1:{}/v1/models", req.port)
+        };
         if let Ok(r) = client.get(&url).send().await {
             if r.status().is_success() {
                 *state.state.write().await = NodeState::Serving;

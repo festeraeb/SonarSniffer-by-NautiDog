@@ -1,0 +1,8 @@
+{
+  "chat_agent": "gemma",
+  "coder_endpoint": "http://10.0.0.61:5001",
+  "reviewer_endpoint": "http://10.0.0.61:5002",
+  "thinker_endpoint": "http://10.0.0.201:5203",
+  "corrector_endpoint": "http://10.0.0.61:5002",
+  "draft_endpoint": "http://10.0.0.201:5200"
+}

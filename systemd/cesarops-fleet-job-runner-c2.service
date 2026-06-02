@@ -1,0 +1,10 @@
+[Unit]
+Description=CESAROPS fleet job runner — cesarops2 queue
+After=network-online.target remote-fs.target
+
+[Service]
+Type=oneshot
+User=cesarops
+Environment=FLEET_NODE=cesarops2
+Environment=REPO=/mnt/t440/repo
+ExecStart=/mnt/t440/repo/scripts/fleet-job-runner.sh

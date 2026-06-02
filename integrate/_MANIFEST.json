@@ -1,0 +1,1901 @@
+[
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/analyze_fuel_leaks.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/analyze_fuel_leaks.py",
+    "live_key": null,
+    "lines": 160,
+    "stub_score": 6,
+    "sha256": "7d6f94eae5642ffbe254c7905c5b3e5af11c7a9194fef34e45dd97315261d667"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/analyze_resolution_comparison.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/analyze_resolution_comparison.py",
+    "live_key": null,
+    "lines": 138,
+    "stub_score": 0,
+    "sha256": "d9e35b4f651ea521e673fcf7d79b13757ce8ecf8e398dc94ee3db4feaf470377"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/anchor_lock_display.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/anchor_lock_display.py",
+    "live_key": null,
+    "lines": 162,
+    "stub_score": 0,
+    "sha256": "a8843365ccc1882e2dc794c8cf05339dc5742af829640abf3a555cf80a85c7c8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/andaste_geometry_test.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/andaste_geometry_test.py",
+    "live_key": null,
+    "lines": 452,
+    "stub_score": 0,
+    "sha256": "606b7f7cc5764a9ab069cb9be8fc66ad246624d9b5fffe07c263950090717776"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cesarops_agent_gui.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/cesarops_agent_gui.py",
+    "live_key": null,
+    "lines": 244,
+    "stub_score": 6,
+    "sha256": "7364cd603f9bb16327c097925ddc07f891c84928cd27fa3d0f53199ac7d51b77"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cesarops_cli.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/cesarops_cli.py",
+    "live_key": null,
+    "lines": 101,
+    "stub_score": 0,
+    "sha256": "5cfeb93bbb9fa9156eba8f1acc09202a3bdc4af2a7c43ce8fe04df96b831ba6b"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cesarops_engine.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/cesarops_engine.py",
+    "live_key": null,
+    "lines": 372,
+    "stub_score": 0,
+    "sha256": "bd9fe6ef8b36832b53a6819a665037de55df6507c4f488168273ac6f13f231ce"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/check_xenon_cuda.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/check_xenon_cuda.py",
+    "live_key": null,
+    "lines": 51,
+    "stub_score": 0,
+    "sha256": "7ea9b0ba056e6846f3c7f391b64eae2ff657916b9335529ccf6461848db29787"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cleanup_and_organize.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/cleanup_and_organize.py",
+    "live_key": null,
+    "lines": 157,
+    "stub_score": 3,
+    "sha256": "4fd2fc15fd1f9d41198027602ccca44a2cd5005183e37bc0b30ab26f6946bfe8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/config_agent.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/config_agent.py",
+    "live_key": null,
+    "lines": 371,
+    "stub_score": 0,
+    "sha256": "8b2f1c487762c82e7326e990f931e831d58372ac400641ad974378ca4e917fe5"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cuda_direct.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/cuda_direct.py",
+    "live_key": null,
+    "lines": 166,
+    "stub_score": 0,
+    "sha256": "e33db6892fd6ddb7ade889b3a1bfc8108b0e06597bcdbb6f430f4c82dcd21ce1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/cuda_test_kmz.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/cuda_test_kmz.py",
+    "live_key": null,
+    "lines": 321,
+    "stub_score": 0,
+    "sha256": "13c60cdf9cb034d857f9a33ceb665bb07cfb22885bb70c327e2231d96f692ae7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/daily_satellite_pull.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/daily_satellite_pull.py",
+    "live_key": null,
+    "lines": 304,
+    "stub_score": 0,
+    "sha256": "ef5a0669554ca38875096a754878cd687b35d8b3761c1af1230be0b3ad566e77"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/daily_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/daily_scan.py",
+    "live_key": null,
+    "lines": 173,
+    "stub_score": 0,
+    "sha256": "1779c2896a7b31b2116f09102417f57bfbe698b952402a00ce7f7bdbadae946a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/database_connector.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/database_connector.py",
+    "live_key": null,
+    "lines": 309,
+    "stub_score": 0,
+    "sha256": "caa61847ea5b06155ab33eee4c881bae081c6162b20c688a7654280f4cbdd52e"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/deep_wreck_validation.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/deep_wreck_validation.py",
+    "live_key": null,
+    "lines": 276,
+    "stub_score": 0,
+    "sha256": "9e65d0ab16ce58f3e8b22053f2c06c784ebc1b46b2b873060af56fa798c4a8a1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/detailed_analysis.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/detailed_analysis.py",
+    "live_key": null,
+    "lines": 377,
+    "stub_score": 0,
+    "sha256": "92532d99bb50d625f22ca3bde33ece1cfd532d901f5cc284f0565b3cba8af2da"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/detection_sorter.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/detection_sorter.py",
+    "live_key": null,
+    "lines": 585,
+    "stub_score": 0,
+    "sha256": "e374accf04ad1f584b477643c21462823da6d728f0ea6e582a71c63ba69de7e7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/diagnose_gpu.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/diagnose_gpu.py",
+    "live_key": null,
+    "lines": 169,
+    "stub_score": 0,
+    "sha256": "e77c2c3998f2be0d9f4c3b2f55a6ecd32d36b918847521d94395abbfae73c09b"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/drive_identity.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/drive_identity.py",
+    "live_key": null,
+    "lines": 322,
+    "stub_score": 0,
+    "sha256": "4420296fb40a16b2db0e0463b715d640cb38944095d619b018b96ed4860d5f41"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/dual_scan_downloader.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/dual_scan_downloader.py",
+    "live_key": null,
+    "lines": 504,
+    "stub_score": 0,
+    "sha256": "7f9d8ce3670905597507253291e0f3a9f60a3723a356c1f2209865300991531d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/dynamic_db_key.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/dynamic_db_key.py",
+    "live_key": null,
+    "lines": 320,
+    "stub_score": 0,
+    "sha256": "b2aa68e7aa74ca76a13a2ebdb48201d78c92859925957c8f7a66b4398ae0ee5d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/extract_oil_spills_kmz.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/extract_oil_spills_kmz.py",
+    "live_key": null,
+    "lines": 214,
+    "stub_score": 0,
+    "sha256": "d8bcfd3c1a49e2479e37d1165b08bb8a0997e03fed3dab2d61ec0855d3c9cdb8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/fast_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/fast_scan.py",
+    "live_key": null,
+    "lines": 114,
+    "stub_score": 0,
+    "sha256": "494a91024ec742694b489fccbc027dc1a5492701873e9e29daceb500b9beeb64"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/fetcher.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/fetcher.py",
+    "live_key": null,
+    "lines": 449,
+    "stub_score": 0,
+    "sha256": "f8d2969bf2d84a74b95e06e2296b49cca6e058b1ec737bf26523e9b746435b01"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/find_swot_dates.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/find_swot_dates.py",
+    "live_key": null,
+    "lines": 209,
+    "stub_score": 0,
+    "sha256": "4a632cf8777be2e6f7446bb6cae308a48a858dad70288c2f841ac3d43c82a12a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/full_basin_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/full_basin_scan.py",
+    "live_key": null,
+    "lines": 483,
+    "stub_score": 0,
+    "sha256": "f12d902f8bd48edc19cd23cacdc31d16f3406e3bfc2001afc8ac9930296818a7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/full_lake_michigan_run.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/full_lake_michigan_run.py",
+    "live_key": null,
+    "lines": 344,
+    "stub_score": 0,
+    "sha256": "4ac11f5d656962f321e1a9269d51a60453c85cac2ee6538b3eda4bec01b5c9ac"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/full_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/full_scan.py",
+    "live_key": null,
+    "lines": 272,
+    "stub_score": 0,
+    "sha256": "193acb0412bde1220ad18a0d1a8e694da48a4f047125728a195a453d0995f83c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/generate_db_master_key.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/generate_db_master_key.py",
+    "live_key": null,
+    "lines": 267,
+    "stub_score": 0,
+    "sha256": "746b9eba2ec1ff84199e7a9aaf1eac21347bd6ab911769ceec132e2f657a85be"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/global_controls.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/global_controls.py",
+    "live_key": null,
+    "lines": 414,
+    "stub_score": 0,
+    "sha256": "1d006133e44dfeda19a8cce15f578d7b6f1a28863d1372eecd57bb7e620ca38d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/gpu_stress_test.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/gpu_stress_test.py",
+    "live_key": null,
+    "lines": 78,
+    "stub_score": 0,
+    "sha256": "81d33bb284ed5a8106d87ac1210b34e52f7fd36e3b800ac72720e9cdce888f2f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/hard_pixel_audit.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/hard_pixel_audit.py",
+    "live_key": null,
+    "lines": 641,
+    "stub_score": 0,
+    "sha256": "bafe6af014a2c26d5bee1b7bab2e8ae0e571935919950f0c6e450e791a63535f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/init_database.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/init_database.py",
+    "live_key": null,
+    "lines": 242,
+    "stub_score": 0,
+    "sha256": "74f3e3e33f2ef679069cfc04771f2132040506c6d6d9fe7485259de60db7cc05"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/integrated_forensic_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/integrated_forensic_scan.py",
+    "live_key": null,
+    "lines": 435,
+    "stub_score": 0,
+    "sha256": "b899f3f0cd7113b66ad73e42be8970abc59a07421cebef2f1974cb5989df2ba4"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/inventory_all_files.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/inventory_all_files.py",
+    "live_key": null,
+    "lines": 180,
+    "stub_score": 0,
+    "sha256": "758d4a2f90bf2f8595ca0a46108ad62405831b55ce77eac184763243c4b44ce8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/inventory_geotiffs.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/inventory_geotiffs.py",
+    "live_key": null,
+    "lines": 116,
+    "stub_score": 0,
+    "sha256": "d11ad728ad755ea1f3ab75ff5bb360600dc3f9709dfdd434ee71e4be1949223f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/iowa_202_analysis.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/iowa_202_analysis.py",
+    "live_key": null,
+    "lines": 402,
+    "stub_score": 0,
+    "sha256": "84c4eea055329e9290f6563f28d1f294d95f4b281738824bafe0a492fcfa5ddf"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/lake_michigan_full_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/lake_michigan_full_scan.py",
+    "live_key": null,
+    "lines": 472,
+    "stub_score": 3,
+    "sha256": "438634a14f5f2e35d83428de3e1e760c4cb4b06bce72ed4bca1372bf837c8bb8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/lake_michigan_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/lake_michigan_scan.py",
+    "live_key": null,
+    "lines": 275,
+    "stub_score": 0,
+    "sha256": "96cf69d92429d5b85aace97b6e400407c50edca6d9e37d1d9707f572bc222403"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/live_feed_server.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/live_feed_server.py",
+    "live_key": null,
+    "lines": 372,
+    "stub_score": 0,
+    "sha256": "013af4cea2a4605f21df9854d5527c263cc3cb4ce8e971a23dce371c757ab2ff"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/monster_analysis.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/monster_analysis.py",
+    "live_key": null,
+    "lines": 320,
+    "stub_score": 0,
+    "sha256": "0040d5b6d1437f45b7978292bb6b6bf0792bb6d3dacc7709f096f8ff1e94211f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/monster_candidate.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/monster_candidate.py",
+    "live_key": null,
+    "lines": 98,
+    "stub_score": 0,
+    "sha256": "d0a9905a0a9c862acf975d7ef7b6ac3d772cf034b2823454775149a4dcccb43a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/monster_material_audit.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/monster_material_audit.py",
+    "live_key": null,
+    "lines": 481,
+    "stub_score": 0,
+    "sha256": "f97446274039b38c6874fcfcdd68dcd2c98b394bb765143520f1108df0416330"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/multi_sensor_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/multi_sensor_scan.py",
+    "live_key": null,
+    "lines": 351,
+    "stub_score": 0,
+    "sha256": "4868e15bd2c0de624cf6e06a93dbe62a36ee5f7034c3762125290588935348f8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/populate_database.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/populate_database.py",
+    "live_key": null,
+    "lines": 184,
+    "stub_score": 0,
+    "sha256": "d3e3d37858b435c11dd5674b25ecd16b612448bf249447d3698b8d523a93c6b2"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/prioritized_pull_v2.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/prioritized_pull_v2.py",
+    "live_key": null,
+    "lines": 378,
+    "stub_score": 0,
+    "sha256": "b8b42a4d94e8a1d568b8f96a21680af0c94dff291644854899069ddbda2bb8b2"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/prioritized_satellite_pull.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/prioritized_satellite_pull.py",
+    "live_key": null,
+    "lines": 347,
+    "stub_score": 0,
+    "sha256": "d05e72f7c1c0d46017594b46742f8a8db3e1a54a989149d06a8bfc435cc6e617"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/process_tiles.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/process_tiles.py",
+    "live_key": null,
+    "lines": 152,
+    "stub_score": 0,
+    "sha256": "9ee599dc69620d02c42e61fbc299c301891e56c80da633be96d6875185d63bb6"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/process_with_coordinates.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/process_with_coordinates.py",
+    "live_key": null,
+    "lines": 119,
+    "stub_score": 0,
+    "sha256": "27d8db155ead91293384e7539f1eef5f9caac3a9f4eb0a2bafb476d1c2364f91"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/pull_altimetry_anonymous.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/pull_altimetry_anonymous.py",
+    "live_key": null,
+    "lines": 399,
+    "stub_score": 0,
+    "sha256": "ccc1a40106d753b4372a9626bf3d654087db5bc69576ce3957cd08586dbf85f6"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/raw_scan_reprocess.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/raw_scan_reprocess.py",
+    "live_key": null,
+    "lines": 57,
+    "stub_score": 0,
+    "sha256": "21d721239929377f883af59c9946d301b14d37151c454e43f950681d2c2e83d3"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/repeatability_check.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/repeatability_check.py",
+    "live_key": null,
+    "lines": 324,
+    "stub_score": 3,
+    "sha256": "405274f1b97327c28714481e9f50cfd904c67d8b9130fceb3d9dadd22978f1d9"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/run_configured_pipeline.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/run_configured_pipeline.py",
+    "live_key": null,
+    "lines": 178,
+    "stub_score": 9,
+    "sha256": "38b0d9146f12824ab787c4a0b17711ef5f93273e50715ac34b20b5d15082323f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/run_straits_fox.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/run_straits_fox.py",
+    "live_key": null,
+    "lines": 89,
+    "stub_score": 0,
+    "sha256": "c1375f4660b345fefd2194aa20f7ee483144f1e553037bfb28b6b01e9b649a8c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/run_zero.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/run_zero.py",
+    "live_key": null,
+    "lines": 419,
+    "stub_score": 0,
+    "sha256": "253570c3954c3c8c567719a93a198d691517ebe52ecb23213fe4151d26d6b542"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/small_batch_test.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/small_batch_test.py",
+    "live_key": null,
+    "lines": 206,
+    "stub_score": 0,
+    "sha256": "6bd8fc6b64fa5fd444cb5a8bf9b311d33420c85b24e752e7bb1237e434aeee3e"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/smart_daily_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/smart_daily_scan.py",
+    "live_key": null,
+    "lines": 470,
+    "stub_score": 0,
+    "sha256": "93b77796b6381d1629ab2d3e59ae7087c04b4a07f88c1c5913a934a5e1249fac"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/start_xenon_db_sync.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/start_xenon_db_sync.py",
+    "live_key": null,
+    "lines": 137,
+    "stub_score": 0,
+    "sha256": "fde8f0c7d769356b30ee8560a99dd4b5ff940d8b257882a60b212c79447e35a5"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/sync_to_xenon.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/sync_to_xenon.py",
+    "live_key": null,
+    "lines": 69,
+    "stub_score": 0,
+    "sha256": "3ff7c195f574644669d798d836eb922a14933861562a5a5753f38b312f958204"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_ai_callable.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_ai_callable.py",
+    "live_key": null,
+    "lines": 148,
+    "stub_score": 0,
+    "sha256": "970dfcbc9cfd59757f863cec45ce20664b0bc062fd739589fd1ba2511f082417"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_cuda_minimal.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_cuda_minimal.py",
+    "live_key": null,
+    "lines": 39,
+    "stub_score": 0,
+    "sha256": "01125462e6b7408bfa6f3842c26fe54446d8b7775b456941cc45b22135ea7cc0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_cuda_simple.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_cuda_simple.py",
+    "live_key": null,
+    "lines": 45,
+    "stub_score": 0,
+    "sha256": "344c17f17c7393f518541cad728ef9c34e1654f932a6b46e05c5e2a33b26dfca"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_gpu.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_gpu.py",
+    "live_key": null,
+    "lines": 100,
+    "stub_score": 0,
+    "sha256": "0baf0b086b6201e4f1471363cb3b8178cc094df57ad30321b6f1aea4a2fd62c4"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_m2200.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_m2200.py",
+    "live_key": null,
+    "lines": 117,
+    "stub_score": 0,
+    "sha256": "1de922425628a79dc025f7ea0f0e71c5a172f512599ef399c2b8163ab3d6c7b5"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_m2200_minimal.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_m2200_minimal.py",
+    "live_key": null,
+    "lines": 134,
+    "stub_score": 0,
+    "sha256": "ee17a1a1b8eadf4010ce6426e608cd9f9b2c1072cd38bfa7c32d8ae043189960"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_pipeline.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_pipeline.py",
+    "live_key": null,
+    "lines": 94,
+    "stub_score": 0,
+    "sha256": "760d226024bf9f1daf8986aa70e1fd85f6a996c985ceebdbc28e1bbba0ceac4d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/test_repeatability.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/test_repeatability.py",
+    "live_key": null,
+    "lines": 357,
+    "stub_score": 0,
+    "sha256": "ad9ac3823bc1f7b0342c4c3415f2f7082ee7c6050bf7e97f53f5392a7a7ff109"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/three_tile_offset_analysis.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/three_tile_offset_analysis.py",
+    "live_key": null,
+    "lines": 300,
+    "stub_score": 0,
+    "sha256": "659c5e7e3d1b22a8cb13efa1133cafc378879f5c327cf7963a3655ae32250059"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/tpu_client.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/tpu_client.py",
+    "live_key": null,
+    "lines": 185,
+    "stub_score": 0,
+    "sha256": "ed9c3464c02008fce21423b8fc3ec5f7224d679802549e3ae97dc202e0cd2b63"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/tpu_server.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/tpu_server.py",
+    "live_key": null,
+    "lines": 278,
+    "stub_score": 3,
+    "sha256": "f5c97ce8ad166f22521175dadeed52752030def720eff94c3388747e6d329064"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/triple_lock_fusion.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/triple_lock_fusion.py",
+    "live_key": null,
+    "lines": 575,
+    "stub_score": 0,
+    "sha256": "611ccec2b57d586efb49866cebe8065ff20be038bea5a17f5a4cab8443488ea0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/validate_detection.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/validate_detection.py",
+    "live_key": null,
+    "lines": 176,
+    "stub_score": 0,
+    "sha256": "77fecd50799d872d176e3522e39df1340ead9fe121bd5b0eaba5aebac2bc1535"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/verify_cuda.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/verify_cuda.py",
+    "live_key": null,
+    "lines": 110,
+    "stub_score": 0,
+    "sha256": "81e9fe67a0849361497920268891e3b76acc671650fdcfd37f8d96c5689ab217"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/viirs_multi_year_scan.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/viirs_multi_year_scan.py",
+    "live_key": null,
+    "lines": 420,
+    "stub_score": 0,
+    "sha256": "805821d0908fe7ae6d799d54ccccb7e7ed2a063f0682ba86991ef964f4d3b7fb"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/wipe_database.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/wipe_database.py",
+    "live_key": null,
+    "lines": 79,
+    "stub_score": 0,
+    "sha256": "c1d58a1841fbd76555eb932c47380c46781ab636757fdaf66ee8b67969f3fb47"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_wreckhunter_build/zion_trench_squeeze.py",
+    "source": "laptopdump-wreckhunter-build:/data/laptopdump/programming/cesarops-wreckhunter build/zion_trench_squeeze.py",
+    "live_key": null,
+    "lines": 276,
+    "stub_score": 0,
+    "sha256": "ce9137c07bfbcf72bea947b077edc72536fc6ee1b8a5c891a86bc35d8be26ad1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/ai_director.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/ai_director.py",
+    "live_key": null,
+    "lines": 816,
+    "stub_score": 0,
+    "sha256": "adb8015aaa36edf98a16f34136938c9f87affb7c20dbe2074871edb4f32f4110"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/analyze_crossref.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/analyze_crossref.py",
+    "live_key": null,
+    "lines": 130,
+    "stub_score": 0,
+    "sha256": "8e2ff77f3c82ec720bb7095f7cc4377a87b4c2db7510839409ab791eee8174a3"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/andaste_geometry_test.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/andaste_geometry_test.py",
+    "live_key": null,
+    "lines": 452,
+    "stub_score": 0,
+    "sha256": "606b7f7cc5764a9ab069cb9be8fc66ad246624d9b5fffe07c263950090717776"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/audit_wrecks_db.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/audit_wrecks_db.py",
+    "live_key": null,
+    "lines": 99,
+    "stub_score": 0,
+    "sha256": "668d3dbef1c0b6aac929c8156e0165728b1dda3f5c443c562ff3b68f287803bd"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/b02_download.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/b02_download.py",
+    "live_key": null,
+    "lines": 86,
+    "stub_score": 0,
+    "sha256": "c6bcd2939595332e12ee4c84f555e82a3b60ba55747b8ab7d7e0763614d66fa0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/background_probe.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/background_probe.py",
+    "live_key": null,
+    "lines": 450,
+    "stub_score": 0,
+    "sha256": "f24f4996bb3b984c04f0017e8d0d0b790a8a1add776d984619c0a4f42dd9fa1c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/batch_download_manager.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/batch_download_manager.py",
+    "live_key": null,
+    "lines": 96,
+    "stub_score": 0,
+    "sha256": "7bfb75802f3338764354b18bc77234446294f2a9260020f2c740717e9c3a915a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/bridge_calibrate.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/bridge_calibrate.py",
+    "live_key": null,
+    "lines": 116,
+    "stub_score": 0,
+    "sha256": "19299359bcd173a446bd35a9bdda3210e06ce7fcda81efbc61a4f8ada0eaf3de"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/bridge_proximity.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/bridge_proximity.py",
+    "live_key": null,
+    "lines": 75,
+    "stub_score": 0,
+    "sha256": "9319c6ef32a5e358899c0b3ebea4720420f7a8904800e126d8140e29c3869d1a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/cesarops_agent_runner.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/cesarops_agent_runner.py",
+    "live_key": null,
+    "lines": 189,
+    "stub_score": 0,
+    "sha256": "4465799e13c8d8f3616b89ad0baca486d210667a63d8dbee90b7667263451762"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/cesarops_engine.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/cesarops_engine.py",
+    "live_key": null,
+    "lines": 375,
+    "stub_score": 0,
+    "sha256": "bd75e452325b6459a3478c4593b0d1ef70d5958c180fb17c61eefeea3255cbc1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/cesarops_orchestrator.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/cesarops_orchestrator.py",
+    "live_key": null,
+    "lines": 426,
+    "stub_score": 0,
+    "sha256": "26b0b28e06c3a5cb6bbf2b365fc0eb7eaab086a7d8facad769ef55e272b981f9"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/config_agent.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/config_agent.py",
+    "live_key": null,
+    "lines": 371,
+    "stub_score": 0,
+    "sha256": "8b2f1c487762c82e7326e990f931e831d58372ac400641ad974378ca4e917fe5"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/crossref_scans.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/crossref_scans.py",
+    "live_key": null,
+    "lines": 203,
+    "stub_score": 0,
+    "sha256": "0d880b876a1e094c0176d19a573b961adaee2c6de45fb72ba7226f14d643e6ef"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/cuda_env.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/cuda_env.py",
+    "live_key": null,
+    "lines": 45,
+    "stub_score": 0,
+    "sha256": "55266b20456ad41c33902de6cf4d4ef06f206818cc692e48e33a9d2b464003fc"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/database_connector.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/database_connector.py",
+    "live_key": null,
+    "lines": 309,
+    "stub_score": 0,
+    "sha256": "caa61847ea5b06155ab33eee4c881bae081c6162b20c688a7654280f4cbdd52e"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/db_ingestor.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/db_ingestor.py",
+    "live_key": null,
+    "lines": 77,
+    "stub_score": 0,
+    "sha256": "250805e8b83069f804c60918f374f3f63f3d55c304c791936d3ed073e6748f38"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/deploy_and_scan.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/deploy_and_scan.py",
+    "live_key": null,
+    "lines": 286,
+    "stub_score": 0,
+    "sha256": "e543d1b292621c285390a62fcbd17209cf6a6310d9225deb448ac9257690b861"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/download_erie_multiyear.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/download_erie_multiyear.py",
+    "live_key": null,
+    "lines": 86,
+    "stub_score": 0,
+    "sha256": "be1184f0bcad609645541aaa6dc95b00b0ddfd727d47b828f801bb9427a48677"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/download_straits_2024.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/download_straits_2024.py",
+    "live_key": null,
+    "lines": 70,
+    "stub_score": 0,
+    "sha256": "207ab211cf63dbd96650dac12b19e442ff92028032f25a2feb6f863f26752bff"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/drive_identity.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/drive_identity.py",
+    "live_key": null,
+    "lines": 322,
+    "stub_score": 0,
+    "sha256": "4420296fb40a16b2db0e0463b715d640cb38944095d619b018b96ed4860d5f41"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/fetch_geometry_metadata.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/fetch_geometry_metadata.py",
+    "live_key": null,
+    "lines": 180,
+    "stub_score": 0,
+    "sha256": "20f527a90f50f08efe18ecd01470a4448b4010e1dd775ddc114beac6d087e506"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/fix_and_add_wrecks.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/fix_and_add_wrecks.py",
+    "live_key": null,
+    "lines": 165,
+    "stub_score": 0,
+    "sha256": "7a23a3b4e055c40dc1008fd691dc803def7d1761ae3d68fbea6cf92f464f8961"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/generate_report.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/generate_report.py",
+    "live_key": null,
+    "lines": 176,
+    "stub_score": 0,
+    "sha256": "2f7552094c9452f270151253221ebab40821d6a6a140190a94440fe17dc790f7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/hard_pixel_audit.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/hard_pixel_audit.py",
+    "live_key": null,
+    "lines": 658,
+    "stub_score": 0,
+    "sha256": "d7051a0ce3d759fabe87e9790eaf66898eb13b45d9152ab28db014e49091f8f8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/hls_dl.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/hls_dl.py",
+    "live_key": null,
+    "lines": 94,
+    "stub_score": 0,
+    "sha256": "49ae06807d6af36c51f39d13982ef9bad7503a22f041719a18bf17af1f8234ef"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/hls_dl2.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/hls_dl2.py",
+    "live_key": null,
+    "lines": 101,
+    "stub_score": 0,
+    "sha256": "4d321d8c9fffd9c67817879917aaee28f2482afa8ed8c69ecac145d4962df8e6"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/hls_download.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/hls_download.py",
+    "live_key": null,
+    "lines": 93,
+    "stub_score": 0,
+    "sha256": "2ade90864ffb792cf767655ceafcbf1ef750d479bf53d21496239ed180131dcf"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/hls_download2.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/hls_download2.py",
+    "live_key": null,
+    "lines": 141,
+    "stub_score": 0,
+    "sha256": "339fa71b49681e7006826b0a59dfdeb90e2def2cee22ec00dfea548ec795ee68"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/hls_download3.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/hls_download3.py",
+    "live_key": null,
+    "lines": 113,
+    "stub_score": 0,
+    "sha256": "7e158642361fb16e67841689c76dfc28b5ed0aa6a243b49f56890f2f2c1298d1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/init_database.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/init_database.py",
+    "live_key": null,
+    "lines": 242,
+    "stub_score": 0,
+    "sha256": "74f3e3e33f2ef679069cfc04771f2132040506c6d6d9fe7485259de60db7cc05"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/inspect_geometry_metadata.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/inspect_geometry_metadata.py",
+    "live_key": null,
+    "lines": 125,
+    "stub_score": 0,
+    "sha256": "1e8c79de438de41cb2623f571265fe6f22fb638d7d1c5a1bc5a798892f002b4f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/inspect_scan.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/inspect_scan.py",
+    "live_key": null,
+    "lines": 50,
+    "stub_score": 0,
+    "sha256": "3b22fcc7ba50b72dd58484dd196958d3debae5e4535b6ae4bd7901d75e08ccbd"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/lake_michigan_scan.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/lake_michigan_scan.py",
+    "live_key": null,
+    "lines": 1175,
+    "stub_score": 0,
+    "sha256": "2931fcd331fe803454431581d1ac53cc4ade0894abe14007f1f746f12580422d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/llm_context_injector.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/llm_context_injector.py",
+    "live_key": null,
+    "lines": 284,
+    "stub_score": 0,
+    "sha256": "9172f9d5407fcfdd9f36b84961824e67a2d5b96d6cd4f61d5c6fd34a94398c32"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/match_wrecks.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/match_wrecks.py",
+    "live_key": null,
+    "lines": 128,
+    "stub_score": 0,
+    "sha256": "47599877f374314e50bba1e72bed6db707ecb80c4357715fbd88ae27cae9fd96"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/mb2_crosscheck.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/mb2_crosscheck.py",
+    "live_key": null,
+    "lines": 76,
+    "stub_score": 0,
+    "sha256": "a90edc491698866950e3423f5b22215661ffc8b5655d25b9289594deffbc56f3"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/query_wrecks_db.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/query_wrecks_db.py",
+    "live_key": null,
+    "lines": 71,
+    "stub_score": 3,
+    "sha256": "72989147125466903c0e3be803bfd4141cc4257289503d50b39eb2759d122006"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/remote_dispatch.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/remote_dispatch.py",
+    "live_key": null,
+    "lines": 362,
+    "stub_score": 0,
+    "sha256": "eef15f7b824d6098ec163c472d1a12b95610cec7db7459df01a2fc1f7a81ef9c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/scan_wreck_db.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/scan_wreck_db.py",
+    "live_key": null,
+    "lines": 50,
+    "stub_score": 3,
+    "sha256": "f9b4f07a0f6f00dc2b6758f84f2501c7e278120f6efa5baebc345b64fd8c6080"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/smart_search_planner.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/smart_search_planner.py",
+    "live_key": null,
+    "lines": 370,
+    "stub_score": 0,
+    "sha256": "679ff3b49ef7b27bb02ee886689f30dc15f6605a18a58eae4aa2787fc9914e5e"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/swot_ssh_extractor.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/swot_ssh_extractor.py",
+    "live_key": null,
+    "lines": 402,
+    "stub_score": 0,
+    "sha256": "c50e00b6d0da5507dd7c475c6620ea5acf40253208a7439a46fe4b31e09d2bd7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/test_cmr.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/test_cmr.py",
+    "live_key": null,
+    "lines": 39,
+    "stub_score": 0,
+    "sha256": "1d04050c61903306b34f473d27fb8a9f794f133b9812eeae5e9f42d79a6499c4"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/test_cmr2.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/test_cmr2.py",
+    "live_key": null,
+    "lines": 55,
+    "stub_score": 0,
+    "sha256": "06735d796aca4cea3f11c89f357dbeb9f08953331d6190afb43943eb3acb2534"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/test_cmr5.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/test_cmr5.py",
+    "live_key": null,
+    "lines": 44,
+    "stub_score": 0,
+    "sha256": "98bb7b3c73c40dae59f69c8980a7f9efbd6480971b3fcb37ab7faa9e92b06402"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/test_hls_download.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/test_hls_download.py",
+    "live_key": null,
+    "lines": 98,
+    "stub_score": 0,
+    "sha256": "04e79e513ce2a40c95c4107782fff354d000fd7e662945c8bc6187c62d7e252b"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/tile_geometry.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/tile_geometry.py",
+    "live_key": null,
+    "lines": 476,
+    "stub_score": 0,
+    "sha256": "69568509591b6412b94db06865c536746b2c330ecf839037e5e2168ad24b8aea"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/tile_selector.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/tile_selector.py",
+    "live_key": null,
+    "lines": 263,
+    "stub_score": 0,
+    "sha256": "16a5841946b5a2ca7fe9eb8df152f8ed396113f3641364b95be5fd0964a67d61"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/tpu_client.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/tpu_client.py",
+    "live_key": null,
+    "lines": 225,
+    "stub_score": 0,
+    "sha256": "87ebb3bf8be12aa93f8e914f6e9153c23b903566dc81648fa23f6461c6e41016"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/tpu_server.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/tpu_server.py",
+    "live_key": null,
+    "lines": 152,
+    "stub_score": 0,
+    "sha256": "13cc8db7649b10a9b4ac3c386c207a83dbb57d146c56963e426ce1a902727c82"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/triple_lock_fusion.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/triple_lock_fusion.py",
+    "live_key": null,
+    "lines": 575,
+    "stub_score": 0,
+    "sha256": "611ccec2b57d586efb49866cebe8065ff20be038bea5a17f5a4cab8443488ea0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/wreck_ml_predictor.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/wreck_ml_predictor.py",
+    "live_key": null,
+    "lines": 431,
+    "stub_score": 0,
+    "sha256": "ca9bc7b0a14b7acd7360d77c78690af2833f2384ad5b67c699a195d2cb001001"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/wreck_ml_trainer.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/wreck_ml_trainer.py",
+    "live_key": null,
+    "lines": 619,
+    "stub_score": 0,
+    "sha256": "acfcfb959ea62f3f40043c28513de665595fa251ffbd994d169af7745b9e1567"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/wreck_pixel_probe.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/wreck_pixel_probe.py",
+    "live_key": null,
+    "lines": 127,
+    "stub_score": 0,
+    "sha256": "e266d82d3978a071b3338d5965fab7893b5fefae456ac5ef067e1e47129765c0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/wreck_scraper.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/wreck_scraper.py",
+    "live_key": null,
+    "lines": 573,
+    "stub_score": 0,
+    "sha256": "8169e5c238efe177bd17e169837bcda2aac4d8947e61b0becb8d5781835ab498"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/laptopdump_programming_root/wreck_web_scraper.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/wreck_web_scraper.py",
+    "live_key": null,
+    "lines": 483,
+    "stub_score": 0,
+    "sha256": "9e6c48ded1e8cc4817efb1333746f6f0af91a6780b6d2f9c0e1bc436244cdbfa"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/viirs_multi_year_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/viirs_multi_year_scan.py",
+    "live_key": null,
+    "lines": 420,
+    "stub_score": 0,
+    "sha256": "805821d0908fe7ae6d799d54ccccb7e7ed2a063f0682ba86991ef964f4d3b7fb"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/cesarops_agent_gui.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/cesarops_agent_gui.py",
+    "live_key": null,
+    "lines": 244,
+    "stub_score": 6,
+    "sha256": "7364cd603f9bb16327c097925ddc07f891c84928cd27fa3d0f53199ac7d51b77"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_cuda_simple.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_cuda_simple.py",
+    "live_key": null,
+    "lines": 45,
+    "stub_score": 0,
+    "sha256": "344c17f17c7393f518541cad728ef9c34e1654f932a6b46e05c5e2a33b26dfca"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/diagnose_gpu.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/diagnose_gpu.py",
+    "live_key": null,
+    "lines": 169,
+    "stub_score": 0,
+    "sha256": "e77c2c3998f2be0d9f4c3b2f55a6ecd32d36b918847521d94395abbfae73c09b"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/process_tiles.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/process_tiles.py",
+    "live_key": null,
+    "lines": 152,
+    "stub_score": 0,
+    "sha256": "9ee599dc69620d02c42e61fbc299c301891e56c80da633be96d6875185d63bb6"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/check_xenon_cuda.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/check_xenon_cuda.py",
+    "live_key": null,
+    "lines": 51,
+    "stub_score": 0,
+    "sha256": "7ea9b0ba056e6846f3c7f391b64eae2ff657916b9335529ccf6461848db29787"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/integrated_forensic_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/integrated_forensic_scan.py",
+    "live_key": null,
+    "lines": 435,
+    "stub_score": 0,
+    "sha256": "b899f3f0cd7113b66ad73e42be8970abc59a07421cebef2f1974cb5989df2ba4"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/tpu_server.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/tpu_server.py",
+    "live_key": null,
+    "lines": 278,
+    "stub_score": 3,
+    "sha256": "f5c97ce8ad166f22521175dadeed52752030def720eff94c3388747e6d329064"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/database_connector.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/database_connector.py",
+    "live_key": null,
+    "lines": 309,
+    "stub_score": 0,
+    "sha256": "caa61847ea5b06155ab33eee4c881bae081c6162b20c688a7654280f4cbdd52e"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/run_configured_pipeline.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/run_configured_pipeline.py",
+    "live_key": null,
+    "lines": 178,
+    "stub_score": 9,
+    "sha256": "38b0d9146f12824ab787c4a0b17711ef5f93273e50715ac34b20b5d15082323f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_gpu.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_gpu.py",
+    "live_key": null,
+    "lines": 100,
+    "stub_score": 0,
+    "sha256": "0baf0b086b6201e4f1471363cb3b8178cc094df57ad30321b6f1aea4a2fd62c4"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/deep_wreck_validation.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/deep_wreck_validation.py",
+    "live_key": null,
+    "lines": 276,
+    "stub_score": 0,
+    "sha256": "9e65d0ab16ce58f3e8b22053f2c06c784ebc1b46b2b873060af56fa798c4a8a1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/run_straits_fox.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/run_straits_fox.py",
+    "live_key": null,
+    "lines": 89,
+    "stub_score": 0,
+    "sha256": "c1375f4660b345fefd2194aa20f7ee483144f1e553037bfb28b6b01e9b649a8c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/fetcher.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/fetcher.py",
+    "live_key": null,
+    "lines": 449,
+    "stub_score": 0,
+    "sha256": "f8d2969bf2d84a74b95e06e2296b49cca6e058b1ec737bf26523e9b746435b01"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/detection_sorter.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/detection_sorter.py",
+    "live_key": null,
+    "lines": 585,
+    "stub_score": 0,
+    "sha256": "e374accf04ad1f584b477643c21462823da6d728f0ea6e582a71c63ba69de7e7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/start_xenon_db_sync.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/start_xenon_db_sync.py",
+    "live_key": null,
+    "lines": 137,
+    "stub_score": 0,
+    "sha256": "fde8f0c7d769356b30ee8560a99dd4b5ff940d8b257882a60b212c79447e35a5"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/inventory_all_files.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/inventory_all_files.py",
+    "live_key": null,
+    "lines": 180,
+    "stub_score": 0,
+    "sha256": "758d4a2f90bf2f8595ca0a46108ad62405831b55ce77eac184763243c4b44ce8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/live_feed_server.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/live_feed_server.py",
+    "live_key": null,
+    "lines": 372,
+    "stub_score": 0,
+    "sha256": "013af4cea2a4605f21df9854d5527c263cc3cb4ce8e971a23dce371c757ab2ff"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/monster_candidate.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/monster_candidate.py",
+    "live_key": null,
+    "lines": 98,
+    "stub_score": 0,
+    "sha256": "d0a9905a0a9c862acf975d7ef7b6ac3d772cf034b2823454775149a4dcccb43a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/repeatability_check.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/repeatability_check.py",
+    "live_key": null,
+    "lines": 324,
+    "stub_score": 3,
+    "sha256": "405274f1b97327c28714481e9f50cfd904c67d8b9130fceb3d9dadd22978f1d9"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/detailed_analysis.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/detailed_analysis.py",
+    "live_key": null,
+    "lines": 377,
+    "stub_score": 0,
+    "sha256": "92532d99bb50d625f22ca3bde33ece1cfd532d901f5cc284f0565b3cba8af2da"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/full_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/full_scan.py",
+    "live_key": null,
+    "lines": 272,
+    "stub_score": 0,
+    "sha256": "193acb0412bde1220ad18a0d1a8e694da48a4f047125728a195a453d0995f83c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/analyze_resolution_comparison.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/analyze_resolution_comparison.py",
+    "live_key": null,
+    "lines": 138,
+    "stub_score": 0,
+    "sha256": "d9e35b4f651ea521e673fcf7d79b13757ce8ecf8e398dc94ee3db4feaf470377"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/lake_michigan_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/lake_michigan_scan.py",
+    "live_key": null,
+    "lines": 275,
+    "stub_score": 0,
+    "sha256": "96cf69d92429d5b85aace97b6e400407c50edca6d9e37d1d9707f572bc222403"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/gpu_stress_test.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/gpu_stress_test.py",
+    "live_key": null,
+    "lines": 78,
+    "stub_score": 0,
+    "sha256": "81d33bb284ed5a8106d87ac1210b34e52f7fd36e3b800ac72720e9cdce888f2f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/global_controls.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/global_controls.py",
+    "live_key": null,
+    "lines": 414,
+    "stub_score": 0,
+    "sha256": "1d006133e44dfeda19a8cce15f578d7b6f1a28863d1372eecd57bb7e620ca38d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/three_tile_offset_analysis.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/three_tile_offset_analysis.py",
+    "live_key": null,
+    "lines": 300,
+    "stub_score": 0,
+    "sha256": "659c5e7e3d1b22a8cb13efa1133cafc378879f5c327cf7963a3655ae32250059"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/monster_analysis.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/monster_analysis.py",
+    "live_key": null,
+    "lines": 320,
+    "stub_score": 0,
+    "sha256": "0040d5b6d1437f45b7978292bb6b6bf0792bb6d3dacc7709f096f8ff1e94211f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/cesarops_engine.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/cesarops_engine.py",
+    "live_key": null,
+    "lines": 372,
+    "stub_score": 0,
+    "sha256": "bd9fe6ef8b36832b53a6819a665037de55df6507c4f488168273ac6f13f231ce"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/prioritized_pull_v2.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/prioritized_pull_v2.py",
+    "live_key": null,
+    "lines": 378,
+    "stub_score": 0,
+    "sha256": "b8b42a4d94e8a1d568b8f96a21680af0c94dff291644854899069ddbda2bb8b2"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/dynamic_db_key.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/dynamic_db_key.py",
+    "live_key": null,
+    "lines": 320,
+    "stub_score": 0,
+    "sha256": "b2aa68e7aa74ca76a13a2ebdb48201d78c92859925957c8f7a66b4398ae0ee5d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/multi_sensor_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/multi_sensor_scan.py",
+    "live_key": null,
+    "lines": 351,
+    "stub_score": 0,
+    "sha256": "4868e15bd2c0de624cf6e06a93dbe62a36ee5f7034c3762125290588935348f8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/dual_scan_downloader.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/dual_scan_downloader.py",
+    "live_key": null,
+    "lines": 504,
+    "stub_score": 0,
+    "sha256": "7f9d8ce3670905597507253291e0f3a9f60a3723a356c1f2209865300991531d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/cuda_test_kmz.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/cuda_test_kmz.py",
+    "live_key": null,
+    "lines": 321,
+    "stub_score": 0,
+    "sha256": "13c60cdf9cb034d857f9a33ceb665bb07cfb22885bb70c327e2231d96f692ae7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_m2200.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_m2200.py",
+    "live_key": null,
+    "lines": 117,
+    "stub_score": 0,
+    "sha256": "1de922425628a79dc025f7ea0f0e71c5a172f512599ef399c2b8163ab3d6c7b5"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/init_database.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/init_database.py",
+    "live_key": null,
+    "lines": 242,
+    "stub_score": 0,
+    "sha256": "74f3e3e33f2ef679069cfc04771f2132040506c6d6d9fe7485259de60db7cc05"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_ai_callable.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_ai_callable.py",
+    "live_key": null,
+    "lines": 148,
+    "stub_score": 0,
+    "sha256": "970dfcbc9cfd59757f863cec45ce20664b0bc062fd739589fd1ba2511f082417"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/full_basin_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/full_basin_scan.py",
+    "live_key": null,
+    "lines": 483,
+    "stub_score": 0,
+    "sha256": "f12d902f8bd48edc19cd23cacdc31d16f3406e3bfc2001afc8ac9930296818a7"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/find_swot_dates.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/find_swot_dates.py",
+    "live_key": null,
+    "lines": 209,
+    "stub_score": 0,
+    "sha256": "4a632cf8777be2e6f7446bb6cae308a48a858dad70288c2f841ac3d43c82a12a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/generate_db_master_key.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/generate_db_master_key.py",
+    "live_key": null,
+    "lines": 267,
+    "stub_score": 0,
+    "sha256": "746b9eba2ec1ff84199e7a9aaf1eac21347bd6ab911769ceec132e2f657a85be"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/tpu_client.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/tpu_client.py",
+    "live_key": null,
+    "lines": 185,
+    "stub_score": 0,
+    "sha256": "ed9c3464c02008fce21423b8fc3ec5f7224d679802549e3ae97dc202e0cd2b63"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/full_lake_michigan_run.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/full_lake_michigan_run.py",
+    "live_key": null,
+    "lines": 344,
+    "stub_score": 0,
+    "sha256": "4ac11f5d656962f321e1a9269d51a60453c85cac2ee6538b3eda4bec01b5c9ac"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/verify_cuda.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/verify_cuda.py",
+    "live_key": null,
+    "lines": 110,
+    "stub_score": 0,
+    "sha256": "81e9fe67a0849361497920268891e3b76acc671650fdcfd37f8d96c5689ab217"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/analyze_fuel_leaks.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/analyze_fuel_leaks.py",
+    "live_key": null,
+    "lines": 160,
+    "stub_score": 6,
+    "sha256": "7d6f94eae5642ffbe254c7905c5b3e5af11c7a9194fef34e45dd97315261d667"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/process_with_coordinates.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/process_with_coordinates.py",
+    "live_key": null,
+    "lines": 119,
+    "stub_score": 0,
+    "sha256": "27d8db155ead91293384e7539f1eef5f9caac3a9f4eb0a2bafb476d1c2364f91"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/iowa_202_analysis.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/iowa_202_analysis.py",
+    "live_key": null,
+    "lines": 402,
+    "stub_score": 0,
+    "sha256": "84c4eea055329e9290f6563f28d1f294d95f4b281738824bafe0a492fcfa5ddf"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/populate_database.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/populate_database.py",
+    "live_key": null,
+    "lines": 184,
+    "stub_score": 0,
+    "sha256": "d3e3d37858b435c11dd5674b25ecd16b612448bf249447d3698b8d523a93c6b2"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/hard_pixel_audit.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/hard_pixel_audit.py",
+    "live_key": null,
+    "lines": 641,
+    "stub_score": 0,
+    "sha256": "bafe6af014a2c26d5bee1b7bab2e8ae0e571935919950f0c6e450e791a63535f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/daily_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/daily_scan.py",
+    "live_key": null,
+    "lines": 173,
+    "stub_score": 0,
+    "sha256": "1779c2896a7b31b2116f09102417f57bfbe698b952402a00ce7f7bdbadae946a"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/daily_satellite_pull.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/daily_satellite_pull.py",
+    "live_key": null,
+    "lines": 304,
+    "stub_score": 0,
+    "sha256": "ef5a0669554ca38875096a754878cd687b35d8b3761c1af1230be0b3ad566e77"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/fast_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/fast_scan.py",
+    "live_key": null,
+    "lines": 114,
+    "stub_score": 0,
+    "sha256": "494a91024ec742694b489fccbc027dc1a5492701873e9e29daceb500b9beeb64"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/validate_detection.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/validate_detection.py",
+    "live_key": null,
+    "lines": 176,
+    "stub_score": 0,
+    "sha256": "77fecd50799d872d176e3522e39df1340ead9fe121bd5b0eaba5aebac2bc1535"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/anchor_lock_display.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/anchor_lock_display.py",
+    "live_key": null,
+    "lines": 162,
+    "stub_score": 0,
+    "sha256": "a8843365ccc1882e2dc794c8cf05339dc5742af829640abf3a555cf80a85c7c8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/andaste_geometry_test.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/andaste_geometry_test.py",
+    "live_key": null,
+    "lines": 452,
+    "stub_score": 0,
+    "sha256": "606b7f7cc5764a9ab069cb9be8fc66ad246624d9b5fffe07c263950090717776"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/wipe_database.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/wipe_database.py",
+    "live_key": null,
+    "lines": 79,
+    "stub_score": 0,
+    "sha256": "c1d58a1841fbd76555eb932c47380c46781ab636757fdaf66ee8b67969f3fb47"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/smart_daily_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/smart_daily_scan.py",
+    "live_key": null,
+    "lines": 470,
+    "stub_score": 0,
+    "sha256": "93b77796b6381d1629ab2d3e59ae7087c04b4a07f88c1c5913a934a5e1249fac"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/lake_michigan_full_scan.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/lake_michigan_full_scan.py",
+    "live_key": null,
+    "lines": 472,
+    "stub_score": 3,
+    "sha256": "438634a14f5f2e35d83428de3e1e760c4cb4b06bce72ed4bca1372bf837c8bb8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/cleanup_and_organize.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/cleanup_and_organize.py",
+    "live_key": null,
+    "lines": 157,
+    "stub_score": 3,
+    "sha256": "4fd2fc15fd1f9d41198027602ccca44a2cd5005183e37bc0b30ab26f6946bfe8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/raw_scan_reprocess.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/raw_scan_reprocess.py",
+    "live_key": null,
+    "lines": 57,
+    "stub_score": 0,
+    "sha256": "21d721239929377f883af59c9946d301b14d37151c454e43f950681d2c2e83d3"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/triple_lock_fusion.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/triple_lock_fusion.py",
+    "live_key": null,
+    "lines": 575,
+    "stub_score": 0,
+    "sha256": "611ccec2b57d586efb49866cebe8065ff20be038bea5a17f5a4cab8443488ea0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/zion_trench_squeeze.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/zion_trench_squeeze.py",
+    "live_key": null,
+    "lines": 276,
+    "stub_score": 0,
+    "sha256": "ce9137c07bfbcf72bea947b077edc72536fc6ee1b8a5c891a86bc35d8be26ad1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/extract_oil_spills_kmz.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/extract_oil_spills_kmz.py",
+    "live_key": null,
+    "lines": 214,
+    "stub_score": 0,
+    "sha256": "d8bcfd3c1a49e2479e37d1165b08bb8a0997e03fed3dab2d61ec0855d3c9cdb8"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/pull_altimetry_anonymous.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/pull_altimetry_anonymous.py",
+    "live_key": null,
+    "lines": 399,
+    "stub_score": 0,
+    "sha256": "ccc1a40106d753b4372a9626bf3d654087db5bc69576ce3957cd08586dbf85f6"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/prioritized_satellite_pull.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/prioritized_satellite_pull.py",
+    "live_key": null,
+    "lines": 347,
+    "stub_score": 0,
+    "sha256": "d05e72f7c1c0d46017594b46742f8a8db3e1a54a989149d06a8bfc435cc6e617"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_pipeline.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_pipeline.py",
+    "live_key": null,
+    "lines": 94,
+    "stub_score": 0,
+    "sha256": "760d226024bf9f1daf8986aa70e1fd85f6a996c985ceebdbc28e1bbba0ceac4d"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/ai_director.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/ai_director.py",
+    "live_key": null,
+    "lines": 478,
+    "stub_score": 0,
+    "sha256": "4e7ad20139fea8fc4eb352940bdb001c261497efc242ab98d72872b9a7a2141c"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/cesarops_cli.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/cesarops_cli.py",
+    "live_key": null,
+    "lines": 101,
+    "stub_score": 0,
+    "sha256": "5cfeb93bbb9fa9156eba8f1acc09202a3bdc4af2a7c43ce8fe04df96b831ba6b"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/drive_identity.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/drive_identity.py",
+    "live_key": null,
+    "lines": 322,
+    "stub_score": 0,
+    "sha256": "4420296fb40a16b2db0e0463b715d640cb38944095d619b018b96ed4860d5f41"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/cuda_direct.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/cuda_direct.py",
+    "live_key": null,
+    "lines": 166,
+    "stub_score": 0,
+    "sha256": "e33db6892fd6ddb7ade889b3a1bfc8108b0e06597bcdbb6f430f4c82dcd21ce1"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_m2200_minimal.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_m2200_minimal.py",
+    "live_key": null,
+    "lines": 134,
+    "stub_score": 0,
+    "sha256": "ee17a1a1b8eadf4010ce6426e608cd9f9b2c1072cd38bfa7c32d8ae043189960"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/sync_to_xenon.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/sync_to_xenon.py",
+    "live_key": null,
+    "lines": 69,
+    "stub_score": 0,
+    "sha256": "3ff7c195f574644669d798d836eb922a14933861562a5a5753f38b312f958204"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/monster_material_audit.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/monster_material_audit.py",
+    "live_key": null,
+    "lines": 481,
+    "stub_score": 0,
+    "sha256": "f97446274039b38c6874fcfcdd68dcd2c98b394bb765143520f1108df0416330"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_cuda_minimal.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_cuda_minimal.py",
+    "live_key": null,
+    "lines": 39,
+    "stub_score": 0,
+    "sha256": "01125462e6b7408bfa6f3842c26fe54446d8b7775b456941cc45b22135ea7cc0"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/small_batch_test.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/small_batch_test.py",
+    "live_key": null,
+    "lines": 206,
+    "stub_score": 0,
+    "sha256": "6bd8fc6b64fa5fd444cb5a8bf9b311d33420c85b24e752e7bb1237e434aeee3e"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/test_repeatability.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/test_repeatability.py",
+    "live_key": null,
+    "lines": 357,
+    "stub_score": 0,
+    "sha256": "ad9ac3823bc1f7b0342c4c3415f2f7082ee7c6050bf7e97f53f5392a7a7ff109"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/inventory_geotiffs.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/inventory_geotiffs.py",
+    "live_key": null,
+    "lines": 116,
+    "stub_score": 0,
+    "sha256": "d11ad728ad755ea1f3ab75ff5bb360600dc3f9709dfdd434ee71e4be1949223f"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/run_zero.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/run_zero.py",
+    "live_key": null,
+    "lines": 419,
+    "stub_score": 0,
+    "sha256": "253570c3954c3c8c567719a93a198d691517ebe52ecb23213fe4151d26d6b542"
+  },
+  {
+    "action": "integrate",
+    "dest": "integrate/unmapped/CESAROPS_COMPLETE_SNAPSHOT.zip/config_agent.py",
+    "source": "CESAROPS_COMPLETE_SNAPSHOT.zip:/tmp/cesarops_snapshot_2lyeu6o6/config_agent.py",
+    "live_key": null,
+    "lines": 371,
+    "stub_score": 0,
+    "sha256": "8b2f1c487762c82e7326e990f931e831d58372ac400641ad974378ca4e917fe5"
+  }
+]

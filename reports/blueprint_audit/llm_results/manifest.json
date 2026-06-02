@@ -1,0 +1,63 @@
+{
+  "status": "ok",
+  "total_batches": 9,
+  "total_processed_files": 1701,
+  "missing_files_count": 0,
+  "missing_files": [],
+  "batches": [
+    {
+      "batch_id": "batch-001",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-001.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-002",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-002.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-003",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-003.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-004",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-004.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-005",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-005.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-006",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-006.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-007",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-007.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-008",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-008.json",
+      "processed_size": 200,
+      "requested_size": 200
+    },
+    {
+      "batch_id": "batch-009",
+      "out_file": "/codebase/repos/wreckhunter2000-1/reports/blueprint_audit/llm_results/batch-009.json",
+      "processed_size": 101,
+      "requested_size": 101
+    }
+  ]
+}

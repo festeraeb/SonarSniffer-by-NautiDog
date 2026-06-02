@@ -1,0 +1,65 @@
+[
+  {
+    "action": "live_reference",
+    "dest": "live_reference/bag__advanced_bag_scanner_runner.py__SIMILAR_TO_LIVE__laptop-code-pipelines__advanced_bag_scanner_runner.py",
+    "source": "laptop-code-pipelines:/codebase/repos/laptop-code/pipelines/bag/advanced_bag_scanner_runner.py",
+    "live_key": "pipelines/bag/advanced_bag_scanner_runner.py",
+    "lines": 334,
+    "stub_score": 0,
+    "sha256": "352031aa2254993c5e5a1d13cdacad25afbee065d130e0fd8ddfc061b2a236ae"
+  },
+  {
+    "action": "live_reference",
+    "dest": "live_reference/mag__adaptive_background_scan.py__SIMILAR_TO_LIVE__laptop-code-pipelines__adaptive_background_scan.py",
+    "source": "laptop-code-pipelines:/codebase/repos/laptop-code/pipelines/mag/adaptive_background_scan.py",
+    "live_key": "pipelines/mag/adaptive_background_scan.py",
+    "lines": 270,
+    "stub_score": 0,
+    "sha256": "935eadc4309a0d8215a9922835f3118e823dca37bad333de0169731ea1bec2b7"
+  },
+  {
+    "action": "live_reference",
+    "dest": "live_reference/mag__erie_wellhead_discriminator.py__SIMILAR_TO_LIVE__laptop-code-pipelines__erie_wellhead_discriminator.py",
+    "source": "laptop-code-pipelines:/codebase/repos/laptop-code/pipelines/mag/erie_wellhead_discriminator.py",
+    "live_key": "pipelines/mag/erie_wellhead_discriminator.py",
+    "lines": 459,
+    "stub_score": 0,
+    "sha256": "cca03cc12516ed736eb00bc0394241ad7cbf2c9a619449b27a3e4e93da58e124"
+  },
+  {
+    "action": "live_reference",
+    "dest": "live_reference/mag__mag_data_pipeline.py__SIMILAR_TO_LIVE__laptop-code-pipelines__mag_data_pipeline.py",
+    "source": "laptop-code-pipelines:/codebase/repos/laptop-code/pipelines/mag/mag_data_pipeline.py",
+    "live_key": "pipelines/mag/mag_data_pipeline.py",
+    "lines": 1411,
+    "stub_score": 0,
+    "sha256": "e4e670a45bdca3eb0f5932c9cb93ba8f7eedbf49f8abcf3409b64ce09ea6381d"
+  },
+  {
+    "action": "live_reference",
+    "dest": "live_reference/repo_root__cmr_search.py__SIMILAR_TO_LIVE__laptopdump-programming-root__cmr_search.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/cmr_search.py",
+    "live_key": "repo_root/cmr_search.py",
+    "lines": 230,
+    "stub_score": 0,
+    "sha256": "b2ee3da38af8eb2cb1d22f632f5d436ba0fbb440aab1fc53c0fc9a1052248c30"
+  },
+  {
+    "action": "live_reference",
+    "dest": "live_reference/repo_root__universal_downloader.py__SIMILAR_TO_LIVE__laptopdump-programming-root__universal_downloader.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/universal_downloader.py",
+    "live_key": "repo_root/universal_downloader.py",
+    "lines": 1711,
+    "stub_score": 0,
+    "sha256": "986749960aa2c8ba550c8fa420cfb09e5d7181bf9dac1e2e2e4639d0052d56d2"
+  },
+  {
+    "action": "live_reference",
+    "dest": "live_reference/repo_root__weather_service.py__SIMILAR_TO_LIVE__laptopdump-programming-root__weather_service.py",
+    "source": "laptopdump-programming-root:/data/laptopdump/programming/weather_service.py",
+    "live_key": "repo_root/weather_service.py",
+    "lines": 93,
+    "stub_score": 0,
+    "sha256": "9ae9e85ef68d7df7dfdf9b2e1c8d676d7e5a3f6a9f27cd148fe3487722c4998c"
+  }
+]

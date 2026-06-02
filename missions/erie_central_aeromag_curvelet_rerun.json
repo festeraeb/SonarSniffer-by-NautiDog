@@ -1,0 +1,40 @@
+{
+  "mission_id": "ERIE_CENTRAL_AEROMAG_CURVELET_RERUN",
+  "target_name": "Lake Erie Central Basin — aeromag + NauticUVs curvelet",
+  "bbox": [-82.0, 41.6, -80.0, 42.6],
+  "basin": "central",
+  "stages": ["clip", "adaptive", "dipole", "curvelet", "erie_scan"],
+  "knobs": {
+    "window_yards": 1000.0,
+    "z_thresh": 0.45,
+    "edge_z_thresh": 0.45,
+    "min_pixels": 3,
+    "max_pixels": 800,
+    "top_n": 400,
+    "curvelet_window_px": 64,
+    "curvelet_num_scales": 5,
+    "curvelet_energy_threshold": 2.5,
+    "curvelet_score_weight": 0.35,
+    "dipole_inner_yd": 2000.0,
+    "dipole_outer_yd": 5000.0,
+    "require_dipolar_pull": true,
+    "min_lobe_ratio": 0.25,
+    "min_dipole_manmade_score": 20.0,
+    "dipole_score_weight": 0.5,
+    "wellhead_radius_m": 2000.0,
+    "apply_loran_correction": true,
+    "retrain_discriminator": false
+  },
+  "paths": {
+    "repo_root": "/home/cesarops/wreckhunter2000-1/pipelines",
+    "grids_dir": "magnetic_data/grids",
+    "output_dir": "detection_runs/lake_erie/erie_central_curvelet_rerun",
+    "mag_sources": [
+      "local_great_lakes_magnetic_greatlakes.tif",
+      "local_canadian_magnetic_points_greatlakes.tif",
+      "usgs_namag_greatlakes.tif",
+      "usgs_usmag_greatlakes.tif"
+    ]
+  },
+  "_comment": "On T440 run from repo root: python3 pipelines/mag/erie_central_aeromag_orchestrator.py --spec missions/erie_central_aeromag_curvelet_rerun.json"
+}

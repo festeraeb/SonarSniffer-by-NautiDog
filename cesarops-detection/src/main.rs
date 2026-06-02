@@ -1,14 +1,16 @@
 //! CESAROPS Detection Pipeline — Rust workflow orchestrator
 //!
 //! Coordinates the Triple-Lock detection across vision workers:
-//!   1060 (Scout/Florence-2) → P1000 (Validator/Moondream2) → TPU (Jitter) → 1070 (Reasoner)
+//!   Scout → Validator → Jitter (cesarops2 GPUs or T440 CPU fallback)
 //!
 //! Also serves as the n8n-style task dispatcher for scan jobs.
 
 mod types;
+mod endpoint_pool;
 mod workers;
 mod pipeline;
 mod dispatcher;
+pub mod bag_scanner;
 
 use std::sync::Arc;
 use axum::{routing::{get, post}, Router};

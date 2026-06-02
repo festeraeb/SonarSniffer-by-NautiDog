@@ -67,11 +67,11 @@ impl Default for CorrectorPreset {
     fn default() -> Self {
         // Sensible default: qwen_coder-like
         Self {
-            think_tolerance: 4,
-            loop_threshold: 3,
-            suggest_after: 3,
-            demand_ack_after: 5,
-            reboot_after: 7,
+            think_tolerance: 20,
+            loop_threshold: 0,
+            suggest_after: 20,
+            demand_ack_after: 25,
+            reboot_after: 30,
             wso_auto: true,
             vector_inject: true,
             correction_strength: CorrectionStrength::Medium,
@@ -182,8 +182,8 @@ pub fn decide_escalation(
     last_escalation: Option<&Escalation>,
     last_tool_name: &str,
 ) -> Escalation {
-    // ── Loop detection (same tool repeated) ─────────────────────────────────
-    if repetition_count >= preset.loop_threshold {
+    // ── Loop detection (same tool repeated) — disabled when loop_threshold is 0 ─
+    if preset.loop_threshold > 0 && repetition_count >= preset.loop_threshold {
         let level = repetition_count - preset.loop_threshold + 1;
         match level {
             1..=2 => return Escalation::Suggest(format!(
@@ -250,13 +250,120 @@ pub fn decide_escalation(
     Escalation::Continue
 }
 
+/// Think-stall ladder: force a concrete operator status update (uses `[tuning].corrector_think_only_after`).
+pub fn decide_think_stall_update(
+    rounds_without_tool: u32,
+    threshold: u32,
+    last_escalation: Option<&Escalation>,
+) -> Escalation {
+    if rounds_without_tool < threshold {
+        return Escalation::Continue;
+    }
+
+    let over = rounds_without_tool - threshold;
+
+    // First hit — short and plain (models misread long formal text as "user message vague").
+    if over == 0 {
+        return Escalation::Demand(format!(
+            "You have had {} rounds with no tool call. Stop thinking-only output.\n\n\
+             Reply now with a short progress report:\n\
+             1) What you finished\n\
+             2) What is blocking you (or \"none\")\n\
+             3) Your very next step — one tool name, or say you are giving the final answer\n\n\
+             Then do that next step (tool call or final answer).",
+            rounds_without_tool
+        ));
+    }
+
+    // Repeat demand (every ~2 rounds until reboot).
+    if over <= 8 {
+        if matches!(last_escalation, Some(Escalation::Demand(_))) && over % 2 == 1 {
+            return Escalation::Continue;
+        }
+        return Escalation::Demand(format!(
+            "Still no tool call after {} rounds. You did not give a clear progress report.\n\n\
+             Answer in plain text right now:\n\
+             - Done:\n\
+             - Blocker:\n\
+             - Next: (one tool, or \"final answer\")\n\n\
+             No more long reasoning. Report first, then act.",
+            rounds_without_tool
+        ));
+    }
+
+    Escalation::Reboot(format!(
+        "{} rounds with no tool call and no clear report. \
+         Start over on the original task. First write Done / Blocker / Next, then use a tool or answer.",
+        rounds_without_tool
+    ))
+}
+
+/// Same-tool repeat ladder (uses `[tuning].corrector_hard_repeat_cap`).
+///
+/// At `demand_after` we stop executing the repeat and force a progress report — same idea as
+/// [`decide_think_stall_update`] for think-only loops. Hard plain-text termination only at
+/// `terminate_after` (defaults to demand_after + 6 in `loop_tuning`).
+pub fn decide_tool_repeat_stall(
+    repeat_count: usize,
+    demand_after: usize,
+    terminate_after: usize,
+    tool_name: &str,
+    last_escalation: Option<&Escalation>,
+) -> Escalation {
+    if repeat_count < demand_after {
+        return Escalation::Continue;
+    }
+
+    if repeat_count >= terminate_after {
+        return Escalation::Demand(format!(
+            "You called '{}' {} times. Stop calling it.\n\n\
+             Give your final answer in plain text NOW — summarize what you did, what failed, and what remains.",
+            tool_name, repeat_count
+        ));
+    }
+
+    let over = repeat_count - demand_after;
+
+    if over == 0 {
+        return Escalation::Demand(format!(
+            "You called '{}' {} times in a row. Pause and answer in plain text:\n\
+             1) What you were trying to do with this tool\n\
+             2) What happened on the last attempt (result or error)\n\
+             3) Your next step — a DIFFERENT tool name, or say you are giving the final answer\n\n\
+             No more '{}' until you answer those three points.",
+            tool_name, repeat_count, tool_name
+        ));
+    }
+
+    if over <= 8 {
+        if matches!(last_escalation, Some(Escalation::Demand(_))) && over % 2 == 1 {
+            return Escalation::Continue;
+        }
+        return Escalation::Demand(format!(
+            "Still repeating '{}' ({}x). You did not explain what you are doing.\n\n\
+             Reply now — short and plain:\n\
+             - Trying to:\n\
+             - Last result:\n\
+             - Next: (different tool, or \"final answer\")\n\n\
+             Break the loop: respond first, then act.",
+            tool_name, repeat_count
+        ));
+    }
+
+    Escalation::Reboot(format!(
+        "Tool loop on '{}' ({} calls). Hard reset on approach.\n\
+         First line: Done / Blocker / Next. Then one different tool or your final answer.",
+        tool_name, repeat_count
+    ))
+}
+
 /// Format an escalation as a system message to inject into the conversation.
 pub fn format_escalation_message(esc: &Escalation) -> Option<String> {
     match esc {
         Escalation::Continue => None,
         Escalation::Suggest(s) => Some(format!("[SUGGESTION FROM CORRECTOR]: {}", s)),
-        Escalation::Demand(s)  => Some(format!("[DEMAND — YOU MUST ADDRESS THIS]: {}", s)),
-        Escalation::Reboot(s)  => Some(format!("[CONVERSATION RESET]: {}", s)),
+        Escalation::Demand(s) => Some(format!("[Forge — give a progress report now]\n{}", s)),
+        Escalation::Reboot(s) => Some(format!("[Forge — reset; report then continue]\n{}", s)),
         Escalation::SwapModel(s) => Some(format!("[OPERATOR ALERT — MODEL SWAP RECOMMENDED]: {}", s)),
     }
 }
@@ -314,5 +421,38 @@ mod tests {
         let p = test_preset();
         let e = decide_escalation(&p, 0, 5, 5, None, "");
         assert!(matches!(e, Escalation::Suggest(_)));
+    }
+
+    #[test]
+    fn think_stall_first_hit_is_forceful_update() {
+        let e = decide_think_stall_update(20, 20, None);
+        assert!(matches!(e, Escalation::Demand(_)));
+        if let Escalation::Demand(s) = e {
+            assert!(s.contains("progress report"));
+        }
+    }
+
+    #[test]
+    fn think_stall_below_threshold_is_continue() {
+        let e = decide_think_stall_update(19, 20, None);
+        assert_eq!(e, Escalation::Continue);
+    }
+
+    #[test]
+    fn tool_repeat_at_cap_demands_report_not_terminate() {
+        let e = decide_tool_repeat_stall(6, 6, 12, "read_file", None);
+        assert!(matches!(e, Escalation::Demand(_)));
+        if let Escalation::Demand(s) = e {
+            assert!(s.contains("trying to do"));
+        }
+    }
+
+    #[test]
+    fn tool_repeat_terminate_only_at_high_count() {
+        let e = decide_tool_repeat_stall(12, 6, 12, "think_harder", None);
+        assert!(matches!(e, Escalation::Demand(_)));
+        if let Escalation::Demand(s) = e {
+            assert!(s.contains("final answer"));
+        }
     }
 }

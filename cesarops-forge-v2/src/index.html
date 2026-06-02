@@ -3,300 +3,1262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CESAROPS Forge v2</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>CESAROPS FORGE v2</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            min-height: 100vh;
+            font-family: 'Segoe UI', monospace, sans-serif;
+            background: #0d0d1a;
+            color: #d8d8e8;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         header {
-            background: #16213e;
-            padding: 1rem 2rem;
-            border-bottom: 2px solid #0f3460;
+            background: #111126;
+            padding: 0.6rem 1rem;
+            border-bottom: 2px solid #1a2a5e;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 200002;
         }
-        header h1 { color: #00d4ff; font-size: 1.5rem; }
-        .status { color: #4caf50; font-size: 0.9rem; }
-        .subtitle { color: #888; font-size: 0.8rem; }
-        .chat-container {
-            flex: 1;
+        header h1 { color: #00e5ff; font-size: 1.1rem; letter-spacing: 1px; }
+        .hdr-sub { color: #556; font-size: 0.72rem; margin-top: 1px; }
+        .hdr-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; position: relative; z-index: 200002; }
+        .hdr-right a { color: #4fc3f7; font-size: 0.8rem; text-decoration: none; padding: 3px 8px; border: 1px solid #1a3a5e; border-radius: 4px; }
+        .hdr-right a:hover { background: #1a3a5e; }
+        .btn { padding: 0.35rem 0.75rem; border: none; border-radius: 5px; cursor: pointer; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.5px; }
+        .btn-steer { background: #2a1a50; color: #c8a8ff; border: 1px solid #6844cc; }
+        .btn-clear { background: #3a0d00; color: #ff9966; border: 1px solid #cc4400; }
+        .btn-stop  { background: #cc2222; color: #fff; border: 1px solid #ff4444; }
+        .btn-steer:hover { background: #3a2060; } .btn-clear:hover { background: #4a1000; } .btn-stop:hover { background: #dd3333; }
+        #status-pill { font-size: 0.74rem; padding: 3px 10px; border-radius: 10px; background: #1a1a2e; border: 1px solid #333; color: #778; }
+        #status-pill.busy { background: #2a1500; border-color: #ff6600; color: #ff9944; }
+        #status-pill.ok   { background: #0a1a0a; border-color: #1a6a1a; color: #44cc44; }
+
+        /* TOAST */
+        #toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 999999; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem;
+            font-weight: 600; pointer-events: none; transition: opacity 0.3s;
+            opacity: 0; white-space: nowrap;
+        }
+        #toast.show { opacity: 1; }
+        #toast.ok      { background: #0a2a0a; border: 1px solid #22c55e; color: #4ade80; }
+        #toast.error   { background: #2a0a0a; border: 1px solid #ef4444; color: #f87171; }
+        #toast.info    { background: #0a1a2e; border: 1px solid #3b82f6; color: #60a5fa; }
+        #toast.loading { background: #1a1a0a; border: 1px solid #f59e0b; color: #fbbf24; }
+
+        /* ROUTING BOARD */
+        .routing-bar {
+            background: #0c0c20;
+            border-bottom: 2px solid #1a2050;
+            padding: 0;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 100;
+        }
+        .routing-toggle {
             display: flex;
-            flex-direction: column;
-            padding: 1rem 2rem;
-            overflow: hidden;
-        }
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem 0;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 1rem 1.5rem;
-            border-radius: 16px;
-            font-size: 1.05rem;
-            line-height: 1.6;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
-        .msg-user {
-            align-self: flex-end;
-            background: #0f3460;
-            color: #e0e0e0;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-assistant {
-            align-self: flex-start;
-            background: #1b4332;
-            color: #e0e0e0;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-diagnosis {
-            align-self: flex-start;
-            background: #4a1500;
-            color: #ffb380;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            padding: 0.5rem 1rem;
-        }
-        .tool-badge {
-            padding: 0.4rem 0.8rem;
-            background: #2d1b4e;
-            border-radius: 8px;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
             font-size: 0.8rem;
-            color: #d4a5ff;
-            margin: 0.2rem 0;
-            align-self: flex-start;
-        }
-        .input-area {
-            display: flex;
-            gap: 0.5rem;
-            padding: 1rem 0;
-        }
-        .input-area input {
-            flex: 1;
-            padding: 1rem 1.5rem;
-            font-size: 1.05rem;
-            border: 2px solid #0f3460;
-            border-radius: 12px;
-            background: #16213e;
-            color: #e0e0e0;
-            outline: none;
-        }
-        .input-area input:focus { border-color: #00d4ff; }
-        .input-area button {
-            padding: 1rem 2rem;
-            font-size: 1.05rem;
-            font-weight: bold;
-            background: #00d4ff;
-            color: #1a1a2e;
+            color: #8899bb;
+            padding: 6px 10px;
             border: none;
-            border-radius: 12px;
-            cursor: pointer;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            transition: background 0.15s;
         }
-        .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .loading { color: #00d4ff; font-style: italic; padding: 0.5rem; }
-        .btn-clear {
-            padding: 0.5rem 1rem;
-            background: #4a1500;
-            color: #ffb380;
-            border: 1px solid #ff6600;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.8rem;
+        .routing-toggle:hover { background: #0f0f28; color: #aabbd0; }
+        .rt-arrow { transition: transform 0.2s; display: inline-block; font-size: 0.7rem; flex-shrink: 0; }
+        .routing-toggle.open .rt-arrow { transform: rotate(90deg); }
+        #routing-board { display: none; padding: 8px 10px 10px; background: #080820; border-top: 1px solid #14145a; }
+        #routing-board.open { display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+
+        .preset-strip { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        .preset-label { font-size: 0.7rem; color: #446; margin-right: 2px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-preset {
+            padding: 4px 10px; font-size: 0.7rem;
+            background: #141430; color: #7799cc;
+            border: 1px solid #223; border-radius: 4px; cursor: pointer;
+        }
+        .btn-preset:hover { background: #1a1a50; }
+        .btn-preset.active { background: #1a2a60; border-color: #4466cc; color: #aaccff; box-shadow: 0 0 6px rgba(68,102,204,0.4); }
+        .btn-scan { padding: 4px 10px; font-size: 0.7rem; background: #0a2010; color: #55cc77; border: 1px solid #225533; border-radius: 4px; cursor: pointer; }
+        .btn-scan:hover { background: #0e2a14; }
+
+        .routing-flow { display: flex; gap: 0; align-items: stretch; overflow-x: auto; padding-bottom: 2px; }
+        .rn-arrow { display: flex; align-items: center; padding: 0 6px; color: #334; font-size: 1rem; flex-shrink: 0; }
+        .routing-node {
+            background: #101028; border: 1px solid #1e2050; border-radius: 6px;
+            padding: 7px 9px; min-width: 140px; max-width: 190px; flex-shrink: 0;
+        }
+        .rn-role { font-size: 0.62rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+        .rn-role.chat      { color: #e879f9; }
+        .rn-role.thinker   { color: #7c3aed; }
+        .rn-role.coder     { color: #00e5ff; }
+        .rn-role.reviewer  { color: #22c55e; }
+        .rn-role.corrector { color: #f59e0b; }
+        .rn-role.validator { color: #f43f5e; }
+        .rn-model { font-size: 0.7rem; color: #889abb; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rn-hw    { font-size: 0.62rem; color: #3a4a6a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rn-select {
+            width: 100%; margin-top: 4px; background: #080818; color: #99bbdd;
+            border: 1px solid #1e2050; border-radius: 3px; padding: 2px 3px; font-size: 0.66rem; cursor: pointer;
+        }
+        .routing-apply-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .btn-apply { padding: 5px 14px; background: #1a2a60; color: #aaccff; border: 1px solid #3355aa; border-radius: 4px; cursor: pointer; font-size: 0.76rem; font-weight: 700; }
+        .btn-apply:hover { background: #223370; }
+        #routing-saved-msg { font-size: 0.72rem; color: #22c55e; display: none; font-weight: 600; }
+        #active-preset-badge { font-size: 0.67rem; color: #6688bb; margin-left: auto; }
+
+        /* ACTIVE NODE GLOW */
+        @keyframes node-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .routing-node.rn-live { position: relative; }
+        .routing-node.rn-live::before {
+            content: ''; display: block; width: 7px; height: 7px;
+            border-radius: 50%; position: absolute; top: 6px; right: 7px;
+            animation: node-pulse 2s ease-in-out infinite;
+        }
+        .routing-node.rn-live.rn-chat      { border-color: #e879f9; box-shadow: 0 0 8px rgba(232,121,249,0.3); }
+        .routing-node.rn-live.rn-thinker   { border-color: #7c3aed; box-shadow: 0 0 8px rgba(124,58,237,0.3); }
+        .routing-node.rn-live.rn-coder     { border-color: #00e5ff; box-shadow: 0 0 8px rgba(0,229,255,0.3); }
+        .routing-node.rn-live.rn-reviewer  { border-color: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.3); }
+        .routing-node.rn-live.rn-corrector { border-color: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.3); }
+        .routing-node.rn-live.rn-validator { border-color: #f43f5e; box-shadow: 0 0 8px rgba(244,63,94,0.3); }
+        .routing-node.rn-live.rn-chat::before      { background: #e879f9; box-shadow: 0 0 4px #e879f9; }
+        .routing-node.rn-live.rn-thinker::before   { background: #7c3aed; box-shadow: 0 0 4px #7c3aed; }
+        .routing-node.rn-live.rn-coder::before     { background: #00e5ff; box-shadow: 0 0 4px #00e5ff; }
+        .routing-node.rn-live.rn-reviewer::before  { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
+        .routing-node.rn-live.rn-corrector::before { background: #f59e0b; box-shadow: 0 0 4px #f59e0b; }
+        .routing-node.rn-live.rn-validator::before { background: #f43f5e; box-shadow: 0 0 4px #f43f5e; }
+
+        /* TOOLS & ORCH PANEL */
+        .orch-section { border-top: 1px solid #1a2050; padding-top: 6px; }
+        .orch-toggle-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; cursor: pointer; user-select: none; }
+        .orch-toggle-label { font-size: 0.7rem; color: #6688bb; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+        .orch-toggle-row:hover .orch-toggle-label { color: #88aad0; }
+        #orch-panel { display: none; margin-top: 6px; }
+        #orch-panel.open { display: flex; flex-direction: column; gap: 8px; }
+        .orch-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .orch-key { font-size: 0.68rem; color: #556; width: 130px; flex-shrink: 0; }
+        .orch-val { font-size: 0.7rem; color: #88aacc; font-family: monospace; }
+        .pill-toggle { display: inline-flex; border-radius: 4px; overflow: hidden; border: 1px solid #1e2050; }
+        .pill-opt { padding: 2px 8px; font-size: 0.68rem; cursor: pointer; color: #556; background: #0c0c20; transition: all 0.1s; user-select: none; }
+        .pill-opt.active { background: #1a2a60; color: #aaccff; font-weight: 700; }
+        .pill-opt.active.green { background: #0a2a10; color: #4ade80; }
+        .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+        .dot-green { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
+        .dot-red   { background: #ef4444; box-shadow: 0 0 4px #ef4444; }
+        .dot-grey  { background: #445; }
+        .tool-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .tool-chip { padding: 2px 7px; font-size: 0.65rem; border-radius: 3px; cursor: pointer; border: 1px solid #1e2050; background: #0e0e22; color: #6688aa; transition: all 0.1s; user-select: none; }
+        .tool-chip.enabled  { background: #0a1a2a; border-color: #2a4a88; color: #88bbdd; }
+        .tool-chip.disabled { opacity: 0.4; text-decoration: line-through; }
+
+        /* DISCOVER PANEL */
+        #discover-panel { display: none; background: #060616; border: 1px solid #1a2a50; border-radius: 6px; padding: 8px; font-size: 0.7rem; }
+        #discover-panel.open { display: block; }
+        .disc-node { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid #0d0d22; }
+        .disc-node-name { color: #7799bb; flex: 0 0 140px; font-weight: 600; }
+        .disc-ep { color: #44cc77; font-family: monospace; cursor: pointer; padding: 2px 5px; border: 1px solid #226633; border-radius: 3px; }
+        .disc-ep:hover { background: #0a2010; }
+        .disc-ep.offline { color: #446; border-color: #1a1a2a; cursor: default; }
+
+        /* MAIN GRID */
+        .page-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .main-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr 255px; min-height: 0; }
+
+        /* LANE */
+        .lane { display: flex; flex-direction: column; border-right: 1px solid #181828; min-height: 0; }
+        .lane:nth-child(1) { border-top: 3px solid #00e5ff; }
+        .lane:nth-child(2) { border-top: 3px solid #22c55e; }
+        .lane:nth-child(3) { border-top: 3px solid #f59e0b; }
+        .lane-head { padding: 6px 8px; background: #0d0d22; border-bottom: 1px solid #181828; flex-shrink: 0; }
+        .lane-title-row { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+        .lane-title { color: #99bbdd; font-size: 0.82rem; font-weight: 700; }
+        .lane-badge { font-size: 0.63rem; background: #141428; border: 1px solid #1e1e38; border-radius: 3px; padding: 1px 5px; color: #556; white-space: nowrap; max-width: 115px; overflow: hidden; text-overflow: ellipsis; }
+        .race-chip { font-size: 0.62rem; padding: 2px 7px; border-radius: 8px; background: #110818; border: 1px solid #330a44; color: #8844aa; cursor: pointer; transition: all 0.15s; user-select: none; }
+        .race-chip.active { background: #1d0a2a; border-color: #7722aa; color: #bb66ee; }
+        .lane-role-row { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+        .lane-role-sel { flex: 1; background: #070710; color: #aab; border: 1px solid #1a1a32; border-radius: 3px; padding: 2px 3px; font-size: 0.68rem; }
+        .lane-ep { font-size: 0.6rem; color: #334; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .race-bar { display: none; background: #0d0520; border-bottom: 1px solid #2a0850; padding: 4px 8px; font-size: 0.7rem; color: #9966cc; flex-shrink: 0; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .race-bar.vis { display: flex; }
+        .race-grade-result { font-size: 0.68rem; color: #88bbcc; flex: 1; min-width: 100%; margin-top: 3px; white-space: pre-wrap; }
+        .btn-win { font-size: 0.65rem; padding: 3px 8px; border-radius: 8px; cursor: pointer; border: none; font-weight: 700; transition: opacity 0.1s; }
+        .btn-win:hover { opacity: 0.8; }
+        .btn-win-a { background: #001838; color: #00e5ff; border: 1px solid #004488; }
+        .btn-win-b { background: #001808; color: #22c55e; border: 1px solid #004422; }
+        .btn-win-c { background: #1a1000; color: #f59e0b; border: 1px solid #664400; }
+        .btn-grade { font-size: 0.65rem; padding: 3px 8px; border-radius: 8px; cursor: pointer; background: #1a1540; color: #cc99ff; border: 1px solid #5533aa; font-weight: 700; }
+        .btn-grade:hover { background: #251a50; }
+
+        .messages { flex: 1; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 5px; font-size: 0.84rem; }
+        .msg { padding: 8px 10px; border-radius: 8px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .msg-user      { background: #081d3c; align-self: flex-end; max-width: 95%; border: 1px solid #0a2a50; }
+        .msg-assistant { background: #091a0c; align-self: flex-start; max-width: 95%; border: 1px solid #0a2812; }
+        .msg-sys       { background: #160826; color: #7766aa; font-size: 0.7rem; border: 1px solid #220a3a; }
+        .msg-grade     { background: #0c1430; color: #99ccff; font-size: 0.73rem; border: 1px solid #1a3080; border-radius: 8px; padding: 8px 10px; }
+        .tool-badge    { font-size: 0.65rem; color: #bb77ff; padding: 1px 6px; }
+
+        .input-area { display: flex; gap: 4px; padding: 5px 6px; background: #09091a; border-top: 1px solid #181828; flex-shrink: 0; }
+        .input-area input { flex: 1; background: #0c0c1e; color: #d0d0e0; border: 1px solid #1a1a30; border-radius: 4px; padding: 6px 8px; font-size: 0.82rem; }
+        .input-area input:focus { outline: none; border-color: #2244aa; }
+        .btn-send { padding: 6px 12px; background: #162256; color: #99bbff; border: 1px solid #2a3a88; border-radius: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 700; }
+        .btn-send:hover { background: #1e2d6a; }
+        .btn-send:disabled { opacity: 0.4; cursor: default; }
+        .btn-race { padding: 6px 9px; background: #1a0828; color: #bb77ee; border: 1px solid #3a1055; border-radius: 4px; cursor: pointer; font-size: 0.74rem; font-weight: 700; }
+        .btn-race:hover { background: #230d35; }
+
+        /* SIDEBAR */
+        .sidebar { display: flex; flex-direction: column; background: #090912; border-left: 1px solid #181828; min-height: 0; overflow: hidden; }
+        .sb-head { padding: 5px 8px; border-bottom: 1px solid #181828; font-size: 0.68rem; color: #446; text-transform: uppercase; letter-spacing: .5px; flex-shrink: 0; }
+        .activity-log { flex: 1; overflow-y: auto; padding: 3px 7px; font-size: 0.68rem; }
+        .act-line { padding: 1px 0; border-bottom: 1px solid #0c0c18; }
+        .act-lane-a { color: #00bcd4; } .act-lane-b { color: #4caf50; } .act-lane-c { color: #ff9800; }
+        .trace-log { max-height: 145px; overflow-y: auto; padding: 3px 7px; font-size: 0.67rem; border-top: 1px solid #181828; flex-shrink: 0; }
+        .trace-line { padding: 1px 0; border-bottom: 1px solid #0c0c18; color: #9ab; }
+        .trace-line.tool { color: #bb88ff; }
+        .trace-line.thought { color: #7fd0ff; }
+        .scorecard { padding: 4px 7px; font-size: 0.67rem; max-height: 120px; overflow-y: auto; border-top: 1px solid #181828; flex-shrink: 0; }
+        .sc-head { color: #446; text-transform: uppercase; letter-spacing: .5px; font-size: 0.65rem; margin-bottom: 3px; }
+        .sc-row { display: flex; justify-content: space-between; padding: 1px 0; border-bottom: 1px solid #0d0d18; }
+        .sc-name { color: #6677aa; } .sc-active { color: #22c55e; } .sc-hw { color: #334; }
+        .netdata-sect { padding: 4px 7px 5px; font-size: 0.67rem; border-top: 1px solid #181828; flex-shrink: 0; }
+        .netdata-sect a { color: #3db8e8; }
+        .nd-frame { width: 100%; height: 85px; border: none; background: #050508; }
+
+        /* LIVE DOCK */
+        .live-dock { flex-shrink: 0; border-top: 2px solid #181828; background: #060610; display: flex; flex-direction: column; height: 125px; }
+        .dock-head { display: flex; gap: 6px; align-items: center; padding: 3px 8px; border-bottom: 1px solid #181828; background: #0a0a1a; flex-shrink: 0; }
+        .dock-head strong { color: #3db8e8; font-size: 0.75rem; }
+        .dock-head span   { color: #334; font-size: 0.67rem; }
+        .dock-head select { font-size: 0.67rem; background: #0c0c1e; color: #99a; border: 1px solid #1a1a30; border-radius: 3px; padding: 1px 3px; }
+        .btn-dock { font-size: 0.65rem; padding: 2px 6px; background: #0d0d1e; color: #667; border: 1px solid #1a1a30; border-radius: 3px; cursor: pointer; }
+        #live-log { flex: 1; overflow-y: auto; padding: 3px 8px; font-size: 0.7rem; line-height: 1.4; color: #aab; white-space: pre-wrap; word-break: break-word; }
+        #live-log .line-send  { color: #00e5ff; } #live-log .line-tool { color: #bb88ff; }
+        #live-log .line-round { color: #f59e0b; } #live-log .line-llm  { color: #6fd98a; }
+        #live-log .line-thought { color: #7fd0ff; }
+
+        @media (max-width: 1100px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .routing-flow { flex-wrap: wrap; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div>
-            <h1>CESAROPS FORGE v2</h1>
-            <span class="subtitle">Self-Healing Knowledge Translator — Qwen3.6-35B on P100s</span>
-        </div>
-        <div>
-            <button class="btn-clear" onclick="clearChat()">CLEAR</button>
-            <button style="background:#f44336; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="interruptAgent()">STOP</button>
-            <button style="background:#ff9800; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="steerAgent()">STEER</button>
-            <button id="modeToggleBtn" style="background:#1565c0; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:0.5rem;" onclick="toggleMode()">MODE: CESAROPS</button>
-            <span class="status" id="status">Connecting...</span>
-        </div>
-    </header>
 
-    <div class="chat-container">
-        <div class="messages" id="messages">
-            <div class="msg msg-assistant">Forge v2 online. Self-healing translator active. Tools: write_file, read_file, cargo_check, think_harder, remember, run_command. Prefix /fast to skip thinker pre-flight.</div>
+<div id="toast"></div>
+
+<header>
+    <div>
+        <h1>CESAROPS FORGE</h1>
+        <div class="hdr-sub">Agent routing · 3 work paths · race mode</div>
+    </div>
+    <div class="hdr-right">
+        <span id="status-pill">…</span>
+        <a href="/cluster">Cluster</a>
+        <a href="/dash">Dashboard</a>
+        <a href="/mcp-ui">MCP</a>
+        <a href="/api-docs">API</a>
+        <button class="btn btn-steer" onclick="steerAgent()">🧭 STEER</button>
+        <button class="btn btn-steer" onclick="specDraftFromInput()" title="Gemini/local OperatorSpec">📋 SPEC</button>
+        <button class="btn btn-steer" onclick="specApprove()" title="Approve pending spec before /send">✓ APPROVE</button>
+        <button class="btn btn-clear" onclick="clearAll()">🗑 CLEAR</button>
+        <button class="btn btn-stop" onclick="interruptAgent()">⏹ STOP</button>
+    </div>
+</header>
+
+<!-- ROUTING BOARD -->
+<div class="routing-bar">
+    <button class="routing-toggle open" id="routing-toggle" onclick="toggleRouting()" type="button">
+        <span class="rt-arrow">▶</span>
+        <span style="font-weight:700;color:#88aacc;font-size:0.82rem">ROUTING FLOW</span>
+        <span style="color:#446;font-size:0.68rem;margin-left:8px">assign agents → node pipeline</span>
+        <span id="active-preset-badge"></span>
+    </button>
+    <div id="routing-board" class="open">
+        <div class="preset-strip" id="preset-strip">
+            <span class="preset-label">PRESETS:</span>
+            <span style="color:#334;font-size:0.68rem">Loading…</span>
         </div>
+        <div class="routing-flow" id="routing-flow">
+            <div style="color:#446;font-size:0.72rem;padding:8px">Loading routing data…</div>
+        </div>
+        <div id="discover-panel"></div>
+        <div class="routing-apply-row">
+            <button class="btn-apply" onclick="applyRouting()">▶ Apply Routing</button>
+            <button class="btn-scan" onclick="scanNetwork()" type="button">📡 Scan Network</button>
+            <span id="routing-saved-msg">✓ saved</span>
+            <span id="routing-loading-msg" style="font-size:0.7rem;color:#f59e0b;display:none">⏳ loading…</span>
+        </div>
+
+        <!-- TOOLS & ORCHESTRATION PANEL -->
+        <div class="orch-section">
+            <div class="orch-toggle-row" onclick="toggleOrchPanel()">
+                <span class="rt-arrow" id="orch-arrow">▶</span>
+                <span class="orch-toggle-label">🔧 Tools &amp; Orchestration</span>
+                <span id="orch-n8n-pill" style="font-size:0.67rem;padding:1px 7px;border-radius:8px;background:#0a1a0a;border:1px solid #224422;color:#4caf50;display:none">n8n ✓</span>
+                <span id="orch-backend-badge" style="font-size:0.67rem;color:#446"></span>
+            </div>
+            <div id="orch-panel">
+                <div class="orch-row">
+                    <span class="orch-key">Tools backend</span>
+                    <div class="pill-toggle" id="backend-toggle">
+                        <span class="pill-opt" data-val="inline" onclick="setBackend('inline')">inline</span>
+                        <span class="pill-opt" data-val="n8n" onclick="setBackend('n8n')">n8n</span>
+                    </div>
+                    <span id="n8n-reach-badge" style="font-size:0.67rem"></span>
+                </div>
+                <div class="orch-row">
+                    <span class="orch-key">PAMP shadow</span>
+                    <div class="pill-toggle" id="pamp-toggle">
+                        <span class="pill-opt" data-val="true" onclick="setPamp(true)">on (observe)</span>
+                        <span class="pill-opt" data-val="false" onclick="setPamp(false)">off</span>
+                    </div>
+                    <span style="font-size:0.63rem;color:#334;margin-left:4px">shadow=on means PAMP runs but doesn't affect routing</span>
+                </div>
+                <div class="orch-row" style="align-items:flex-start">
+                    <span class="orch-key" style="padding-top:3px">Active tools</span>
+                    <div class="tool-grid" id="tool-grid">Loading…</div>
+                </div>
+                <div class="orch-row">
+                    <button class="btn-apply" style="font-size:0.68rem;padding:3px 10px" onclick="saveOrchConfig()">▶ Save Orch Config</button>
+                    <span id="orch-saved-msg" style="font-size:0.7rem;color:#22c55e;display:none">✓ saved</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+<div class="main-grid">
+
+    <!-- LANE A -->
+    <div class="lane">
+        <div class="lane-head">
+            <div class="lane-title-row">
+                <span class="lane-title">PATH A</span>
+                <span class="lane-badge" id="badge-lane-a">—</span>
+                <span class="race-chip active" id="race-chip-lane-a" onclick="toggleRaceLane('lane-a')" title="Toggle in race">🏁 A</span>
+            </div>
+            <div class="lane-role-row">
+                <select class="lane-role-sel" id="role-lane-a" onchange="setLaneRole('lane-a',this.value)"></select>
+            </div>
+            <div class="lane-ep" id="ep-lane-a"></div>
+        </div>
+        <div class="race-bar" id="race-bar-lane-a">
+            <span style="font-weight:700">Race complete —</span>
+            <button class="btn-win btn-win-a" onclick="markWinner('lane-a')">✓ A won</button>
+            <button class="btn-grade" onclick="gradeRace()">🎯 Auto-Grade</button>
+            <div class="race-grade-result" id="grade-result-lane-a"></div>
+        </div>
+        <div class="messages" id="msgs-lane-a"></div>
         <div class="input-area">
-            <input type="text" id="input" placeholder="Type your message... (/fast to skip thinker)" onkeydown="if(event.key==='Enter')sendMessage()" aria-label="Message input">
-            <button id="sendBtn" onclick="sendMessage()">SEND</button>
+            <input id="input-lane-a" placeholder="Path A message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendLane('lane-a')}">
+            <button class="btn-send" id="send-btn-lane-a" onclick="sendLane('lane-a')">SEND</button>
+            <button class="btn-race" onclick="sendRace('lane-a')" title="Send to all race lanes">🏁</button>
         </div>
     </div>
 
-    <script>
-        fetch('/health').then(r => r.json()).then(d => {
-            document.getElementById('status').textContent = 'Online — ' + d.service;
-            document.getElementById('status').style.color = '#4caf50';
-        }).catch(() => {
-            document.getElementById('status').textContent = 'Offline';
-            document.getElementById('status').style.color = '#f44336';
+    <!-- LANE B -->
+    <div class="lane">
+        <div class="lane-head">
+            <div class="lane-title-row">
+                <span class="lane-title">PATH B</span>
+                <span class="lane-badge" id="badge-lane-b">—</span>
+                <span class="race-chip active" id="race-chip-lane-b" onclick="toggleRaceLane('lane-b')" title="Toggle in race">🏁 B</span>
+            </div>
+            <div class="lane-role-row">
+                <select class="lane-role-sel" id="role-lane-b" onchange="setLaneRole('lane-b',this.value)"></select>
+            </div>
+            <div class="lane-ep" id="ep-lane-b"></div>
+        </div>
+        <div class="race-bar" id="race-bar-lane-b">
+            <span style="font-weight:700">Race complete —</span>
+            <button class="btn-win btn-win-b" onclick="markWinner('lane-b')">✓ B won</button>
+            <button class="btn-grade" onclick="gradeRace()">🎯 Auto-Grade</button>
+            <div class="race-grade-result" id="grade-result-lane-b"></div>
+        </div>
+        <div class="messages" id="msgs-lane-b"></div>
+        <div class="input-area">
+            <input id="input-lane-b" placeholder="Path B message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendLane('lane-b')}">
+            <button class="btn-send" id="send-btn-lane-b" onclick="sendLane('lane-b')">SEND</button>
+            <button class="btn-race" onclick="sendRace('lane-b')" title="Send to all race lanes">🏁</button>
+        </div>
+    </div>
+
+    <!-- LANE C -->
+    <div class="lane">
+        <div class="lane-head">
+            <div class="lane-title-row">
+                <span class="lane-title">PATH C</span>
+                <span class="lane-badge" id="badge-lane-c">—</span>
+                <span class="race-chip" id="race-chip-lane-c" onclick="toggleRaceLane('lane-c')" title="Toggle in race">🏁 C</span>
+            </div>
+            <div class="lane-role-row">
+                <select class="lane-role-sel" id="role-lane-c" onchange="setLaneRole('lane-c',this.value)"></select>
+            </div>
+            <div class="lane-ep" id="ep-lane-c"></div>
+        </div>
+        <div class="race-bar" id="race-bar-lane-c">
+            <span style="font-weight:700">Race complete —</span>
+            <button class="btn-win btn-win-c" onclick="markWinner('lane-c')">✓ C won</button>
+            <button class="btn-grade" onclick="gradeRace()">🎯 Auto-Grade</button>
+            <div class="race-grade-result" id="grade-result-lane-c"></div>
+        </div>
+        <div class="messages" id="msgs-lane-c"></div>
+        <div class="input-area">
+            <input id="input-lane-c" placeholder="Path C message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendLane('lane-c')}">
+            <button class="btn-send" id="send-btn-lane-c" onclick="sendLane('lane-c')">SEND</button>
+            <button class="btn-race" onclick="sendRace('lane-c')" title="Send to all race lanes">🏁</button>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sb-head">Cross-lane activity</div>
+        <div class="activity-log" id="activity-log"><div class="act-line">Loading…</div></div>
+        <div class="sb-head">Thought / Tool Trace</div>
+        <div class="trace-log" id="trace-log"><div class="trace-line">Waiting for thought/tool events…</div></div>
+        <div class="scorecard" id="scorecard">
+            <div class="sc-head">Fleet agents</div>
+        </div>
+        <div class="netdata-sect">
+            <div style="color:#446;font-size:0.65rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Netdata</div>
+            <a id="netdata-link" href="#" target="_blank" rel="noopener">Open Netdata</a>
+            <div id="netdata-offline" style="display:none;color:#556;font-size:0.65rem;margin-top:2px"></div>
+            <iframe class="nd-frame" id="netdata-frame" title="GPU charts"></iframe>
+        </div>
+    </aside>
+</div>
+
+<div class="live-dock">
+    <div class="dock-head">
+        <strong>Live output</strong>
+        <span>LLM rounds · tools · sends</span>
+        <select id="stream-pick" onchange="connectLiveStream(this.value)" title="Log source"></select>
+        <button class="btn-dock" onclick="clearLiveLog()">Clear</button>
+        <button class="btn-dock" onclick="connectLiveStream(document.getElementById('stream-pick').value)">Reconnect</button>
+    </div>
+    <pre id="live-log">Connecting to live stream…</pre>
+</div>
+</div>
+
+<link rel="stylesheet" href="/assets/forge-hud.css?v=20260531d">
+<script src="/assets/forge-hud.js?v=20260531d" defer></script>
+<script>
+'use strict';
+
+const LANES = ['lane-a','lane-b','lane-c'];
+const LIVE_LOG_MAX = 600;
+const ROLE_OPTS = ['general','coding','coder','thinker','reviewer','corrector','validator','bootstrap','idle'];
+const ROUTING_ROLES = [
+    { key:'chat_agent',        label:'CHAT',     cls:'chat',      type:'name' },
+    { key:'thinker_endpoint',  label:'THINK',    cls:'thinker',   type:'ep' },
+    { key:'coder_endpoint',    label:'CODE',     cls:'coder',     type:'ep' },
+    { key:'reviewer_endpoint', label:'REVIEW',   cls:'reviewer',  type:'ep' },
+    { key:'corrector_endpoint',label:'CORRECT',  cls:'corrector', type:'ep' },
+    { key:'draft_endpoint',    label:'VALIDATE', cls:'validator', type:'ep' },
+];
+
+let liveEs = null;
+const liveLogLines = [];
+let agents = [];
+let presets = [];
+let routingState = {};
+let routingOpen = true;
+let raceLaneSet = new Set(['lane-a','lane-b']);
+let raceContext = { prompt:'', responses:{} };  // stores race prompt + lane→response for grader
+
+function escapeHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── TOAST ──
+let toastTimer = null;
+function showToast(msg, type='info', durationMs=2500) {
+    const el = document.getElementById('toast'); if (!el) return;
+    el.textContent = msg; el.className = 'show ' + type;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.classList.remove('show'); }, durationMs);
+}
+
+// ── LIVE LOG ──
+function appendLiveLog(text, cls) {
+    const line = (text||'').trim(); if (!line) return;
+    liveLogLines.push({text:line,cls:cls||''});
+    while (liveLogLines.length > LIVE_LOG_MAX) liveLogLines.shift();
+    const el = document.getElementById('live-log'); if (!el) return;
+    const atBot = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    el.innerHTML = liveLogLines.map(l => `<span${l.cls?' class="line-'+l.cls+'"':''}>${escapeHtml(l.text)}</span>\n`).join('');
+    if (atBot) el.scrollTop = el.scrollHeight;
+    if (window.ForgeHud && window.ForgeHud.log) window.ForgeHud.log(line, cls||'info');
+}
+function clearLiveLog() {
+    liveLogLines.length = 0;
+    const el = document.getElementById('live-log'); if (el) el.textContent = '';
+    if (window.ForgeHud && window.ForgeHud.clear) window.ForgeHud.clear();
+}
+function classifyLine(line) {
+    if (/\b(thought|reasoning|diagnos(?:e|ing)|self-correction|analysis):?/i.test(line)) return 'thought';
+    if (/\bround:/.test(line)||/#\d+: generating/.test(line)) return 'round';
+    if (/\bllm:/.test(line)||/#\d+: [^g]/.test(line)) return 'llm';
+    if (/\btool:/.test(line)) return 'tool';
+    if (/\bsend:/.test(line)) return 'send';
+    return '';
+}
+
+function isTraceActivity(evt) {
+    const kind = String(evt?.kind || '').toLowerCase();
+    const text = String(evt?.text || '').toLowerCase();
+    if (kind.includes('tool') || kind.includes('think') || kind.includes('reason')) return true;
+    return /\b(tool call|tool:|thinking|reasoning|diagnos(?:e|ing)|self-correction|round)\b/.test(text);
+}
+
+function traceCls(evt) {
+    const kind = String(evt?.kind || '').toLowerCase();
+    const text = String(evt?.text || '').toLowerCase();
+    if (kind.includes('tool') || /\btool\b/.test(text)) return 'tool';
+    return 'thought';
+}
+function connectLiveStream(id) {
+    if (liveEs) { liveEs.close(); liveEs = null; }
+    id = id || 'activity';
+    appendLiveLog(`--- stream: ${id} ---`, '');
+    try {
+        liveEs = new EventSource('/streams/' + id);
+        liveEs.onmessage = ev => {
+            (ev.data||'').trim().split('\n').forEach(p => {
+                p = p.trim();
+                if (p && !p.startsWith('# activity stream connected')) appendLiveLog(p, classifyLine(p));
+            });
+        };
+        liveEs.onerror = () => {
+            appendLiveLog('[stream disconnected — retrying 3s]','round');
+            liveEs.close(); liveEs = null;
+            setTimeout(() => connectLiveStream(id), 3000);
+        };
+    } catch(e) { appendLiveLog('EventSource failed: '+e.message,'tool'); }
+}
+async function loadStreamCatalog() {
+    try {
+        const d = await fetch('/streams').then(r=>r.json());
+        const sel = document.getElementById('stream-pick');
+        sel.innerHTML = (d.streams||[]).map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+        if (!sel.value) sel.value = 'activity';
+    } catch(e) {}
+}
+
+// ── ROUTING BOARD ──
+function toggleRouting() {
+    routingOpen = !routingOpen;
+    document.getElementById('routing-board').classList.toggle('open', routingOpen);
+    document.getElementById('routing-toggle').classList.toggle('open', routingOpen);
+}
+
+async function loadRouting() {
+    const loadMsg = document.getElementById('routing-loading-msg');
+    if (loadMsg) loadMsg.style.display = 'inline';
+    try {
+        const d = await fetch('/cluster/routing').then(r=>r.json());
+        agents = d.agents||[]; presets = d.presets||[]; routingState = d.routing_state||{};
+        renderPresetStrip(); renderRoutingFlow(); updateLaneBadges(); renderActiveBadge();
+    } catch(e) {
+        appendLiveLog('[routing] load failed: '+e.message,'tool');
+        showToast('Routing load failed: ' + e.message, 'error');
+        const flow = document.getElementById('routing-flow');
+        if (flow) flow.innerHTML = '<div style="color:#f87171;font-size:0.72rem;padding:6px">⚠ Could not load routing — is Forge running?</div>';
+    } finally {
+        if (loadMsg) loadMsg.style.display = 'none';
+    }
+}
+
+function renderPresetStrip() {
+    const s = document.getElementById('preset-strip'); if (!s) return;
+    s.innerHTML = '<span class="preset-label">PRESETS:</span>' +
+        presets.map(p => `<button class="btn-preset" onclick="activatePreset('${escapeHtml(p.id)}')" title="${escapeHtml(p.description||p.name)}">${escapeHtml(p.name)}</button>`).join('');
+}
+
+function agentByEp(ep) { return agents.find(a=>a.endpoint===ep)||null; }
+function agentByName(n) { return agents.find(a=>a.name===n)||null; }
+
+function agentSelectOpts(selectedEp) {
+    return agents.map(a=>{
+        const sel = a.endpoint===selectedEp?' selected':'';
+        return `<option value="${escapeHtml(a.endpoint)}"${sel}>${escapeHtml(a.name+' — '+(a.model||a.role||''))} [${escapeHtml(a.hardware||'')}]</option>`;
+    }).join('');
+}
+function agentNameOpts(selectedName) {
+    return agents.map(a=>{
+        const sel = a.name===selectedName?' selected':'';
+        return `<option value="${escapeHtml(a.name)}"${sel}>${escapeHtml(a.name+' — '+(a.model||a.role||''))}</option>`;
+    }).join('');
+}
+
+function renderRoutingFlow() {
+    const flow = document.getElementById('routing-flow'); if (!flow) return;
+    if (!agents.length) {
+        flow.innerHTML = '<div style="color:#f59e0b;font-size:0.72rem;padding:8px">⚠ No agents loaded — check Forge is up</div>';
+        return;
+    }
+    const parts = [];
+    ROUTING_ROLES.forEach((role, i) => {
+        if (i>0) parts.push('<div class="rn-arrow">→</div>');
+        const val = routingState[role.key]||'';
+        const agent = role.type==='name' ? agentByName(val) : agentByEp(val);
+        const modelTxt = agent ? (agent.model||agent.role||'—') : (val||'—');
+        const hwTxt    = agent ? (agent.hardware||'') : '';
+        const selHtml  = role.type==='name'
+            ? `<select class="rn-select" onchange="onRoutingChange('${role.key}',this.value,'name')">${agentNameOpts(val)}</select>`
+            : `<select class="rn-select" onchange="onRoutingChange('${role.key}',this.value,'ep')">${agentSelectOpts(val)}</select>`;
+        // Live glow: node is "live" when it has a value assigned
+        const isLive = !!val;
+        const liveClass = isLive ? `rn-live rn-${role.cls}` : '';
+        parts.push(`<div class="routing-node ${liveClass}" id="rn-${role.key}">
+            <div class="rn-role ${role.cls}">${role.label}</div>
+            <div class="rn-model" id="rnm-${role.key}" title="${escapeHtml(modelTxt)}">${escapeHtml(modelTxt)}</div>
+            <div class="rn-hw" id="rnh-${role.key}">${escapeHtml(hwTxt)}</div>
+            ${selHtml}
+        </div>`);
+    });
+    flow.innerHTML = parts.join('');
+}
+
+function onRoutingChange(key, val, type) {
+    routingState[key] = val;
+    const agent = type==='name' ? agentByName(val) : agentByEp(val);
+    const mEl = document.getElementById('rnm-'+key);
+    const hEl = document.getElementById('rnh-'+key);
+    if (mEl) mEl.textContent = agent ? (agent.model||agent.role||val) : val;
+    if (hEl) hEl.textContent = agent ? (agent.hardware||'') : '';
+    // Update live glow on changed node
+    const node = document.getElementById('rn-'+key);
+    if (node) {
+        const role = ROUTING_ROLES.find(r=>r.key===key);
+        if (role) {
+            node.classList.toggle('rn-live', !!val);
+            node.classList.toggle('rn-'+role.cls, !!val);
+        }
+    }
+    renderActiveBadge();
+}
+
+function onRoutingChange(key, val, type) {
+    routingState[key] = val;
+    const agent = type==='name' ? agentByName(val) : agentByEp(val);
+    const mEl = document.getElementById('rnm-'+key);
+    const hEl = document.getElementById('rnh-'+key);
+    if (mEl) mEl.textContent = agent ? (agent.model||agent.role||val) : val;
+    if (hEl) hEl.textContent = agent ? (agent.hardware||'') : '';
+    renderActiveBadge();
+}
+
+function renderActiveBadge() {
+    const b = document.getElementById('active-preset-badge'); if (!b) return;
+    const chat  = routingState.chat_agent||'?';
+    const coder = agentByEp(routingState.coder_endpoint);
+    const think = agentByEp(routingState.thinker_endpoint);
+    b.textContent = `chat:${chat} · coder:${coder?coder.name:'?'} · think:${think?think.name:'?'}`;
+}
+
+async function applyRouting() {
+    showToast('Applying routing…', 'loading', 5000);
+    try {
+        const r = await fetch('/cluster/routing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(routingState)});
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        showToast('✓ Routing saved', 'ok');
+        const m = document.getElementById('routing-saved-msg');
+        if (m) { m.style.display='inline'; setTimeout(()=>m.style.display='none',2200); }
+        appendLiveLog('[routing] saved: '+JSON.stringify(routingState),'send');
+        await loadLanes();
+    } catch(e) {
+        showToast('Routing save failed: ' + e.message, 'error');
+        appendLiveLog('[routing] save failed: '+e.message,'tool');
+    }
+}
+
+async function activatePreset(id) {
+    showToast('Activating preset ' + id + '…', 'loading', 4000);
+    try {
+        await fetch('/cluster/routing/preset/'+encodeURIComponent(id),{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        showToast('✓ Preset: ' + id, 'ok');
+        appendLiveLog('[preset] activated: '+id,'round');
+        await loadRouting(); await loadLanes();
+        document.querySelectorAll('.btn-preset').forEach(b=>{
+            const p = presets.find(x=>x.id===id);
+            b.classList.toggle('active', p && b.textContent === p.name);
+        });
+    } catch(e) {
+        showToast('Preset failed: ' + e.message, 'error');
+        appendLiveLog('[preset] failed: '+e.message,'tool');
+    }
+}
+
+// ── NETWORK DISCOVERY ──
+async function scanNetwork() {
+    const btn = document.querySelector('.btn-scan');
+    if (btn) { btn.textContent = '⏳ Scanning…'; btn.disabled = true; }
+    showToast('Scanning network for GPU endpoints…', 'loading', 8000);
+    const panel = document.getElementById('discover-panel');
+    try {
+        const nodes = await fetch('/cluster/discover').then(r=>r.json());
+        if (!nodes.length) { showToast('No nodes discovered', 'info'); return; }
+        let html = '<div style="color:#446;font-size:0.65rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700">DISCOVERED NODES — click endpoint to add to routing</div>';
+        for (const node of nodes) {
+            html += `<div class="disc-node">`;
+            html += `<span class="disc-node-name">${escapeHtml(node.name||node.ip)}</span>`;
+            const onlinePorts = (node.ports||[]).filter(p=>p.online);
+            if (onlinePorts.length) {
+                onlinePorts.forEach(p => {
+                    const ep = `http://${node.ip}:${p.port}`;
+                    html += `<span class="disc-ep" onclick="addDiscoveredEp('${escapeHtml(ep)}')" title="Click to add to routing">${escapeHtml(ep)}</span>`;
+                });
+            } else {
+                html += `<span class="disc-ep offline">no services</span>`;
+            }
+            html += `</div>`;
+        }
+        if (panel) { panel.innerHTML = html; panel.classList.add('open'); }
+        showToast(`Found ${nodes.filter(n=>(n.ports||[]).some(p=>p.online)).length} nodes`, 'ok');
+        appendLiveLog('[discover] found nodes: ' + nodes.map(n=>n.name||n.ip).join(', '), 'send');
+    } catch(e) {
+        showToast('Scan failed: ' + e.message, 'error');
+        appendLiveLog('[discover] failed: '+e.message,'tool');
+    } finally {
+        if (btn) { btn.textContent = '📡 Scan Network'; btn.disabled = false; }
+    }
+}
+
+function addDiscoveredEp(ep) {
+    // Show in the live log and let user assign via routing dropdowns
+    appendLiveLog('[discover] endpoint ready to assign: '+ep,'send');
+    showToast('Endpoint ' + ep + ' — use routing dropdowns to assign', 'info', 4000);
+    // Add as an agent entry in the select dropdowns if not already present
+    if (!agents.find(a=>a.endpoint===ep)) {
+        const name = ep.replace('http://','').replace(':','_');
+        agents.push({ name, endpoint: ep, model: ep, hardware: 'discovered', role:'general' });
+        renderRoutingFlow();
+    }
+}
+
+// ── LANES ──
+async function loadLanes() {
+    try {
+        const d = await fetch('/lanes').then(r=>r.json());
+        const roles = (d.roles&&d.roles.length) ? d.roles : ROLE_OPTS.map(id=>({id,label:id}));
+        LANES.forEach(laneId=>{
+            const lane = (d.lanes||[]).find(l=>l.id===laneId);
+            const cur  = lane?.role||'general';
+            const sel  = document.getElementById('role-'+laneId);
+            if (sel) sel.innerHTML = roles.map(ro=>{
+                const id = ro.id||ro; const label = ro.label||id;
+                return `<option value="${escapeHtml(id)}"${id===cur?' selected':''}>${escapeHtml(label)}</option>`;
+            }).join('');
+            const ep = document.getElementById('ep-'+laneId);
+            if (ep) ep.textContent = lane?.endpoint||'';
+        });
+        updateLaneBadges();
+    } catch(e) {
+        LANES.forEach(id=>{ const s=document.getElementById('role-'+id); if(s) s.innerHTML=ROLE_OPTS.map(r=>`<option value="${r}">${r}</option>`).join(''); });
+    }
+}
+
+function updateLaneBadges() {
+    LANES.forEach(id=>{
+        const ep    = document.getElementById('ep-'+id)?.textContent||'';
+        const badge = document.getElementById('badge-'+id); if (!badge) return;
+        const agent = agentByEp(ep);
+        if (agent) { badge.textContent=(agent.model||agent.name).slice(0,22); badge.title=`${agent.name} — ${agent.model||''} [${agent.hardware||''}]`; }
+        else        { badge.textContent = ep ? ep.replace('http://','') : '—'; }
+    });
+}
+
+async function setLaneRole(laneId, role) {
+    try {
+        await fetch('/lanes/'+laneId+'/role',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});
+        await loadLanes();
+    } catch(e) { appendLiveLog('[lane] role failed: '+e.message,'tool'); }
+}
+
+// ── RACE MODE ──
+function toggleRaceLane(id) {
+    const chip = document.getElementById('race-chip-'+id);
+    if (raceLaneSet.has(id)) { raceLaneSet.delete(id); chip?.classList.remove('active'); }
+    else                     { raceLaneSet.add(id);    chip?.classList.add('active'); }
+    appendLiveLog('[race] lanes: '+[...raceLaneSet].join(', '),'tool');
+}
+
+async function sendRace(fromLane) {
+    const input = document.getElementById('input-'+fromLane);
+    const msg = input.value.trim(); if (!msg) return;
+    if (raceLaneSet.size < 2) { showToast('Enable ≥2 lanes with 🏁 chips first', 'info'); return; }
+    input.value = '';
+    raceContext.prompt = msg;
+    raceContext.responses = {};
+    const lanes = [...raceLaneSet];
+    appendLiveLog('[race] → '+lanes.join(', ')+': '+msg.slice(0,80),'round');
+    showToast('Race started → ' + lanes.join(', '), 'loading', 8000);
+    lanes.forEach(id => {
+        addMsg(id,'user',`[RACE] ${msg}`);
+        document.getElementById('race-bar-'+id)?.classList.add('vis');
+        const gr = document.getElementById('grade-result-'+id);
+        if (gr) gr.textContent = '';
+    });
+    const results = await Promise.allSettled(lanes.map(async id => {
+        const baseline = await countAssistantMessages(id);
+        const data = await fetchSendWithRetry({message:msg,lane:id},{attempts:3,timeoutMs:90000});
+        const reply = data.response||data.error||'(empty)';
+        addMsg(id,'assistant',reply);
+        raceContext.responses[id] = reply;
+        if (data.accepted||(data.tool_actions||[]).includes('background_run')) await pollForLaneReply(id,baseline+1);
+        return reply;
+    }));
+    showToast('Race done — click 🎯 Auto-Grade or ✓ to pick winner', 'ok', 4000);
+    appendLiveLog('[race] all lanes replied — auto-grade or click ✓','llm');
+}
+
+// ── AUTO GRADER ──
+async function gradeRace() {
+    const lanes = [...raceLaneSet];
+    if (lanes.length < 2) { showToast('Need ≥2 race lanes to grade', 'info'); return; }
+    const prompt = raceContext.prompt;
+    if (!prompt) { showToast('No race prompt found — run a race first', 'info'); return; }
+
+    // Build grading prompt
+    let gradingMsg = `You are an expert AI quality judge. Score these responses strictly and fairly.\n\nOriginal task: "${prompt}"\n\n`;
+    lanes.forEach((id, i) => {
+        const letter = id.replace('lane-','').toUpperCase();
+        const resp = raceContext.responses[id] || '(no response)';
+        gradingMsg += `=== Response ${letter} ===\n${resp.slice(0,1200)}\n\n`;
+    });
+    gradingMsg += `Score each response 1-10 for: accuracy, completeness, clarity, code quality (if code present).\nFormat EXACTLY as:\nSCORE_A: X/10 | SCORE_B: X/10 | WINNER: A or B | REASON: one sentence\n`;
+
+    // Show loading in all race bars
+    lanes.forEach(id => {
+        const el = document.getElementById('grade-result-'+id);
+        if (el) el.textContent = '⏳ Grading with AI judge…';
+    });
+    showToast('Sending to AI judge…', 'loading', 10000);
+
+    const reviewerEp = routingState.reviewer_endpoint || routingState.thinker_endpoint || '';
+    const gradePayload = { message: gradingMsg, lane: lanes[0] };
+
+    try {
+        const data = await fetchSendWithRetry(gradePayload, {attempts:2, timeoutMs:60000});
+        const result = data.response || '(no grade)';
+        appendLiveLog('[grade] result: ' + result.slice(0,200), 'llm');
+
+        // Parse scores from response
+        const scoreMatch = result.match(/SCORE_([A-C])\s*:\s*(\d+)\/10/gi) || [];
+        const winnerMatch = result.match(/WINNER\s*:\s*([A-C])/i);
+        const reasonMatch = result.match(/REASON\s*:\s*(.+)/i);
+
+        const winner = winnerMatch ? winnerMatch[1].toLowerCase() : null;
+        const reason = reasonMatch ? reasonMatch[1].trim() : '';
+
+        lanes.forEach(id => {
+            const letter = id.replace('lane-','').toUpperCase();
+            const scoreRx = new RegExp(`SCORE_${letter}\\s*:\\s*(\\d+)/10`, 'i');
+            const sm = result.match(scoreRx);
+            const score = sm ? sm[1] : '?';
+            const isWinner = winner && id === ('lane-' + winner.toLowerCase());
+            const el = document.getElementById('grade-result-'+id);
+            if (el) {
+                el.textContent = `Score: ${score}/10${isWinner ? ' 🏆 WINNER' : ''}${reason ? '\n' + reason : ''}`;
+                el.style.color = isWinner ? '#4ade80' : '#88a0bb';
+            }
         });
 
-        async function sendMessage() {
-            const input = document.getElementById('input');
-            const msg = input.value.trim();
-            if (!msg) return;
+        if (winner) {
+            addMsg('lane-'+winner.toLowerCase(), 'grade', `🏆 RACE WINNER — Score: AI judge verdict\n${reason}`);
+            showToast(`AI Judge: Lane ${winner} wins!`, 'ok', 5000);
+        } else {
+            showToast('Grade complete — check race bars', 'ok');
+        }
+    } catch(e) {
+        lanes.forEach(id => {
+            const el = document.getElementById('grade-result-'+id);
+            if (el) el.textContent = '⚠ Grade failed: ' + e.message;
+        });
+        showToast('Grade failed: ' + e.message, 'error');
+        appendLiveLog('[grade] failed: '+e.message,'tool');
+    }
+}
 
-            input.value = '';
-            addMessage('user', msg);
+function markWinner(winner) {
+    const losers = LANES.filter(id=>raceLaneSet.has(id)&&id!==winner);
+    addMsg(winner,'sys',`🏆 RACE WINNER (${winner})`);
+    losers.forEach(id=>addMsg(id,'sys',`↳ lost race to ${winner}`));
+    LANES.forEach(id=>document.getElementById('race-bar-'+id)?.classList.remove('vis'));
+    appendLiveLog(`[race] WINNER: ${winner} beat: ${losers.join(', ')}  —  ep-winner: ${document.getElementById('ep-'+winner)?.textContent||'?'}`,'round');
+    showToast('Winner: ' + winner, 'ok');
+}
 
-            const sendBtn = document.getElementById('sendBtn');
-            sendBtn.disabled = true;
-            addLoading();
+// ── MESSAGE ──
+function addMsg(laneId, role, text) {
+    const box = document.getElementById('msgs-'+laneId); if (!box) return;
+    const el = document.createElement('div');
+    el.className = 'msg msg-'+role; el.textContent = text;
+    box.appendChild(el); el.scrollIntoView({behavior:'smooth',block:'end'});
+}
 
-            try {
-                const resp = await fetch('/send', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg})
-                });
-                const data = await resp.json();
-                removeLoading();
+// ── FETCH HELPERS ──
+async function fetchJsonWithRetry(url, opts={}, {attempts=3,timeoutMs=30000,label='fetch'}={}) {
+    let last;
+    for (let i=1;i<=attempts;i++) {
+        const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),timeoutMs);
+        try {
+            const r=await fetch(url,{...opts,signal:ctrl.signal}); clearTimeout(t);
+            if (!r.ok) throw new Error('HTTP '+r.status);
+            return await r.json();
+        } catch(e) {
+            clearTimeout(t); last=e;
+            const retryable=e.name==='AbortError'||e.message==='Failed to fetch'||/network|http 5/i.test(e.message||'');
+            if (i<attempts&&retryable) { appendLiveLog(`[${label}] retry ${i}/${attempts-1}: ${e.message}`,'tool'); await new Promise(r=>setTimeout(r,1500*i)); continue; }
+            throw e;
+        }
+    }
+    throw last;
+}
+async function fetchSendWithRetry(payload,{attempts=5,timeoutMs=90000}={}) {
+    return fetchJsonWithRetry('/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},{attempts,timeoutMs,label:'send'});
+}
+async function countAssistantMessages(laneId) {
+    try { const d=await fetchJsonWithRetry('/lanes/'+laneId+'/conversation',{},{attempts:2,timeoutMs:12000,label:'conv'}); return (d.messages||[]).filter(m=>m.role==='assistant').length; }
+    catch { return 0; }
+}
 
-                if (data.tool_actions && data.tool_actions.length > 0) {
-                    addToolBadge(data.tool_actions);
-                }
-                if (data.diagnosis) {
-                    addDiagnosis(data.diagnosis);
-                }
-                addMessage('assistant', data.response);
-            } catch(e) {
-                removeLoading();
-                addMessage('assistant', 'Error: ' + e.message);
+// ── POLL ──
+async function pollForLaneReply(laneId, baseline, {waitForTuneAutorun=false}={}) {
+    const box=document.getElementById('msgs-'+laneId);
+    const el=document.createElement('div'); el.className='msg msg-sys poll-status'; el.textContent='Waiting for reply…'; box.appendChild(el);
+    for (let tick=0;tick<1800;tick++) {
+        await new Promise(r=>setTimeout(r,2000));
+        el.textContent=`Waiting for reply… (${tick*2}s)`;
+        await refreshActivity(); await refreshHealth();
+        try {
+            const d=await fetchJsonWithRetry('/lanes/'+laneId+'/conversation',{},{attempts:2,timeoutMs:12000,label:'poll'});
+            const asst=(d.messages||[]).filter(m=>m.role==='assistant');
+            const latest=asst[asst.length-1]?.content||'';
+            if (waitForTuneAutorun&&latest.includes('[/tune auto-run]')) { el.remove(); addMsg(laneId,'assistant',latest); return; }
+            if (!waitForTuneAutorun&&asst.length>baseline) {
+                const ackOnly=latest.includes('running in background')&&latest.length<400;
+                if (!ackOnly||asst.length>baseline+1) { el.remove(); addMsg(laneId,'assistant',latest); return; }
             }
+            const st=await fetchJsonWithRetry('/forge/status',{},{attempts:1,timeoutMs:8000,label:'status'});
+            if (!st.send_busy&&tick>2&&asst.length>baseline) { el.remove(); if (latest&&!latest.includes('Waiting for server')) addMsg(laneId,'assistant',latest); return; }
+        } catch(e) { appendLiveLog(`[poll] ${e.message} — retrying`,'tool'); }
+    }
+    el.textContent='Poll timed out — check Activity or reload.';
+}
 
-            sendBtn.disabled = false;
-            input.focus();
+// ── SEND LANE ──
+async function sendLane(laneId) {
+    const input=document.getElementById('input-'+laneId);
+    const msg=input.value.trim(); if (!msg) return;
+    input.value=''; addMsg(laneId,'user',msg);
+    appendLiveLog(`[send] user (${laneId}): ${msg.slice(0,120)}`,'send');
+    const btn=document.getElementById('send-btn-'+laneId);
+    if (btn) btn.disabled=true;
+    addMsg(laneId,'sys','Sending…');
+    const isTune=msg.startsWith('/tune');
+    const baseline=await countAssistantMessages(laneId);
+    let actPoll=setInterval(refreshActivity,2500);
+    try {
+        addMsg(laneId,'sys','Connecting to Forge…');
+        const data=await fetchSendWithRetry({message:msg,lane:laneId},{attempts:5,timeoutMs:isTune?120000:90000});
+        const box=document.getElementById('msgs-'+laneId);
+        box.querySelectorAll('.msg-sys').forEach(el=>{ if(['Sending…','Connecting to Forge…'].includes(el.textContent)) el.remove(); });
+        if (data.tool_actions?.length) {
+            const t=document.createElement('div'); t.className='tool-badge'; t.textContent='Tools: '+data.tool_actions.join(' → '); box.appendChild(t);
+        }
+        const reply=data.response||data.error||'(empty)';
+        addMsg(laneId,'assistant',reply);
+        appendLiveLog(`[send] reply (${laneId}): ${reply.slice(0,160)}`,'llm');
+        const needsPoll=data.accepted||(data.tool_actions||[]).includes('background_run')||(data.tool_actions||[]).includes('tune_autorun_background')||reply.includes('background');
+        if (needsPoll) {
+            if (isTune&&reply.includes('Auto-run')) await pollForLaneReply(laneId,baseline,{waitForTuneAutorun:true});
+            else { const aft=await countAssistantMessages(laneId); await pollForLaneReply(laneId,aft); }
+        }
+    } catch(e) {
+        const box=document.getElementById('msgs-'+laneId);
+        box.querySelectorAll('.msg-sys').forEach(el=>{ if(el.textContent.startsWith('Sending')||el.textContent.startsWith('Connecting')) el.remove(); });
+        const err=e.name==='AbortError'?'Request timed out (task may still run — check Activity)':e.message;
+        addMsg(laneId,'assistant','Error: '+err);
+        appendLiveLog('[send] error: '+err,'tool');
+    }
+    clearInterval(actPoll);
+    if (btn) btn.disabled=false;
+    input.focus(); refreshActivity(); refreshHealth();
+}
+
+// ── ACTIVITY / HEALTH ──
+async function refreshActivity() {
+    const log=document.getElementById('activity-log'); if (!log) return;
+    const trace=document.getElementById('trace-log');
+    try {
+        const d=await fetchJsonWithRetry('/lanes/activity',{},{attempts:3,timeoutMs:15000,label:'activity'});
+        const activity = d.activity || [];
+        log.innerHTML=activity.slice(-40).reverse().map(l=>{
+            const t=new Date(l.ts*1000).toLocaleTimeString();
+            return `<div class="act-line act-${l.lane}">[${t}] <b>${l.lane}</b> ${l.kind}: ${escapeHtml(l.text)}</div>`;
+        }).join('')||'<div class="act-line" style="color:#334">No activity yet</div>';
+        if (trace) {
+            const traceEvents = activity.filter(isTraceActivity).slice(-60).reverse();
+            trace.innerHTML = traceEvents.length
+                ? traceEvents.map(l=>{
+                    const t=new Date(l.ts*1000).toLocaleTimeString();
+                    const cls = traceCls(l);
+                    return `<div class="trace-line ${cls}">[${t}] <b>${escapeHtml(l.lane||'lane')}</b> ${escapeHtml(l.kind||'event')}: ${escapeHtml(l.text||'')}</div>`;
+                }).join('')
+                : '<div class="trace-line" style="color:#556">No thought/tool events yet</div>';
+        }
+    } catch(e) {
+        document.getElementById('activity-log').innerHTML=`<div class="act-line" style="color:#733">Activity offline: ${escapeHtml(e.message)}</div>`;
+        if (trace) trace.innerHTML = `<div class="trace-line" style="color:#733">Trace offline: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function refreshHealth() {
+    try {
+        const st=await fetchJsonWithRetry('/forge/status',{},{attempts:1,timeoutMs:5000,label:'health'});
+        const pill=document.getElementById('status-pill'); if (!pill) return;
+        pill.textContent = st.send_busy ? '⚡ BUSY' : '✓ ready';
+        pill.className   = st.send_busy ? 'busy' : 'ok';
+    } catch(e) {}
+}
+
+// ── SCORECARD ──
+async function loadScorecard() {
+    const sc=document.getElementById('scorecard'); if (!sc) return;
+    const rows=agents.map(a=>{
+        const active=Object.values(routingState).includes(a.endpoint)||routingState.chat_agent===a.name;
+        return `<div class="sc-row"><span class="${active?'sc-active':'sc-name'}">${escapeHtml(a.name)}</span><span class="sc-hw">${escapeHtml((a.hardware||'').split('—')[0].trim())}</span></div>`;
+    }).join('');
+    sc.innerHTML='<div class="sc-head">Fleet agents</div>'+(rows||'<div style="color:#334">No agents</div>');
+}
+
+// ── NETDATA ──
+async function setupNetdata() {
+    const frame=document.getElementById('netdata-frame'), offline=document.getElementById('netdata-offline'), link=document.getElementById('netdata-link');
+    try {
+        const d=await fetch('/netdata/status').then(r=>r.json());
+        const use=d.resolved?.online?d.resolved:(d.local?.online?d.local:(d.tailscale?.online?d.tailscale:(d.local||{})));
+        if (use.url) link.href=use.url;
+        if (use.online||d.resolved?.online) {
+            if (offline) offline.style.display='none'; frame.style.display='block';
+            frame.src='/netdata/embed/#metrics_correlation=false;after=-300;before=0;utc=LOCAL';
+        } else {
+            frame.style.display='none';
+            if (offline) { offline.style.display='block'; offline.textContent='Netdata offline. Open: '+(use.url||':19999'); }
+        }
+    } catch(e) { if (frame) frame.style.display='none'; if (offline) { offline.style.display='block'; offline.textContent='Netdata unavailable.'; } }
+}
+
+// ── GLOBAL ACTIONS ──
+async function steerAgent() {
+    const msg=prompt('Steering message:'); if (!msg) return;
+    try { await fetch('/steer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})}); appendLiveLog('[steer] '+msg.slice(0,80),'round'); showToast('Steered: '+msg.slice(0,40),'ok'); }
+    catch(e) { appendLiveLog('[steer] failed: '+e.message,'tool'); showToast('Steer failed','error'); }
+}
+function specIntentFromInput() {
+    const el = document.querySelector('.input-area input');
+    const v = (el && el.value || '').trim();
+    if (v && !v.startsWith('/')) return v;
+    return prompt('Operator intent for OperatorSpec draft:') || '';
+}
+async function specDraftFromInput() {
+    const intent = specIntentFromInput();
+    if (!intent) return;
+    showToast('Drafting spec…','loading');
+    try {
+        const r = await fetch('/spec/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intent})});
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || d.message || r.statusText);
+        const lane = activeLaneId || 'lane-a';
+        addMsg(lane,'assistant','[spec draft] '+d.title+'\n'+d.path+'\n\nReview JSON, then click APPROVE before Send.');
+        appendLiveLog('[spec] drafted: '+d.title,'round');
+        showToast('Spec drafted — approve before send','ok');
+    } catch(e) {
+        appendLiveLog('[spec] draft failed: '+e.message,'tool');
+        showToast('Spec draft failed','error');
+    }
+}
+async function specApprove() {
+    try {
+        const r = await fetch('/spec/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:true})});
+        const d = await r.json();
+        if (!r.ok) throw new Error(typeof d === 'string' ? d : (d.error || r.statusText));
+        appendLiveLog('[spec] approved: '+(d.title||'?'),'round');
+        showToast('Spec approved — /send will use it','ok');
+    } catch(e) {
+        appendLiveLog('[spec] approve failed: '+e.message,'tool');
+        showToast('Approve failed (draft a spec first?)','error');
+    }
+}
+async function clearAll() {
+    if (!confirm('Clear all lane conversations?')) return;
+    try { await fetch('/clear',{method:'POST'}); LANES.forEach(id=>{const b=document.getElementById('msgs-'+id);if(b)b.innerHTML='';}); appendLiveLog('[clear] all lanes cleared','send'); showToast('All lanes cleared','ok'); }
+    catch(e) { appendLiveLog('[clear] failed: '+e.message,'tool'); showToast('Clear failed','error'); }
+}
+async function interruptAgent() {
+    try { await fetch('/interrupt',{method:'POST'}); appendLiveLog('[interrupt] sent','round'); showToast('Agent interrupted','ok'); } catch(e) {}
+}
+
+// ── ORCHESTRATION & TOOLS PANEL ──
+let orchConfig = {};
+let orchOpen = false;
+// Per-tool enable/disable stored in localStorage (backend uses all tools; this is a UI filter hint)
+function getDisabledTools() {
+    try { return new Set(JSON.parse(localStorage.getItem('forge_disabled_tools')||'[]')); } catch { return new Set(); }
+}
+function saveDisabledTools(set) {
+    localStorage.setItem('forge_disabled_tools', JSON.stringify([...set]));
+}
+
+function toggleOrchPanel() {
+    orchOpen = !orchOpen;
+    document.getElementById('orch-panel').classList.toggle('open', orchOpen);
+    const arr = document.getElementById('orch-arrow');
+    if (arr) arr.style.transform = orchOpen ? 'rotate(90deg)' : '';
+    if (orchOpen && !orchConfig.tools_backend) loadOrchestration();
+}
+
+async function loadOrchestration() {
+    try {
+        const d = await fetch('/cluster/orchestration').then(r=>r.json());
+        orchConfig = d.orchestration || {};
+        const n8nUp = d.n8n_reachable;
+
+        // Update backend toggle
+        document.querySelectorAll('#backend-toggle .pill-opt').forEach(el => {
+            el.classList.toggle('active', el.dataset.val === orchConfig.tools_backend);
+            if (el.dataset.val === orchConfig.tools_backend) el.classList.add('green');
+            else el.classList.remove('green');
+        });
+
+        // Update pamp toggle
+        const pampVal = orchConfig.pamp_shadow ? 'true' : 'false';
+        document.querySelectorAll('#pamp-toggle .pill-opt').forEach(el => {
+            el.classList.toggle('active', el.dataset.val === pampVal);
+        });
+
+        // n8n reachability badge
+        const badge = document.getElementById('n8n-reach-badge');
+        if (badge) badge.innerHTML = n8nUp
+            ? '<span class="status-dot dot-green"></span><span style="color:#4ade80;font-size:0.68rem">n8n online</span>'
+            : '<span class="status-dot dot-red"></span><span style="color:#f87171;font-size:0.68rem">n8n offline</span>';
+
+        // Header n8n pill
+        const n8nPill = document.getElementById('orch-n8n-pill');
+        if (n8nPill) {
+            n8nPill.style.display = 'inline';
+            n8nPill.style.color = n8nUp ? '#4caf50' : '#f87171';
+            n8nPill.style.borderColor = n8nUp ? '#224422' : '#442222';
+            n8nPill.textContent = orchConfig.tools_backend === 'n8n' ? (n8nUp ? 'n8n ✓' : 'n8n ✗') : 'inline';
         }
 
-        function addMessage(role, content) {
-            const div = document.createElement('div');
-            div.className = 'msg msg-' + role;
-            div.textContent = content;
-            document.getElementById('messages').appendChild(div);
-            div.scrollIntoView({behavior: 'smooth'});
-        }
+        // Backend badge in toggle row
+        const bBadge = document.getElementById('orch-backend-badge');
+        if (bBadge) bBadge.textContent = `backend: ${orchConfig.tools_backend}`;
 
-        function addToolBadge(actions) {
-            const div = document.createElement('div');
-            div.className = 'tool-badge';
-            div.textContent = 'Tools: ' + actions.join(' → ');
-            document.getElementById('messages').appendChild(div);
-        }
+        // Load tool grid
+        await loadToolGrid();
+    } catch(e) {
+        appendLiveLog('[orch] load failed: '+e.message,'tool');
+    }
+}
 
-        function addDiagnosis(text) {
-            const div = document.createElement('div');
-            div.className = 'msg msg-diagnosis';
-            div.textContent = '🔧 Diagnosis: ' + text;
-            document.getElementById('messages').appendChild(div);
-        }
+async function loadToolGrid() {
+    const grid = document.getElementById('tool-grid'); if (!grid) return;
+    try {
+        const d = await fetch('/forge/tooling').then(r=>r.json());
+        const tools = d.forge_tools || [];
+        const delegatable = new Set(d.delegatable_tools || []);
+        const disabled = getDisabledTools();
+        grid.innerHTML = tools.map(t => {
+            const isDisabled = disabled.has(t);
+            const isDeleg = delegatable.has(t);
+            return `<span class="tool-chip ${isDisabled?'disabled':'enabled'}" onclick="toggleTool('${escapeHtml(t)}')" title="${isDeleg?'MCP delegatable':'inline only'}">${isDeleg?'⚡ ':''}${escapeHtml(t)}</span>`;
+        }).join('');
+    } catch(e) {
+        grid.textContent = 'Could not load tools: '+e.message;
+    }
+}
 
-        function addLoading() {
-            const div = document.createElement('div');
-            div.className = 'loading';
-            div.id = 'loading';
-            div.textContent = 'Working... (35B generating on P100s)';
-            document.getElementById('messages').appendChild(div);
-            div.scrollIntoView({behavior: 'smooth'});
-        }
+function toggleTool(name) {
+    const disabled = getDisabledTools();
+    if (disabled.has(name)) disabled.delete(name);
+    else disabled.add(name);
+    saveDisabledTools(disabled);
+    // Refresh grid
+    loadToolGrid();
+    showToast(disabled.has(name) ? `Tool ${name} disabled (UI hint)` : `Tool ${name} enabled`, 'info');
+}
 
-        function removeLoading() {
-            const el = document.getElementById('loading');
-            if (el) el.remove();
-        }
+function setBackend(val) {
+    orchConfig.tools_backend = val;
+    document.querySelectorAll('#backend-toggle .pill-opt').forEach(el => {
+        el.classList.toggle('active', el.dataset.val === val);
+        if (el.dataset.val === val) el.classList.add('green');
+        else el.classList.remove('green');
+    });
+}
 
-        async function clearChat() {
-            await fetch('/clear', {method: 'POST'});
-            document.getElementById('messages').innerHTML =
-                '<div class="msg msg-assistant">Conversation cleared. Ready.</div>';
-        }
+function setPamp(val) {
+    orchConfig.pamp_shadow = val;
+    const sv = String(val);
+    document.querySelectorAll('#pamp-toggle .pill-opt').forEach(el => {
+        el.classList.toggle('active', el.dataset.val === sv);
+    });
+}
 
-        async function interruptAgent() {
-            const resp = await fetch('/interrupt', {method: 'POST'});
-            const text = await resp.text();
-            const msgs = document.getElementById('messages');
-            msgs.innerHTML += '<div class="msg msg-assistant" style="color:#f44336;">[STOP] ' + text + '</div>';
-            msgs.scrollTop = msgs.scrollHeight;
-        }
+async function saveOrchConfig() {
+    showToast('Saving orchestration config…', 'loading', 4000);
+    try {
+        const body = {
+            tools_backend: orchConfig.tools_backend,
+            pamp_shadow: orchConfig.pamp_shadow,
+        };
+        const r = await fetch('/cluster/orchestration', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        showToast('✓ Orchestration saved', 'ok');
+        const m = document.getElementById('orch-saved-msg');
+        if (m) { m.style.display='inline'; setTimeout(()=>m.style.display='none',2000); }
+        appendLiveLog('[orch] saved: '+JSON.stringify(body),'send');
+        await loadOrchestration();
+    } catch(e) {
+        showToast('Save failed: '+e.message,'error');
+        appendLiveLog('[orch] save failed: '+e.message,'tool');
+    }
+}
 
-        async function steerAgent() {
-            const msg = prompt('Steering message (injected into next round):');
-            if (!msg) return;
-            const resp = await fetch('/steer', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: msg})
-            });
-            const result = await resp.json();
-            const msgs = document.getElementById('messages');
-            msgs.innerHTML += '<div class="msg msg-assistant" style="color:#ff9800;">[STEER] ' + (result.message || result.error) + '</div>';
-            msgs.scrollTop = msgs.scrollHeight;
-        }
-
-        // ── MODE TOGGLE ─────────────────────────────────────────────────────
-        // CESAROPS = SAR / wreck-hunting fleet. Workers run their detection roles.
-        // CODING   = Qwen MoE coder on P100s + Gemma reviewer layered across 1070+P1000.
-        //            /code requests pipeline through coder -> reviewer -> coder_compile.
-        async function refreshModeButton() {
-            try {
-                const resp = await fetch('/mode');
-                const data = await resp.json();
-                const btn = document.getElementById('modeToggleBtn');
-                if (data.mode === 'coding') {
-                    btn.textContent = 'MODE: CODING';
-                    btn.style.background = '#7b1fa2';
-                } else {
-                    btn.textContent = 'MODE: CESAROPS';
-                    btn.style.background = '#1565c0';
-                }
-            } catch (e) {
-                console.error('refreshModeButton failed:', e);
-            }
-        }
-
-        async function toggleMode() {
-            const resp = await fetch('/mode');
-            const data = await resp.json();
-            const target = data.mode === 'coding' ? 'cesarops' : 'coding';
-            if (target === 'coding') {
-                if (!confirm('Switch to CODING mode?\\n\\nThis stops the SAR workers on P100s, starts Qwen3.6-MoE as the coder, and routes /code requests through Gemma layered review (1070+P1000).')) return;
-            } else {
-                if (!confirm('Switch to CESAROPS mode?\\n\\nThis stops the coding workers and returns to SAR / wreck-hunting fleet roles.')) return;
-            }
-            const r2 = await fetch('/mode/' + target, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({})
-            });
-            const result = await r2.json();
-            const msgs = document.getElementById('messages');
-            msgs.innerHTML += '<div class="msg msg-assistant" style="color:#90caf9;">[MODE] ' + (result.message || result.error || 'Mode swap failed') + '</div>';
-            msgs.scrollTop = msgs.scrollHeight;
-            await refreshModeButton();
-        }
-
-        // Refresh mode button on load and every 30s
-        refreshModeButton();
-        setInterval(refreshModeButton, 30000);
-    </script>
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', async () => {
+    raceLaneSet.forEach(id=>document.getElementById('race-chip-'+id)?.classList.add('active'));
+    await Promise.allSettled([loadRouting(), loadLanes(), loadStreamCatalog()]);
+    await loadScorecard();
+    loadOrchestration(); // load orch config for header badges (panel loads lazily)
+    setupNetdata(); refreshActivity(); refreshHealth();
+    const pick=document.getElementById('stream-pick');
+    connectLiveStream(pick?.value||'activity');
+    setInterval(refreshActivity,5000);
+    setInterval(refreshHealth,8000);
+    setInterval(loadScorecard,30000);
+});
+</script>
 </body>
 </html>

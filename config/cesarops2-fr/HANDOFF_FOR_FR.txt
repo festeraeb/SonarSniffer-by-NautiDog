@@ -1,0 +1,18 @@
+cesarops2-fr setup (run on the France machine with root/sudo)
+============================================================
+
+Option A — one-liner from T440 (needs internet + Tailscale auth key):
+
+  export TS_AUTHKEY="tskey-auth-XXXX"   # Tailscale admin → Settings → Keys
+  curl -fsSL "http://100.72.182.77:8877/config/cesarops2-fr/bootstrap-from-t440.sh" | sudo -E bash
+
+Option B — copy from staging on old cesarops2 (if you have USB/LAN to ML350e):
+
+  scp -r cesarops@10.0.0.201:~/cesarops2-fr-staging/ /tmp/
+  cd /tmp/cesarops2-fr-staging && sudo bash setup_cesarops2_fr_tailscale.sh
+
+After join, on T440 (automatic if watch script running):
+
+  bash scripts/patch_cluster_config_cesarops2_fr.sh $(tailscale ip -4 on FR host)
+
+T440 is serving configs on port 8877 (Tailscale 100.72.182.77).

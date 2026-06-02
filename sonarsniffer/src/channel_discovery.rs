@@ -1749,9 +1749,9 @@ mod tests {
 
     #[test]
     fn test_nadir_gap_sidescan_pattern() {
-        // Simulate SideVü: 50 low samples (water column), then signal
-        let mut samples = vec![10u16; 50];
-        samples.extend(vec![500u16; 450]);
+        // Simulate SideVü: water column must exceed 15th percentile mass (p15 index)
+        let mut samples = vec![10u16; 120];
+        samples.extend(vec![500u16; 380]);
         let gap = measure_single_nadir_gap(&samples);
         assert!(gap >= 40, "Expected nadir gap ≥40, got {}", gap);
     }

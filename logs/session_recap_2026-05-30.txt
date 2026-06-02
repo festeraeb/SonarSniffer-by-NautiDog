@@ -1,0 +1,56 @@
+CESAROPS SESSION RECAP - 2026-05-30 (pre-reboot)
+
+What was fixed
+1) P100 routing ports in Forge now correct.
+   - GPU0 (P100 #1) port: 5001
+   - GPU1 (P100 #2) port: 5002
+   Root cause was worker-level hardcoded ports overriding gpu port_base.
+
+2) cesarops2 heartbeat restored.
+   - Node agent running and registered in /cluster/nodes.
+   - Current node list: cesarops2
+
+3) MCP stack fully online.
+   - Current status: 7/7 online
+   - Services: context7, crawl4ai, mcp_worker, openmemory, playwright_mcp, qdrant, searxng
+
+4) n8n watchdog boot+liveness guard added and enabled on both hosts.
+   - New script: scripts/ensure_n8n_watchdog.sh
+   - Integrated into scripts/n8n-watchdog.sh (runs each tick)
+   - Fleet action added in scripts/fleet-job-runner.sh: ensure_n8n_watchdog
+   - Systemd units installed and enabled:
+     - /etc/systemd/system/cesarops-n8n-watchdog.service
+     - /etc/systemd/system/cesarops-n8n-watchdog.timer
+   - Timer state (both t440 + cesarops2): enabled, active
+
+Key code changes
+- scripts/ensure_n8n_watchdog.sh
+  - verifies timer enabled + active
+  - verifies service unit exists (LoadState-based, oneshot-safe)
+  - stale-trigger protection via N8N_WATCHDOG_MAX_STALE_SECS (default 600)
+  - forces service tick if timer never triggered or stale
+
+- scripts/n8n-watchdog.sh
+  - calls ensure_n8n_watchdog.sh at start of each watchdog tick
+  - dispatches remote ensure_n8n_watchdog action when peer unhealthy
+
+- scripts/fleet-job-runner.sh
+  - new action: ensure_n8n_watchdog
+
+Quick post-reboot verification
+1) Local watchdog timer:
+   systemctl is-enabled cesarops-n8n-watchdog.timer && systemctl is-active cesarops-n8n-watchdog.timer
+
+2) Remote watchdog timer:
+   ssh cesarops@10.0.0.201 'systemctl is-enabled cesarops-n8n-watchdog.timer && systemctl is-active cesarops-n8n-watchdog.timer'
+
+3) MCP stack:
+   curl -s http://localhost:9100/forge/mcp-stack
+
+4) Fleet GPUs + node heartbeat:
+   curl -s http://localhost:9100/cluster/gpus
+   curl -s http://localhost:9100/cluster/nodes
+
+Notes
+- n8n watchdog service is oneshot by design; inactive/dead between timer firings is expected.
+- Health authority is the timer state + trigger history, not service active state.

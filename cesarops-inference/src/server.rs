@@ -12,8 +12,10 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::time::{Duration, Instant};
+use tokio::sync::{Mutex, Semaphore};
 use tracing::info;
 
 use crate::arena::InferenceArena;
@@ -25,14 +27,46 @@ use crate::tokenizer::ZeroAllocBpeTokenizer;
 use crate::transformer::{TransformerConfig, TransformerDecoder};
 use crate::weight_cache::WeightCache;
 
-/// Server state shared across handlers.
+/// Server state shared across handlers — read-only after construction.
+/// The model lives behind Arc references so concurrent reads (health, model_info)
+/// don't block inference, and inference itself is gated by `infer_lock`
+/// (single-flight) plus `idem_cache` (retry-storm immunity).
 pub struct InferenceState {
     pub model_name: String,
-    pub is_generating: bool,
     pub weights: Arc<ModelWeights>,
     pub decoder: Arc<TransformerDecoder>,
     pub tokenizer: Arc<ZeroAllocBpeTokenizer>,
     pub prefix_cache: Arc<parking_lot::RwLock<crate::kv_prefix_cache::KvPrefixCache>>,
+    /// Single-flight permit. Only one forward pass runs at a time.
+    pub infer_lock: Arc<Semaphore>,
+    /// Idempotency cache: request_id → completed text. Bounded by TTL+size.
+    pub idem_cache: Arc<Mutex<IdemCache>>,
+}
+
+#[derive(Default)]
+pub struct IdemCache {
+    map: HashMap<String, IdemEntry>,
+}
+
+struct IdemEntry {
+    text: String,
+    inserted_at: Instant,
+}
+
+impl IdemCache {
+    pub fn get_fresh(&mut self, key: &str, ttl: Duration) -> Option<String> {
+        let now = Instant::now();
+        // GC stale entries (cheap pass since cache is bounded).
+        self.map.retain(|_, v| now.duration_since(v.inserted_at) < ttl);
+        self.map.get(key).map(|e| e.text.clone())
+    }
+    pub fn insert(&mut self, key: String, text: String) {
+        // Soft cap to prevent unbounded growth on long-running servers.
+        if self.map.len() > 1024 {
+            self.map.clear();
+        }
+        self.map.insert(key, IdemEntry { text, inserted_at: Instant::now() });
+    }
 }
 
 /// KoboldCPP-compatible generate request.
@@ -53,6 +87,9 @@ pub struct GenerateRequest {
     /// Set to false for raw completion mode.
     #[serde(default = "default_chat_template")]
     pub use_chat_template: bool,
+    /// Optional client-supplied request id for idempotent retries.
+    #[serde(default)]
+    pub request_id: Option<String>,
 }
 
 fn default_chat_template() -> bool { true }
@@ -99,23 +136,21 @@ pub struct HealthResponse {
     pub model: String,
 }
 
-async fn health(State(state): State<Arc<Mutex<InferenceState>>>) -> Json<HealthResponse> {
-    let s = state.lock().await;
+async fn health(State(state): State<Arc<InferenceState>>) -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "ok".to_string(),
         service: "cesarops-inference".to_string(),
-        model: s.model_name.clone(),
+        model: state.model_name.clone(),
     })
 }
 
-async fn model_info(State(state): State<Arc<Mutex<InferenceState>>>) -> Json<ModelResponse> {
-    let s = state.lock().await;
-    let cache = s.prefix_cache.read();
+async fn model_info(State(state): State<Arc<InferenceState>>) -> Json<ModelResponse> {
+    let cache = state.prefix_cache.read();
     let stats = cache.stats();
     let capacity = cache.capacity();
     drop(cache);
     Json(ModelResponse {
-        result: format!("cesarops-inference/{}", s.model_name),
+        result: format!("cesarops-inference/{}", state.model_name),
         prefix_cache: PrefixCacheStats {
             capacity_tokens: capacity,
             total_tokens: stats.total_tokens,
@@ -128,20 +163,44 @@ async fn model_info(State(state): State<Arc<Mutex<InferenceState>>>) -> Json<Mod
 }
 
 async fn generate(
-    State(state): State<Arc<Mutex<InferenceState>>>,
+    State(state): State<Arc<InferenceState>>,
     Json(req): Json<GenerateRequest>,
 ) -> Json<GenerateResponse> {
-    info!("Generate: prompt_len={}, max_length={}, temp={}",
-        req.prompt.len(), req.max_length, req.temperature);
+    info!(
+        "Generate: prompt_len={}, max_length={}, temp={}, request_id={:?}",
+        req.prompt.len(), req.max_length, req.temperature, req.request_id
+    );
 
-    let mut s = state.lock().await;
-    s.is_generating = true;
+    // ── Idempotent retry guard ──────────────────────────────────────────
+    // If the client passes a request_id and we've already completed it
+    // recently, return the cached text instead of starting a duplicate
+    // forward pass. This neutralizes the HTTP-retry-on-timeout storm that
+    // caused the "stuck on layer 0" symptom.
+    if let Some(ref rid) = req.request_id {
+        let mut cache = state.idem_cache.lock().await;
+        if let Some(text) = cache.get_fresh(rid, Duration::from_secs(600)) {
+            info!("[idem] cache hit request_id={}", rid);
+            return Json(GenerateResponse {
+                results: vec![GenerateResult { text }],
+            });
+        }
+    }
 
-    let weights = Arc::clone(&s.weights);
-    let decoder = Arc::clone(&s.decoder);
-    let tokenizer = Arc::clone(&s.tokenizer);
-    let prefix_cache = Arc::clone(&s.prefix_cache);
-    drop(s); // Release lock during inference
+    // ── Single-flight gate ──────────────────────────────────────────────
+    // GPU forward passes share device buffers (`buf_a`, `buf_c`, etc.) so
+    // concurrent inference would clobber each other. Permit count = 1 today;
+    // bump when per-stream scratch lands.
+    let _permit = state
+        .infer_lock
+        .acquire()
+        .await
+        .expect("infer semaphore closed");
+
+    // Cheap clones — they're all Arc.
+    let weights = Arc::clone(&state.weights);
+    let decoder = Arc::clone(&state.decoder);
+    let tokenizer = Arc::clone(&state.tokenizer);
+    let prefix_cache = Arc::clone(&state.prefix_cache);
 
     // KV prefix-cache telemetry. v1: bookkeeping only (no actual KV state
     // restore yet). The cache records hits/misses on prompt prefix and
@@ -166,17 +225,22 @@ async fn generate(
         }
     }
 
-    let response_text = run_inference(
-        &weights,
-        &decoder,
-        &tokenizer,
-        &req.prompt,
-        req.max_length,
-        req.temperature,
-        req.top_p,
-        req.rep_pen,
-        req.use_chat_template,
-    );
+    // Run actual inference on a blocking thread so the tokio runtime stays
+    // responsive for /health and /api/v1/model while the GPU is busy.
+    let prompt = req.prompt.clone();
+    let max_length = req.max_length;
+    let temperature = req.temperature;
+    let top_p = req.top_p;
+    let rep_pen = req.rep_pen;
+    let use_chat = req.use_chat_template;
+    let response_text = tokio::task::spawn_blocking(move || {
+        run_inference(
+            &weights, &decoder, &tokenizer,
+            &prompt, max_length, temperature, top_p, rep_pen, use_chat,
+        )
+    })
+    .await
+    .unwrap_or_else(|e| format!("inference panic: {}", e));
 
     // Commit prefix to cache so the next identical prompt registers as hit.
     // v2 will store actual KV state here for true prefill skip.
@@ -192,8 +256,11 @@ async fn generate(
         );
     }
 
-    let mut s = state.lock().await;
-    s.is_generating = false;
+    // Stash the result under the supplied request_id so retries return cached text.
+    if let Some(ref rid) = req.request_id {
+        let mut cache = state.idem_cache.lock().await;
+        cache.insert(rid.clone(), response_text.clone());
+    }
 
     Json(GenerateResponse {
         results: vec![GenerateResult { text: response_text }],
@@ -351,7 +418,7 @@ fn find_embed_name(weights: &ModelWeights) -> String {
 }
 
 /// Generate check endpoint (KoboldCPP compatibility).
-async fn generate_check(State(_state): State<Arc<Mutex<InferenceState>>>) -> Json<GenerateResponse> {
+async fn generate_check(State(_state): State<Arc<InferenceState>>) -> Json<GenerateResponse> {
     Json(GenerateResponse {
         results: vec![GenerateResult { text: String::new() }],
     })
@@ -399,33 +466,24 @@ pub async fn run_server(
     // Pre-dequantize all weights into a CPU cache (eliminates per-token dequant overhead)
     let weight_cache = Arc::new(WeightCache::from_model(&weights));
 
-    let decoder = Arc::new(
-        TransformerDecoder::new(config, arena).with_weight_cache(weight_cache)
-    );
-
-    // Attach GPU context if available
-    let decoder = if let Some(gpu) = gpu_context {
-        Arc::new(
-            TransformerDecoder::new(
-                TransformerConfig {
-                    vocab_size: weights.vocab_size,
-                    hidden_size: weights.hidden_dim,
-                    intermediate_size,
-                    num_layers: weights.n_layers,
-                    num_heads: weights.n_heads,
-                    num_kv_heads: weights.n_kv_heads,
-                    head_dim: weights.hidden_dim / weights.n_heads,
-                    max_seq_len: 4096,
-                    rope_theta: 1000000.0,
-                    rms_norm_eps: 1e-6,
-                },
-                decoder.arena.clone(),
-            ).with_weight_cache(decoder.weight_cache.clone().unwrap())
-             .with_gpu(gpu)
-        )
+    // If GPU is available, upload weights to VRAM ONCE so per-token matmuls
+    // don't re-upload tens of MB to the device. This is the primary fix for
+    // the 12-second-per-layer pathology.
+    let gpu_weights: Option<Arc<crate::weight_cache::GpuWeightCache>> = if let Some(ref gpu) = gpu_context {
+        Some(Arc::new(crate::weight_cache::GpuWeightCache::upload(&weight_cache, Arc::clone(gpu))))
     } else {
-        decoder
+        None
     };
+
+    let mut decoder_builder =
+        TransformerDecoder::new(config, arena).with_weight_cache(Arc::clone(&weight_cache));
+    if let Some(ref gpu) = gpu_context {
+        decoder_builder = decoder_builder.with_gpu(Arc::clone(gpu));
+    }
+    if let Some(ref gw) = gpu_weights {
+        decoder_builder = decoder_builder.with_gpu_weights(Arc::clone(gw));
+    }
+    let decoder = Arc::new(decoder_builder);
 
     // KV prefix cache. v1: telemetry + bookkeeping only (real prefill skip
     // lands when KvCache state retention across requests is wired). Sized
@@ -438,14 +496,15 @@ pub async fn run_server(
         ),
     ));
 
-    let state = Arc::new(Mutex::new(InferenceState {
+    let state = Arc::new(InferenceState {
         model_name: model_name.clone(),
-        is_generating: false,
         weights,
         decoder,
         tokenizer,
         prefix_cache,
-    }));
+        infer_lock: Arc::new(Semaphore::new(1)),
+        idem_cache: Arc::new(Mutex::new(IdemCache::default())),
+    });
 
     let app = Router::new()
         .route("/health", get(health))

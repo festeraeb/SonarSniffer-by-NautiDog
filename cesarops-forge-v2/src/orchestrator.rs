@@ -1363,7 +1363,6 @@ pub async fn dispatch_modules(
     routing: &[RouteAssignment],
 ) -> Vec<ModuleResult> {
     let mut set: JoinSet<ModuleResult> = JoinSet::new();
-    let client = http_client(MODULE_TIMEOUT_DEFAULT_SECS + 5);
 
     // Index modules by id for fast lookup (avoid O(n*m) in routing loop).
     let mut spec_by_id = std::collections::HashMap::new();
@@ -1373,7 +1372,6 @@ pub async fn dispatch_modules(
 
     for route in routing {
         let route = route.clone();
-        let client = client.clone();
         let spec = match spec_by_id.get(&route.module_id) {
             Some(s) => s.clone(),
             None => {
@@ -1388,6 +1386,8 @@ pub async fn dispatch_modules(
             }
         };
 
+        let tool_for_client = spec.tool_name.clone().unwrap_or_else(|| "noop".to_string());
+        let client = http_client(module_timeout_secs(&tool_for_client) + 5);
         set.spawn(async move {
             let task = async {
                 // /tool/{name} expects {"arguments": {...}} envelope.
@@ -1447,7 +1447,6 @@ pub async fn dispatch_modules_sequential(
     plan: &MissionPlan,
     scenario: &OperatorScenario,
 ) -> Vec<ModuleResult> {
-    let client = http_client(MODULE_TIMEOUT_DEFAULT_SECS + 5);
     let mut ctx = PipelineContext::from_scenario(scenario);
     let mut results = Vec::new();
     let mut completed: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -1481,6 +1480,7 @@ pub async fn dispatch_modules_sequential(
 
         let endpoint = format!("{}/tool/{}", forge_base(), tool);
         let body = serde_json::json!({ "arguments": spec_mut.tool_args });
+        let client = http_client(module_timeout_secs(&tool) + 5);
 
         let task = async {
             match client.post(&endpoint).json(&body).send().await {

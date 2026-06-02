@@ -1,0 +1,3371 @@
+{
+  "batch_id": "batch-003",
+  "requested_size": 200,
+  "processed_size": 200,
+  "instruction": "For each file: summarize purpose, map to blueprint module(s), note overlap/redundancy, and rate usefulness 1-5.",
+  "results": [
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/universal_bridge.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=1",
+      "module_score": 2,
+      "lines": 51,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/fast_drift_engine.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=2",
+      "module_score": 2,
+      "lines": 456,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/deploy_sovereign.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=7, next_best=2",
+      "module_score": 2,
+      "lines": 227,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_cockpit_all.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=2",
+      "module_score": 2,
+      "lines": 123,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_nginx_i7.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=7, next_best=3",
+      "module_score": 2,
+      "lines": 186,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_pihole_wireguard.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=2",
+      "module_score": 2,
+      "lines": 280,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_thought_engine.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=2",
+      "module_score": 2,
+      "lines": 83,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/setup_devtunnel.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=1",
+      "module_score": 2,
+      "lines": 92,
+      "language": "shell"
+    },
+    {
+      "path": "cesarops-inference/src/universal_bridge.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 4,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=6, next_best=1",
+      "module_score": 2,
+      "lines": 51,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/backend_cuda.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 66,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/backend_trait.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=0",
+      "module_score": 2,
+      "lines": 40,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/backend_wgpu.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 76,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/galvanic_battery.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 57,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/mcp.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=4",
+      "module_score": 2,
+      "lines": 507,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/wgpu_dynamic_binder.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=0",
+      "module_score": 2,
+      "lines": 98,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/tests/cpu_smoke_test.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=4",
+      "module_score": 2,
+      "lines": 210,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-mcp-steered/src/verification.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 171,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-satellite-worker/src/tpu_infer.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 248,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-slicer/src/io/watcher.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 167,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/analytics/sar_metrics.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 145,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/cesarops.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 63,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/enhanced_drift_analysis.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=2",
+      "module_score": 2,
+      "lines": 719,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/reporting_api.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint web_ui_api.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "web_ui_api",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=1",
+      "module_score": 2,
+      "lines": 294,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/reports/incident_report.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 216,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/reports/pdf_export.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint pdf_breaker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "pdf_breaker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 318,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_direct_optimization.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 320,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_fender_hindcast.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 776,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_final_summary.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 171,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_hindcast_final.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 383,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_summary.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 159,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/deploy_kobold_instances.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 73,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/deploy_kobold_multi.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 390,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/great_lakes_bathymetry_sweep.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 178,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/hls_download2.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 142,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/kobold_dashboard.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint web_ui_api.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "web_ui_api",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=3",
+      "module_score": 2,
+      "lines": 533,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/inference/live_deep_vision.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 129,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/models/ml/training/train_wreck_classifier_gpu.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 89,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/nauticuvs/src/fdct_kernels/tile.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=0",
+      "module_score": 2,
+      "lines": 91,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/nautivecs/src/main.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 155,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/node_worker.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint web_ui_api.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "web_ui_api",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 486,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/attention_processor.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 5678,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/bag_alignment_corrector.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 469,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/bag_analyzer_gui.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 59,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/black_hole_scanner.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=2",
+      "module_score": 2,
+      "lines": 317,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/bag/clean_bag_mesh.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "altimetry_displacement"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=0",
+      "module_score": 2,
+      "lines": 24,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/confidence_reporting.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 30,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/geo_filter_candidates.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 554,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/multisource_depth_proximity_ranker.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 247,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/run_lake_scans.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 199,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_digest_new_mag_drop.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=0",
+      "module_score": 2,
+      "lines": 165,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_rasterize_erie_csv.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 312,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/wh2k_rasterize_huron_csv.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 271,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/batch_download_manager.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 100,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/probe_sources.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 69,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/wh2k_build_satellite_bundle_manifest.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 143,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/queue_worker.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 531,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/quick_gpu_status.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 171,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/remote_dispatch.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=3",
+      "module_score": 2,
+      "lines": 677,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_download_wreck_tiles.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 241,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_fix_samba_i7.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 63,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_i7_finalize.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 64,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_i7_setup_armor_host.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 70,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_migrate_to_armor.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 99,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_mount_armor_xeon.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 62,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_scan_status.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=0",
+      "module_score": 2,
+      "lines": 36,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/_status_check.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 102,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/add_detection_ws.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=0",
+      "module_score": 2,
+      "lines": 11,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/bench_mistral_candle.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=4",
+      "module_score": 2,
+      "lines": 195,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/build_from_specs.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=3",
+      "module_score": 2,
+      "lines": 111,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/build_loop.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 240,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/build_self_healing.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint web_ui_api.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "web_ui_api",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=4",
+      "module_score": 2,
+      "lines": 213,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/build_supervisor.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint web_ui_api.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "web_ui_api",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=4",
+      "module_score": 2,
+      "lines": 141,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/check_xenon_cuda.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 52,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/cloudflare_ssh_tunnel.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 46,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/credential_inventory.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 179,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/deploy_cesarops3.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=3",
+      "module_score": 2,
+      "lines": 219,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/deploy_mcp_t440.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=5",
+      "module_score": 2,
+      "lines": 64,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/deploy_xenon.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=3",
+      "module_score": 2,
+      "lines": 265,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/diagnose_xeon_gpu.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 152,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/dynamic_db_key.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 321,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/ea_dl_test.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 73,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/feed_r1_spec.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=7, next_best=5",
+      "module_score": 2,
+      "lines": 107,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/fix_mc.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 63,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/fix_thought_nautivecs.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=0",
+      "module_score": 2,
+      "lines": 21,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/generate_db_master_key.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 277,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/ionos_ddns.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 278,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/orchestrate_codegen.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=4",
+      "module_score": 2,
+      "lines": 179,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/overnight_research.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 102,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/s3dl_test.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 50,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/s3getobj_test.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 96,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_cesarops3_share.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=1",
+      "module_score": 2,
+      "lines": 37,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/setup_cesarops_tunnel.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=4",
+      "module_score": 2,
+      "lines": 71,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/start_thought_engine.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 11,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/t440_setup.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 111,
+      "language": "shell"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/scripts/test_pipeline_cpu.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 125,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/tauri/src-tauri/src/kml_generator.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 740,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/tauri/src-tauri/src/lib.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=3",
+      "module_score": 2,
+      "lines": 807,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/test_cmr.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 40,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/test_hls_download.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 99,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/test_ssh.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 71,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/thought-engine/thought_engine.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=3",
+      "module_score": 2,
+      "lines": 333,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/update_sovereign_systemd.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 56,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/watchdog.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 309,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/wreck_scraper.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 574,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/wrecks_api/stages/mag_pipeline_stage.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint bag_unmasker.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "bag_unmasker",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 111,
+      "language": "python"
+    },
+    {
+      "path": "cesarops-forge-v2/src/fleet_registry.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 193,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-forge-v2/src/hardware.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 312,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-forge-v2/src/model_command.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=3",
+      "module_score": 2,
+      "lines": 593,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-forge-v2/src/orchestration.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=4",
+      "module_score": 2,
+      "lines": 492,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-forge-v2/src/stream_lanes.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 104,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-forge-v2/src/validator.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=2",
+      "module_score": 2,
+      "lines": 213,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/backend_cuda.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 66,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/backend_trait.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=0",
+      "module_score": 2,
+      "lines": 40,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/backend_wgpu.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 93,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/diagnostics.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 153,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/generate.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "high",
+      "guess_reason": "role_score=7, next_best=3",
+      "module_score": 2,
+      "lines": 532,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/crossref.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 119,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/crossref_scans.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 104,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/forensic_scan.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 84,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/inspect_scan.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 102,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/remote_dispatch.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 148,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/integrate/tpu_client.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 83,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/mcp.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint mcp_tooling.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "mcp_tooling",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=4",
+      "module_score": 2,
+      "lines": 507,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/pipeline_cache.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 126,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/server.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=7, next_best=4",
+      "module_score": 2,
+      "lines": 527,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/wgpu_dynamic_binder.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=0",
+      "module_score": 2,
+      "lines": 98,
+      "language": "rust"
+    },
+    {
+      "path": "scripts/analyze_sonarsniffer_outputs.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint sonar_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "thermal_sync"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "sonar_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 149,
+      "language": "python"
+    },
+    {
+      "path": "scripts/bench_2060_watchdog_models.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=3",
+      "module_score": 2,
+      "lines": 235,
+      "language": "python"
+    },
+    {
+      "path": "scripts/build_loop.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 240,
+      "language": "python"
+    },
+    {
+      "path": "scripts/cake/install_cake_fleet.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 119,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/launch-fleet-after-pascal-build.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 54,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/monitor-70b-live.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 69,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/prep-c2-hetero-workers.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 108,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/run-70b-task-live.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 80,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/run-qwen72b-inference-fix.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=2",
+      "module_score": 2,
+      "lines": 108,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/start-fleet-hetero-70b.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 128,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cake/start-master-when-c2-ready.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 73,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cesarops-cake-audit-loop.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 38,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/cesarops-fleet-mode.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 85,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/collect_integrate_and_reference.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 388,
+      "language": "python"
+    },
+    {
+      "path": "scripts/conductor_ship_search.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 127,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/credentials.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=4",
+      "module_score": 2,
+      "lines": 124,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/dispatch_satellite_gaps.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=4",
+      "module_score": 2,
+      "lines": 91,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/download-deepseek-r1.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 83,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/e2e_forge_holloway.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 122,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/feed_r1_spec.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=7, next_best=5",
+      "module_score": 2,
+      "lines": 107,
+      "language": "python"
+    },
+    {
+      "path": "scripts/finish_worthy_stubs.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 81,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/fleet-job-runner.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 93,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/fleet-sync-cesarops2-llm.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 40,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/forge-routing-switch.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 117,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/forge_overnight_watch.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 270,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/install_cake_fleet.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 122,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/integrate/apply_integration_queue.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 159,
+      "language": "python"
+    },
+    {
+      "path": "scripts/integrate/dispatch_forge_rust_port.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=4",
+      "module_score": 2,
+      "lines": 201,
+      "language": "python"
+    },
+    {
+      "path": "scripts/integrate/grade_rust_ports.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 192,
+      "language": "python"
+    },
+    {
+      "path": "scripts/merge_wreck_sources.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 171,
+      "language": "python"
+    },
+    {
+      "path": "scripts/p106_metrics_ingest.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 22,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/prep_n8n_fleet_live.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 35,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/prep_post_pipeline.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint devops_runtime.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "devops_runtime",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 56,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/reestimate_from_historic_news.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 287,
+      "language": "python"
+    },
+    {
+      "path": "scripts/run_baseline_golden.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 41,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/run_great_lakes_satellite.sh",
+      "purpose_summary": "shell source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "docs_config",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 134,
+      "language": "shell"
+    },
+    {
+      "path": "scripts/sat_mi_straits_p100_array.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "spectral_plume_clarity"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 247,
+      "language": "python"
+    },
+    {
+      "path": "scripts/scrape_nos_great_lakes.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context",
+        "sar_ripple_glint"
+      ],
+      "overlap_redundancy": "overlap_detected",
+      "usefulness_1_to_5": 3,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=2",
+      "module_score": 2,
+      "lines": 224,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops-inference/src/tokenizer.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=2",
+      "module_score": 2,
+      "lines": 353,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/fetch_historical_weather.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint docs_config.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "docs_config",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 435,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_enhanced_timeline_analysis.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 680,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/cesarops_core/rosa_case/rosa_precise_timeline_analysis.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 608,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/nauticuvs/src/weights/directional.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 163,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/nautivecs/src/pipeline.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 166,
+      "language": "rust"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/datum_correction.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 644,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/directional_pull.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint evaluation_testing.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "evaluation_testing",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 293,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/erie_direct_match.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 369,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/erie_feedback_loop.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 317,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/generate_combined_kml.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 276,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/mag/generate_kml.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 289,
+      "language": "python"
+    },
+    {
+      "path": "backup/wreckhunter2000-1/pipelines/satellite/buoy_analog.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint data_ingest_etl.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "data_ingest_etl",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 549,
+      "language": "python"
+    },
+    {
+      "path": "cesarops-forge-v2/src/translator.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 417,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/attention.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 82,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/attention_dispatch.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 420,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/dequant_probe.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 191,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/forward_pass.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=3",
+      "module_score": 2,
+      "lines": 875,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/gemma4_gpu_pipelines.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 414,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/gemma4_gpu_runner.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 974,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/gemma4_runner.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=6, next_best=5",
+      "module_score": 2,
+      "lines": 1176,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/gpu_stats.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=1",
+      "module_score": 2,
+      "lines": 191,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/iq4_pipeline.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 230,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/kv_prefix_cache.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=1",
+      "module_score": 2,
+      "lines": 391,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/moe_dispatch.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 327,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/moe_iq4_dispatch.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 885,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/moe_multigpu_dispatch.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=1",
+      "module_score": 2,
+      "lines": 201,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/pipeline_init.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 408,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/shader_ops.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 425,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/telemetry_tuner.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 355,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/tensor_chunker.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 662,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/tensor_loader_safe.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=2, next_best=2",
+      "module_score": 2,
+      "lines": 754,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/tokenizer.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=5, next_best=2",
+      "module_score": 2,
+      "lines": 413,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/uniform_pool.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint orchestration_dispatch.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "orchestration_dispatch",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=3, next_best=2",
+      "module_score": 2,
+      "lines": 153,
+      "language": "rust"
+    },
+    {
+      "path": "cesarops-inference/src/weight_cache.rs",
+      "purpose_summary": "rust source aligned primarily to geometry_context with role hint llm_inference_serving.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "llm_inference_serving",
+      "guess_confidence": "medium",
+      "guess_reason": "role_score=4, next_best=3",
+      "module_score": 2,
+      "lines": 183,
+      "language": "rust"
+    },
+    {
+      "path": "scripts/datum_correction.py",
+      "purpose_summary": "python source aligned primarily to geometry_context with role hint drift_analysis.",
+      "primary_module": "geometry_context",
+      "modules": [
+        "geometry_context"
+      ],
+      "overlap_redundancy": "no_blueprint_overlap",
+      "usefulness_1_to_5": 2,
+      "guessed_role": "drift_analysis",
+      "guess_confidence": "low",
+      "guess_reason": "role_score=1, next_best=1",
+      "module_score": 2,
+      "lines": 644,
+      "language": "python"
+    }
+  ]
+}

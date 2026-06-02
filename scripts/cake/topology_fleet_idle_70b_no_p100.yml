@@ -1,0 +1,20 @@
+# 70B fleet — T440 DDR4 + cesarops2 RTX 2060 + cesarops2 RAM only (P100s reserved for llama :5001/:5002)
+# Start workers before master: bash scripts/cake/start-fleet-70b-no-p100.sh
+
+t440_cpu:
+  host: "127.0.0.1:10130"
+  description: "T440 host RAM (93Gi) — primary offload"
+  layers:
+    - "model.layers.0-39"
+
+cesarops2_rtx:
+  host: "10.0.0.201:10128"
+  description: "cesarops2 RTX 2060 SUPER (GPU 1)"
+  layers:
+    - "model.layers.40-59"
+
+cesarops2_cpu:
+  host: "10.0.0.201:10129"
+  description: "cesarops2 host RAM"
+  layers:
+    - "model.layers.60-79"

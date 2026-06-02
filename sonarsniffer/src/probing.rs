@@ -824,13 +824,17 @@ mod tests {
     use super::*;
     use crate::garmin_rsd_parser::GarminRSDParser;
 
-    const GT56_FILE: &str =
-        r"C:\Users\thomf\programming\sonarsnifferrust\test files\515456\25MAR25-0736-01.RSD";
+    fn gt56_test_rsd() -> std::path::PathBuf {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("test_files")
+            .join("126SV-UHD2-GT56.RSD")
+    }
 
     #[test]
     fn probe_gt56_alignment_and_gain() {
-        let raw = std::fs::read(GT56_FILE)
-            .unwrap_or_else(|e| panic!("Cannot read test file {GT56_FILE}: {e}"));
+        let path = gt56_test_rsd();
+        let raw = std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("Cannot read test file {}: {e}", path.display()));
 
         println!("\n══════════════════════════════════════════════");
         println!(" HeuristicProbe — GT56 UHD2 live run");
@@ -867,7 +871,7 @@ mod tests {
         // ── Now full-parse & check for sample mismatches ────────────────────
         println!("\n── Full parse + sample-mismatch check ────────");
         let mut parser = GarminRSDParser::new();
-        let result = parser.parse_file(std::path::Path::new(GT56_FILE));
+        let result = parser.parse_file(&path);
 
         println!("Records parsed : {}", result.record_count);
         println!("Recovered      : {}", result.recovered_records);
@@ -933,11 +937,12 @@ mod tests {
     /// Run: cargo test gt56_clipping_analysis -- --nocapture
     #[test]
     fn gt56_clipping_analysis() {
-        let raw = std::fs::read(GT56_FILE)
-            .unwrap_or_else(|e| panic!("Cannot read test file: {e}"));
+        let path = gt56_test_rsd();
+        let raw = std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("Cannot read test file {}: {e}", path.display()));
 
         let mut parser = crate::garmin_rsd_parser::GarminRSDParser::new();
-        let result = parser.parse_file(std::path::Path::new(GT56_FILE));
+        let result = parser.parse_file(&path);
         let _ = raw; // drop early — file is huge
 
         // Clipping thresholds for abs(i16) samples stored as u16

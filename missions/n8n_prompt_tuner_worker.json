@@ -1,0 +1,109 @@
+{
+  "name": "Prompt Tuner Worker",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prompt-tuner-initial",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "prompt-tuner-webhook-initial",
+      "name": "Prompt Tuner Initial Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [180, 220],
+      "webhookId": "prompt-tuner-initial"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prompt-tuner-failed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "prompt-tuner-webhook-failed",
+      "name": "Prompt Tuner Failed Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [180, 420],
+      "webhookId": "prompt-tuner-failed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst payload = {\n  mode: 'initial',\n  lane: body.lane || 'lane-a',\n  phase: body.phase || 'VERIFY',\n  detection_port: body.detection_port || 5580,\n  task: body.task || 'Verify cesarops-detection startup and endpoints.',\n  report: body.report || '',\n  summary: body.summary || '',\n  result: body.result || '',\n  notes: body.notes || '',\n  table_rows: body.table_rows || [],\n  write_latest_prompt: body.write_latest_prompt !== false\n};\nreturn [{ json: { payloadJson: JSON.stringify(payload) } }];"
+      },
+      "id": "normalize-input-initial",
+      "name": "Normalize Initial Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [430, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst payload = {\n  mode: 'failed',\n  lane: body.lane || 'lane-a',\n  phase: body.phase || 'VERIFY',\n  detection_port: body.detection_port || 5580,\n  task: body.task || 'Verify cesarops-detection startup and endpoints.',\n  report: body.report || body.latest_report || '',\n  summary: body.summary || '',\n  result: body.result || '',\n  notes: body.notes || '',\n  table_rows: body.table_rows || [],\n  write_latest_prompt: body.write_latest_prompt !== false\n};\nreturn [{ json: { payloadJson: JSON.stringify(payload) } }];"
+      },
+      "id": "normalize-input-failed",
+      "name": "Normalize Failed Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [430, 420]
+    },
+    {
+      "parameters": {
+        "command": "={{ \"printf '%s' \" + JSON.stringify($json.payloadJson) + \" | python3 /codebase/repos/wreckhunter2000-1/scripts/prompt_tuner_worker.py\" }}"
+      },
+      "id": "run-tuner",
+      "name": "Run Prompt Tuner",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [720, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $input.first().json.stdout || '{}';\nlet parsed = {};\ntry { parsed = JSON.parse(out); } catch (e) { parsed = { ok: false, error: String(e), raw: out }; }\nreturn [{ json: parsed }];"
+      },
+      "id": "parse-output",
+      "name": "Parse Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1220, 320]
+    }
+  ],
+  "connections": {
+    "Prompt Tuner Initial Webhook": {
+      "main": [[{ "node": "Normalize Initial Input", "type": "main", "index": 0 }]]
+    },
+    "Prompt Tuner Failed Webhook": {
+      "main": [[{ "node": "Normalize Failed Input", "type": "main", "index": 0 }]]
+    },
+    "Normalize Initial Input": {
+      "main": [[{ "node": "Run Prompt Tuner", "type": "main", "index": 0 }]]
+    },
+    "Normalize Failed Input": {
+      "main": [[{ "node": "Run Prompt Tuner", "type": "main", "index": 0 }]]
+    },
+    "Run Prompt Tuner": {
+      "main": [[{ "node": "Parse Output", "type": "main", "index": 0 }]]
+    },
+    "Parse Output": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

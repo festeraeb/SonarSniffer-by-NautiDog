@@ -1,3 +1,4 @@
+use crate::orchestration;
 use crate::AppState;
 use crate::validator::{ValidatorConfig, run_validation, benchmark_tps, ping};
 use serde_json::Value;
@@ -5,6 +6,43 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::process::Command;
 use tracing::{info, warn};
+
+const AVAILABLE_TOOLS: &[&str] = &[
+    "write_file",
+    "read_file",
+    "cargo_check",
+    "think_harder",
+    "remember",
+    "run_command",
+    "speed_check",
+    "list_fleet_agents",
+    "call_sub_agent",
+    "delegate_sub_agent",
+    "scan_region",
+    "magnetic_dipole_detect",
+    "download_satellite_window",
+    "weather_window",
+    "detection_health",
+    "detection_scan",
+    "detection_poll",
+    "sat_mission",
+    "sat_read_mission_report",
+    // SymForge-compatible coding tools
+    "search_symbols",
+    "get_symbol",
+    "get_file_context",
+    "search_text",
+    "replace_symbol_body",
+    "edit_within_symbol",
+    "insert_symbol",
+    "delete_symbol",
+    "batch_edit",
+    "batch_rename",
+];
+
+pub fn available_tools() -> &'static [&'static str] {
+    AVAILABLE_TOOLS
+}
 
 /// Load satellite/earthdata credentials from .env, credentials.sh, or bootstrap scripts.
 fn load_satellite_env() -> Vec<(String, String)> {
@@ -153,6 +191,23 @@ fn satellite_mission_cwd(py: &PathBuf) -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("/codebase/projects/pipelines"))
 }
 
+/// n8n tool-route often returns `"[]"` with status success — treat as miss so inline path runs.
+fn n8n_tool_result_usable(tool_name: &str, result: &str) -> bool {
+    let t = result.trim();
+    if t.is_empty() || t == "[]" || t == "{}" || t == "null" {
+        return false;
+    }
+    // think_harder must include at least one backend section
+    if tool_name == "think_harder"
+        && !t.contains("[nautivecs]")
+        && !t.contains("[web search]")
+        && !t.contains("results")
+    {
+        return false;
+    }
+    true
+}
+
 /// Counter for think_harder calls per session. Resets on /clear.
 static THINK_HARDER_COUNT: AtomicU32 = AtomicU32::new(0);
 const THINK_HARDER_LIMIT: u32 = u32::MAX; // No limit — let it search as much as it needs
@@ -164,18 +219,54 @@ pub fn reset_think_counter() {
 
 /// Execute a tool by name with the given arguments. Returns the tool result as a string.
 pub async fn execute(name: &str, arguments: &Value, state: &AppState) -> String {
+    let started = std::time::Instant::now();
+    let mut delegated_to_mcp = false;
     info!("Tool call: {} args={}", name, arguments);
+    let args_short = arguments.to_string();
+    crate::stream_sources::log_tool(
+        state,
+        name,
+        &args_short[..args_short.len().min(100)],
+    )
+    .await;
 
     if crate::mcp_delegate::should_delegate(name) {
+        delegated_to_mcp = true;
         match crate::mcp_delegate::execute_on_mcp(name, arguments).await {
-            Ok(r) => return format!("[mcp] {}", r),
+            Ok(r) => {
+                let out = format!("[mcp] {}", r);
+                state
+                    .tool_telemetry
+                    .lock()
+                    .await
+                    .record(name, delegated_to_mcp, true, started.elapsed().as_millis());
+                return out;
+            }
             Err(e) => {
                 warn!("MCP delegate for {} failed ({}), running locally", name, e);
             }
         }
     }
 
-    match name {
+    let orch = orchestration::load_orchestration();
+    // think_harder always uses inline nautivecs + WSO (n8n often returns "[]" and skips web search).
+    if orch.tools_backend == "n8n" && name != "think_harder" {
+        let n8n_name = if name == "wso_search" { "wso_search" } else { name };
+        if matches!(n8n_name, "wso_search" | "read_file" | "run_command") {
+            if let Some(r) = orchestration::route_tool_via_n8n(n8n_name, arguments, "").await {
+                if n8n_tool_result_usable(n8n_name, &r) {
+                    return r;
+                }
+                warn!(
+                    "n8n {} returned empty/trivial result {:?}; falling back to inline",
+                    n8n_name,
+                    &r[..r.len().min(80)]
+                );
+            }
+        }
+    }
+
+    let result = match name {
         "write_file" => { reset_think_counter(); write_file(arguments, state).await },
         "read_file" => { reset_think_counter(); read_file(arguments, state).await },
         "cargo_check" => { reset_think_counter(); cargo_check(arguments, state).await },
@@ -203,11 +294,45 @@ pub async fn execute(name: &str, arguments: &Value, state: &AppState) -> String 
         "detection_poll" => { reset_think_counter(); detection_poll(arguments, state).await },
         "sat_mission" => { reset_think_counter(); sat_mission(arguments, state).await },
         "sat_read_mission_report" => { reset_think_counter(); sat_read_mission_report(arguments, state).await },
+        // These are expected to run via MCP delegate (SymForge or worker backend).
+        "search_symbols"
+        | "get_symbol"
+        | "get_file_context"
+        | "search_text"
+        | "replace_symbol_body"
+        | "edit_within_symbol"
+        | "insert_symbol"
+        | "delete_symbol"
+        | "batch_edit"
+        | "batch_rename" => {
+            format!(
+                "Tool '{}' requires MCP delegation. Set MCP_WORKER_URL and enable MCP worker SymForge tool proxy.",
+                name
+            )
+        }
+        "list_fleet_agents" => { reset_think_counter(); crate::model_command::tool_list_fleet_agents().await },
+        "call_sub_agent" => { reset_think_counter(); crate::model_command::tool_call_sub_agent(arguments).await },
+        "delegate_sub_agent" => {
+            reset_think_counter();
+            let root = state.config.read().await.project_root.clone();
+            let mcp = std::env::var("MCP_WORKER_URL").ok().filter(|s| !s.is_empty());
+            crate::model_command::tool_delegate_sub_agent(arguments, &root, mcp, 0).await
+        }
         _ => format!(
-            "Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check, scan_region, magnetic_dipole_detect, download_satellite_window, weather_window, detection_health, detection_scan, detection_poll, sat_mission, sat_read_mission_report",
+            "Unknown tool: '{}'. Available: write_file, read_file, cargo_check, think_harder, remember, run_command, speed_check, list_fleet_agents, call_sub_agent, delegate_sub_agent, scan_region, magnetic_dipole_detect, download_satellite_window, weather_window, detection_health, detection_scan, detection_poll, sat_mission, sat_read_mission_report",
             name
         ),
-    }
+    };
+    let ok = !(result.starts_with("Error")
+        || result.contains(" FAILED")
+        || result.contains("BLOCKED:")
+        || result.starts_with("Unknown tool:"));
+    state
+        .tool_telemetry
+        .lock()
+        .await
+        .record(name, delegated_to_mcp, ok, started.elapsed().as_millis());
+    result
 }
 
 /// Write content to a file under project_root.
@@ -331,8 +456,7 @@ async fn think_harder(args: &Value, state: &AppState) -> String {
     match nautivecs_result {
         Ok(resp) => {
             if let Ok(body) = resp.text().await {
-                let truncated = truncate_output(&body, 1500);
-                results.push(format!("[nautivecs]: {}", truncated));
+                results.push(format_nautivecs_for_model(&body));
             }
         }
         Err(e) => {
@@ -351,8 +475,7 @@ async fn think_harder(args: &Value, state: &AppState) -> String {
     match wso_result {
         Ok(resp) => {
             if let Ok(body) = resp.text().await {
-                let truncated = truncate_output(&body, 1500);
-                results.push(format!("[web search]: {}", truncated));
+                results.push(format_wso_for_model(&body));
             }
         }
         Err(e) => {
@@ -544,6 +667,96 @@ async fn speed_check(args: &Value, state: &AppState) -> String {
 
 fn resolve_path(relative: &str, root: &str) -> PathBuf {
     PathBuf::from(root).join(relative)
+}
+
+/// Compact nautivecs JSON for the coder — avoids dumping raw embeddings/scores into context.
+fn format_nautivecs_for_model(body: &str) -> String {
+    let Ok(v) = serde_json::from_str::<Value>(body) else {
+        return format!("[nautivecs]: {}", truncate_output(body, 1200));
+    };
+
+    let total = v.get("total_chunks").and_then(|c| c.as_u64()).unwrap_or(0);
+    if total == 0 {
+        return "[nautivecs]: empty index (total_chunks=0). Run `nautivecs-cli serve` and index the repo.".to_string();
+    }
+
+    let results = match v.get("results").and_then(|r| r.as_array()) {
+        Some(a) => a,
+        None => return format!("[nautivecs]: {} chunks indexed (unparseable results).", total),
+    };
+
+    if results.is_empty() {
+        return format!(
+            "[nautivecs]: {} chunks indexed; no hits for this query.",
+            total
+        );
+    }
+
+    let mut lines = vec![format!(
+        "[nautivecs] {} hit(s), {} chunks indexed:",
+        results.len().min(3),
+        total
+    )];
+    for (i, r) in results.iter().take(3).enumerate() {
+        let path = r.get("file_path").and_then(|x| x.as_str()).unwrap_or("?");
+        let sym = r.get("function_name").and_then(|x| x.as_str()).unwrap_or("");
+        let score = r.get("score").and_then(|x| x.as_f64()).unwrap_or(0.0);
+        let text = r.get("text").and_then(|x| x.as_str()).unwrap_or("");
+        lines.push(format!(
+            "{}. {} ({}) score={:.3}\n   {}",
+            i + 1,
+            path,
+            sym,
+            score,
+            truncate_output(text, 300)
+        ));
+    }
+    if let Some(ctx) = v.get("context_block").and_then(|x| x.as_str()) {
+        if !ctx.trim().is_empty() {
+            lines.push(format!(
+                "context_block: {}",
+                truncate_output(ctx, 400)
+            ));
+        }
+    }
+    lines.join("\n")
+}
+
+/// Compact WSO JSON for the coder.
+fn format_wso_for_model(body: &str) -> String {
+    let Ok(v) = serde_json::from_str::<Value>(body) else {
+        return format!("[web search]: {}", truncate_output(body, 1200));
+    };
+
+    if let Some(results) = v.get("results").and_then(|r| r.as_array()) {
+        if results.is_empty() {
+            return "[web search]: no results.".to_string();
+        }
+        let mut lines = vec![format!("[web search] {} hit(s):", results.len().min(3))];
+        for (i, r) in results.iter().take(3).enumerate() {
+            let title = r
+                .get("title")
+                .or_else(|| r.get("name"))
+                .and_then(|x| x.as_str())
+                .unwrap_or("?");
+            let url = r.get("url").and_then(|x| x.as_str()).unwrap_or("");
+            let snippet = r
+                .get("snippet")
+                .or_else(|| r.get("content"))
+                .and_then(|x| x.as_str())
+                .unwrap_or("");
+            lines.push(format!(
+                "{}. {} — {}\n   {}",
+                i + 1,
+                title,
+                url,
+                truncate_output(snippet, 220)
+            ));
+        }
+        return lines.join("\n");
+    }
+
+    format!("[web search]: {}", truncate_output(body, 1200))
 }
 
 fn truncate_output(s: &str, max: usize) -> String {

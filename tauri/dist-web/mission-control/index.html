@@ -4,38 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CESAROPS Mission Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/site.css">
   <style>
-    :root { --bg: #f4f4f9; --text: #1a1a1a; --primary: #0057b7; --success: #28a745; --warn: #ffc107; --font: 'Lexend', sans-serif; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-    h1 { font-size: 2.5rem; text-align: center; margin-bottom: 20px; }
-    .modes { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
-    .mode-btn { min-height: 60px; min-width: 120px; padding: 15px 25px; font-size: 1.2rem; border: none; border-radius: 8px; cursor: pointer; background: var(--primary); color: white; transition: transform 0.1s; }
-    .mode-btn:hover { transform: scale(1.05); }
-    .mode-btn.active { background: var(--success); }
-    .controls { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; }
-    input[type="text"] { flex: 1; padding: 12px; font-size: 1rem; border: 2px solid #ccc; border-radius: 6px; }
-    .voice-btn { min-height: 60px; min-width: 60px; background: var(--warn); border: none; border-radius: 6px; cursor: pointer; font-size: 1.5rem; }
+    body { align-items: stretch; max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+    h1 { font-size: 1.75rem; text-align: left; margin-bottom: 0.25rem; }
+    .sub { color: var(--muted); margin-bottom: 1.25rem; font-size: 0.95rem; }
+    .modes { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .mode-btn { min-height: 48px; padding: 0.65rem 1.1rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; background: #0057b7; color: white; font-family: var(--font); }
+    .mode-btn.active { background: var(--accent2); color: #001018; }
+    .controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    input[type="text"] { flex: 1; padding: 0.75rem; font-size: 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); color: var(--text); font-family: var(--font); }
+    .voice-btn { min-width: 48px; background: var(--warn); border: none; border-radius: 8px; cursor: pointer; font-size: 1.25rem; }
     .voice-btn.listening { animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    #progress { width: 100%; max-width: 600px; background: #e0e0e0; border-radius: 6px; overflow: hidden; height: 30px; margin-bottom: 20px; position: relative; }
-    #progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
-    #progress-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; line-height: 30px; font-weight: bold; }
-    #output { width: 100%; max-width: 600px; min-height: 100px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ccc; white-space: pre-wrap; font-family: monospace; }
+    #progress { background: rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; height: 28px; margin-bottom: 1rem; position: relative; }
+    #progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+    #progress-text { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.85rem; font-weight: 600; }
+    #output { min-height: 120px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; white-space: pre-wrap; font-family: var(--mono, monospace); font-size: 0.85rem; }
+    .back { margin-bottom: 1rem; display: inline-block; }
   </style>
 </head>
 <body>
+  <a class="back" href="../tools.html">← Tools dashboard</a>
   <h1>CESAROPS Mission Control</h1>
+  <p class="sub">Routes tasks to Forge at <code id="api-host-label">api.cesarops.org</code></p>
+
   <div class="modes">
-    <button class="mode-btn" data-mode="CODE">CODE</button>
-    <button class="mode-btn" data-mode="SCAN">SCAN</button>
-    <button class="mode-btn" data-mode="RESEARCH">RESEARCH</button>
+    <button class="mode-btn active" data-mode="CODE" type="button">CODE</button>
+    <button class="mode-btn" data-mode="SCAN" type="button">SCAN</button>
+    <button class="mode-btn" data-mode="RESEARCH" type="button">RESEARCH</button>
   </div>
+
   <div class="controls">
-    <input type="text" id="user-input" placeholder="Enter task or speak...">
-    <button class="voice-btn" id="voice-btn">🎤</button>
+    <input type="text" id="user-input" placeholder="Enter task or speak…" autocomplete="off">
+    <button class="voice-btn" id="voice-btn" type="button" title="Voice input">🎤</button>
   </div>
-  <div id="progress"><div id="progress-bar"></div><div id="progress-text">Ready</div></div>
+
+  <div id="progress"><div id="progress-bar"></div><div id="progress-text">Connecting…</div></div>
   <div id="output"></div>
+
   <script>
     let currentMode = 'CODE';
     let ws = null;
@@ -46,81 +54,85 @@
     const progressText = document.getElementById('progress-text');
     const output = document.getElementById('output');
 
-    // Configuration for IONOS Deployment
-    const API_HOST = 'api.cesarops.org';
-    const API_PORT = '443'; // HTTPS
-    const PROTOCOL = 'https:';
+    const API_HOST = (location.hostname === 'localhost' || location.hostname.startsWith('10.'))
+      ? '10.0.0.61:9100'
+      : 'api.cesarops.org';
+    const API_BASE = API_HOST.includes(':') ? `http://${API_HOST}` : `https://${API_HOST}`;
+    const WS_BASE = API_HOST.includes(':') ? `ws://${API_HOST}` : `wss://${API_HOST}`;
+    document.getElementById('api-host-label').textContent = API_HOST;
 
     modes.forEach(btn => btn.addEventListener('click', () => {
       modes.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentMode = btn.dataset.mode;
-      submitTask();
+      if (input.value.trim()) submitTask();
     }));
 
     function connectWS() {
-      // Connect to WSS on the API host
-      ws = new WebSocket(`wss://${API_HOST}/ws`);
-      
-      ws.onopen = () => {
-        progressText.textContent = '🟢 Connected';
-      };
-
-      ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if(data.type === 'progress') {
-          progressText.textContent = data.detail || data.step;
-          progressBar.style.width = `${(data.step/data.total)*100}%`;
-        } else if(data.type === 'llm_token') {
-          output.textContent += data.text;
-        } else if(data.type === 'result') {
-          output.textContent = JSON.stringify(data.data, null, 2);
-          progressText.textContent = '✅ Done';
-          progressBar.style.width = '100%';
-        }
-      };
-
-      ws.onerror = (err) => {
-        progressText.textContent = '❌ Connection Error';
-        console.error("WS Error", err);
-      };
+      try {
+        ws = new WebSocket(`${WS_BASE}/ws`);
+        ws.onopen = () => { progressText.textContent = '🟢 Connected'; };
+        ws.onmessage = (e) => {
+          const data = JSON.parse(e.data);
+          if (data.type === 'progress') {
+            progressText.textContent = data.detail || data.step || 'Working…';
+            if (data.total) progressBar.style.width = `${Math.min(100, (data.step / data.total) * 100)}%`;
+          } else if (data.type === 'llm_token') {
+            output.textContent += data.text;
+          } else if (data.type === 'result') {
+            output.textContent = JSON.stringify(data.data, null, 2);
+            progressText.textContent = '✅ Done';
+            progressBar.style.width = '100%';
+          }
+        };
+        ws.onerror = () => { progressText.textContent = '❌ WebSocket error'; };
+        ws.onclose = () => { progressText.textContent = '🔴 Disconnected — retry in 5s'; setTimeout(connectWS, 5000); };
+      } catch (err) {
+        progressText.textContent = '❌ WS unavailable';
+      }
     }
     connectWS();
 
-    function submitTask() {
+    async function submitTask() {
       const payload = { mode: currentMode, input: input.value };
-      fetch(`https://${API_HOST}/task`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-        .then(() => {
-          output.textContent = '';
-          progressText.textContent = '🔄 Planning...';
-          progressBar.style.width = '10%';
-        })
-        .catch(err => {
-          progressText.textContent = '❌ Task Failed';
-          console.error("Task Error", err);
+      output.textContent = '';
+      progressText.textContent = '🔄 Planning…';
+      progressBar.style.width = '10%';
+      try {
+        const res = await fetch(`${API_BASE}/task`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch (err) {
+        progressText.textContent = '❌ Task failed — is Forge up?';
+        output.textContent = String(err);
+      }
     }
 
-    if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitTask(); });
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
       voiceBtn.addEventListener('click', () => {
-        if(recognition.isListening) { recognition.stop(); voiceBtn.classList.remove('listening'); }
+        if (recognition.isListening) { recognition.stop(); voiceBtn.classList.remove('listening'); }
         else { recognition.start(); voiceBtn.classList.add('listening'); }
       });
       recognition.onresult = (e) => {
         let transcript = '';
-        for(let i=e.resultIndex; i<e.results.length; i++) transcript += e.results[i][0].transcript;
+        for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
         input.value = transcript;
-        if(e.results[0].isFinal) submitTask();
+        if (e.results[0].isFinal) submitTask();
       };
       recognition.onend = () => voiceBtn.classList.remove('listening');
+    } else {
+      voiceBtn.disabled = true;
+      voiceBtn.title = 'Speech not supported in this browser';
     }
   </script>
 </body>
 </html>
-```
-
-###

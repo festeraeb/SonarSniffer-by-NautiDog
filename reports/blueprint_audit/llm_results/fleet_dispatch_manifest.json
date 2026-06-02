@@ -1,0 +1,28 @@
+{
+  "status": "running",
+  "started_at": 1780131526.8709152,
+  "workers": [
+    "p100-r1",
+    "p100-gemma"
+  ],
+  "worker_models": [
+    {
+      "id": "p100-r1",
+      "model": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+      "score_b": 32
+    },
+    {
+      "id": "p100-gemma",
+      "model": "Gemma-4-26B-MoE-IQ4_XS.gguf",
+      "score_b": 26
+    }
+  ],
+  "worker_filter_errors": [
+    "c2-qwen model below min size 14B: DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M.gguf",
+    "c2-gemma model filtered by allow regex: Phi-3-mini-4k-instruct-Q4_K_M.gguf"
+  ],
+  "chunk_size": 18,
+  "min_chunk_size": 6,
+  "batches": [],
+  "summary": {}
+}

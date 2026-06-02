@@ -58,48 +58,28 @@ Respond in this exact JSON format:
         truncate(raw_output, 500),
     );
 
-    // Call 8B on cesarops2
     let client = reqwest::Client::new();
-    let payload = serde_json::json!({
-        "prompt": diag_prompt,
-        "max_length": 1500,
-        "temperature": 0.3,
-        "top_p": 0.9,
-        "stop_sequence": ["<|im_end|>", "\n\n\n"],
-    });
-
-    let resp = match client
-        .post(format!("{}/api/v1/generate", state.config.thinker_url))
-        .json(&payload)
-        .timeout(std::time::Duration::from_secs(30))
-        .send()
-        .await
+    let thinker_url = state.config.read().await.thinker_url.clone();
+    let text = match crate::inference_client::complete_prompt(
+        &client,
+        &thinker_url,
+        &diag_prompt,
+        1500,
+        0.3,
+        vec!["<|im_end|>".to_string(), "\n\n\n".to_string()],
+        None,
+    )
+    .await
     {
-        Ok(r) => r,
+        Ok(t) => t,
         Err(e) => {
             warn!("8B diagnosis request failed: {}", e);
             return None;
         }
     };
 
-    let body: serde_json::Value = match resp.json().await {
-        Ok(b) => b,
-        Err(e) => {
-            warn!("8B diagnosis parse failed: {}", e);
-            return None;
-        }
-    };
-
-    let text = body
-        .get("results")
-        .and_then(|r| r.as_array())
-        .and_then(|a| a.first())
-        .and_then(|r| r.get("text"))
-        .and_then(|t| t.as_str())
-        .unwrap_or("");
-
     // Try to parse as JSON
-    parse_diagnosis(text)
+    parse_diagnosis(&text)
 }
 
 /// Search nautivecs for a prior fix matching this failure type.
@@ -108,7 +88,7 @@ async fn search_prior_fix(failure_type: &FailureType, state: &AppState) -> Optio
     let client = reqwest::Client::new();
 
     let resp = client
-        .post(&state.config.nautivecs_url)
+        .post(&state.config.read().await.nautivecs_url)
         .json(&serde_json::json!({"query": query, "top_k": 1}))
         .timeout(std::time::Duration::from_secs(5))
         .send()

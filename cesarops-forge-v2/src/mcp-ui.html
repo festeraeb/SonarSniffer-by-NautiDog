@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>MCP Stack — CESAROPS Forge</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',sans-serif; background:#0d0d1a; color:#d8d8e8; min-height:100vh; }
+    header { background:#111126; border-bottom:2px solid #1a2a5e; padding:0.6rem 1.2rem; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
+    header h1 { color:#00e5ff; font-size:1.1rem; letter-spacing:1px; }
+    .nav { display:flex; gap:8px; align-items:center; }
+    .nav a { color:#4fc3f7; font-size:0.82rem; text-decoration:none; padding:3px 9px; border:1px solid #1a3a5e; border-radius:4px; }
+    .nav a:hover { background:#1a3a5e; }
+    .nav button { padding:4px 12px; border-radius:4px; border:1px solid #2a4a88; background:#0d1a3a; color:#88bbff; cursor:pointer; font-size:0.78rem; font-weight:700; }
+
+    .wrap { max-width:1050px; margin:0 auto; padding:16px; }
+    .page-title { font-size:1.2rem; color:#88bbdd; margin-bottom:2px; }
+    .page-sub { font-size:0.76rem; color:#446; margin-bottom:16px; }
+
+    .stat-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .sr { background:#0f0f22; border:1px solid #1a1a30; border-radius:6px; padding:8px 12px; min-width:110px; }
+    .sr-lbl { font-size:0.63rem; color:#446; text-transform:uppercase; letter-spacing:.4px; margin-bottom:2px; }
+    .sr-val { font-size:0.9rem; font-weight:700; }
+    .sv-ok  { color:#4caf50; } .sv-err { color:#ef4444; } .sv-grey { color:#446; }
+
+    .svc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; margin-bottom:20px; }
+    .svc-card { background:#111126; border:2px solid #1a1a38; border-radius:12px; padding:14px; }
+    .svc-card.up   { border-color:#1a3a1a; box-shadow:0 0 8px rgba(74,175,80,0.12); }
+    .svc-card.down { border-color:#3a1a1a; }
+    .svc-card.unknown { border-color:#2a2a40; }
+    .svc-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+    .svc-name { font-size:1.0rem; font-weight:700; color:#88ccdd; }
+    .svc-pill { font-size:0.64rem; font-weight:700; padding:2px 8px; border-radius:10px; }
+    .svc-pill.up   { background:#0a2a0a; color:#4caf50; border:1px solid #1a3a1a; }
+    .svc-pill.down { background:#2a0a0a; color:#ef4444; border:1px solid #3a1a1a; }
+    .svc-pill.unknown { background:#1a1a28; color:#556677; border:1px solid #2a2a40; }
+    .svc-url  { font-family:monospace; font-size:0.7rem; color:#334; margin-bottom:4px; word-break:break-all; }
+    .svc-desc { font-size:0.76rem; color:#778899; line-height:1.4; margin-bottom:8px; }
+    .svc-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .btn-start { font-size:0.68rem; padding:3px 10px; border-radius:4px; background:#0a1a0a; border:1px solid #2a4a2a; color:#4caf50; cursor:pointer; }
+    .btn-start:hover { background:#1a2a1a; }
+    .btn-restart { font-size:0.68rem; padding:3px 10px; border-radius:4px; background:#1a1a0a; border:1px solid #4a4a1a; color:#ccaa00; cursor:pointer; }
+    .btn-restart:hover { background:#2a2a10; }
+    .btn-open { font-size:0.68rem; padding:3px 10px; border-radius:4px; background:#0a0a1a; border:1px solid #1a2a5e; color:#4fc3f7; text-decoration:none; display:inline-block; }
+    .svc-cmd { margin-top:6px; font-family:monospace; font-size:0.66rem; background:#080810; padding:4px 8px; border-radius:4px; color:#446; border-left:2px solid #1a1a30; display:none; white-space:pre-wrap; }
+    .btn-cmd { font-size:0.63rem; padding:2px 7px; border-radius:3px; background:#0a0a18; border:1px solid #1a1a2a; color:#334; cursor:pointer; margin-top:4px; }
+    .btn-cmd:hover { color:#556; }
+    .start-result { font-size:0.68rem; margin-top:4px; color:#4caf50; display:none; }
+
+    .detail-box { background:#0a0a16; border:1px solid #1a1a28; border-radius:8px; padding:12px; margin-bottom:14px; }
+    .detail-title { font-size:0.7rem; color:#446; text-transform:uppercase; letter-spacing:.5px; font-weight:700; margin-bottom:6px; }
+    .detail-json { font-family:monospace; font-size:0.68rem; color:#556677; white-space:pre-wrap; max-height:240px; overflow:auto; }
+
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .spin { display:inline-block; width:12px; height:12px; border:2px solid #334; border-top-color:#4fc3f7; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:5px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🔌 MCP STACK</h1>
+  <div class="nav">
+    <a href="/">Forge</a>
+    <a href="/dash">Dash</a>
+    <a href="/api-docs">API</a>
+    <a href="/cluster">Cluster</a>
+    <button onclick="loadAll()">↻ Refresh</button>
+  </div>
+</header>
+<div class="wrap">
+  <div class="page-title">MCP Stack Status</div>
+  <div class="page-sub">Model Context Protocol services — tool execution, memory, and search infrastructure</div>
+
+  <div class="stat-row" id="stat-row">
+    <div class="sr"><div class="sr-lbl">Loading</div><div class="sr-val sv-grey"><span class="spin"></span></div></div>
+  </div>
+
+  <div class="svc-grid" id="svc-grid">
+    <div style="color:#446;padding:20px"><span class="spin"></span>Loading MCP stack…</div>
+  </div>
+
+  <div class="detail-box">
+    <div class="detail-title">Raw MCP Stack Config</div>
+    <pre class="detail-json" id="raw-json">Loading…</pre>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// Per-service metadata: start command (what to run if down), open URL, etc.
+const SVC = {
+  searxng: {
+    icon:'🔍', name:'SearXNG', desc:'Private meta-search. Routes web queries without Google. Container: cesarops-searxng.',
+    start:'docker start cesarops-searxng',
+    restart:'docker restart cesarops-searxng',
+    openPath:'/searxng',
+    dockerContainer: 'cesarops-searxng',
+  },
+  mcp_worker: {
+    icon:'⚙️', name:'MCP Worker', desc:'Core MCP protocol worker. Bridges Forge tool calls to MCP-compatible services.',
+    start:'cd /opt/mcp-worker && ./start.sh  # or: docker run --rm -p 8090:8090 mcp-worker',
+    openPath:null,
+  },
+  openmemory: {
+    icon:'🧠', name:'OpenMemory', desc:'Persistent semantic memory via Qdrant. Lets the agent remember facts across sessions.',
+    start:'docker compose -f docker/mcp-stack.compose.yml up -d openmemory-mcp',
+    restart:'docker compose -f docker/mcp-stack.compose.yml restart openmemory-mcp',
+    dockerContainer: 'openmemory-mcp',
+    openPath:'/docs',
+  },
+  playwright_mcp: {
+    icon:'🎭', name:'Playwright MCP', desc:'Browser automation and screenshot capture for AI-driven web tasks.',
+    start:'npx playwright-mcp --port 8931  # or via docker',
+    openPath:null,
+  },
+  qdrant: {
+    icon:'📦', name:'Qdrant', desc:'Vector database backing OpenMemory. Required for semantic memory search.',
+    start:'docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant',
+    restart:'docker restart qdrant',
+  },
+  crawl4ai: {
+    icon:'🕷️', name:'Crawl4AI', desc:'Web crawler and content extractor for AI pipelines.',
+    start:'docker compose -f docker/mcp-stack.compose.yml up -d crawl4ai',
+    restart:'docker compose -f docker/mcp-stack.compose.yml restart crawl4ai',
+    dockerContainer: 'crawl4ai',
+    openPath:'/playground',
+  },
+  context7: {
+    icon:'📚', name:'Context7', desc:'Documentation context provider. Local :3737 proxies to mcp.context7.com (set CONTEXT7_API_KEY in ~/.config/cesarops/mcp-stack.env for clients).',
+    start:'docker compose -f docker/mcp-stack.compose.yml up -d context7-proxy',
+    restart:'docker compose -f docker/mcp-stack.compose.yml restart context7-proxy',
+    dockerContainer: 'context7-proxy',
+    openPath:'/mcp',
+  },
+};
+
+function scClass(up) { return up===true?'up':up===false?'down':'unknown'; }
+function scPill(up)  { return up===true?'● ONLINE':up===false?'○ OFFLINE':'? UNKNOWN'; }
+
+function renderCard(key, svc) {
+  const m = SVC[key]||{icon:'🔌', name:key, desc:'MCP service'};
+  const up = svc.online??svc.up??null;
+  const sc = scClass(up);
+  const url = svc.url||'';
+  const openUrl = url || '';
+  const cmd = m.start||'';
+  const restartCmd = m.restart||m.start||'';
+  const id = 'svc-'+key;
+  const cmdId = 'cmd-'+key;
+  const resId = 'res-'+key;
+
+  return `<div class="svc-card ${sc}" id="${id}">
+    <div class="svc-hdr">
+      <div class="svc-name">${m.icon} ${m.name}</div>
+      <span class="svc-pill ${sc}">${scPill(up)}</span>
+    </div>
+    ${url?`<div class="svc-url">${url}</div>`:''}
+    <div class="svc-desc">${m.desc}</div>
+    <div class="svc-actions">
+      ${up!==true?`<button class="btn-start" onclick="startSvc('${key}','${esc(m.dockerContainer||'')}')">▶ Start</button>`:''}
+      ${up===true?`<button class="btn-restart" onclick="restartSvc('${key}','${esc(m.dockerContainer||'')}')">↺ Restart</button>`:''}
+      ${openUrl?`<a class="btn-open" href="${openUrl}" target="_blank">🔗 Open</a>`:''}
+      <button class="btn-cmd" onclick="toggleCmd('${cmdId}')">⌨ cmd</button>
+    </div>
+    <pre class="svc-cmd" id="${cmdId}">${esc(up===true?restartCmd:cmd)}</pre>
+    <div class="start-result" id="${resId}"></div>
+  </div>`;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toggleCmd(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display==='none'?'block':'none';
+}
+
+async function startSvc(key, container) {
+  const resEl = document.getElementById('res-'+key);
+  if (resEl) { resEl.style.display='block'; resEl.textContent='⏳ Starting…'; }
+  try {
+    const r = await fetch('/forge/mcp-stack/start', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({service:key, container})
+    }).then(r=>r.json());
+    if (resEl) resEl.textContent = r.ok ? '✓ Started' : ('✗ '+(r.error||'failed'));
+    setTimeout(loadAll, 3000);
+  } catch(e) {
+    if (resEl) { resEl.style.color='#ef4444'; resEl.textContent='✗ '+e.message; }
+  }
+}
+
+async function restartSvc(key, container) {
+  const resEl = document.getElementById('res-'+key);
+  if (resEl) { resEl.style.display='block'; resEl.textContent='⏳ Restarting…'; }
+  try {
+    const r = await fetch('/forge/mcp-stack/start', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({service:key, container, restart:true})
+    }).then(r=>r.json());
+    if (resEl) resEl.textContent = r.ok ? '✓ Restarted' : ('✗ '+(r.error||'failed'));
+    setTimeout(loadAll, 3000);
+  } catch(e) {
+    if (resEl) { resEl.style.color='#ef4444'; resEl.textContent='✗ '+e.message; }
+  }
+}
+
+async function loadAll() {
+  try {
+    const d = await fetch('/forge/mcp-stack').then(r=>r.json());
+    const st = d.status||{};
+    const cfg = d.config||{};
+    document.getElementById('raw-json').textContent = JSON.stringify(d, null, 2);
+
+    let upN=0, tot=0;
+    const cards = Object.entries(st).map(([k,v]) => { if(v.online===true)upN++; tot++; return renderCard(k,v); }).join('');
+    document.getElementById('svc-grid').innerHTML = cards||'<div style="color:#446">No services</div>';
+
+    // Check n8n separately
+    let n8nUp = false;
+    try {
+      const od = await fetch('/cluster/orchestration').then(r=>r.json());
+      n8nUp = od.n8n_reachable;
+    } catch {}
+
+    document.getElementById('stat-row').innerHTML = `
+      <div class="sr"><div class="sr-lbl">Services Up</div><div class="sr-val ${upN===tot?'sv-ok':upN===0?'sv-err':'sv-grey'}">${upN} / ${tot}</div></div>
+      <div class="sr"><div class="sr-lbl">n8n</div><div class="sr-val ${n8nUp?'sv-ok':'sv-err'}">${n8nUp?'● online':'○ offline'}</div></div>
+      <div class="sr"><div class="sr-lbl">OpenMemory</div><div class="sr-val ${(st.openmemory?.online)?'sv-ok':'sv-err'}">${scPill(st.openmemory?.online??null)}</div></div>
+      <div class="sr"><div class="sr-lbl">SearXNG</div><div class="sr-val ${(st.searxng?.online)?'sv-ok':'sv-err'}">${scPill(st.searxng?.online??null)}</div></div>
+      <div class="sr"><div class="sr-lbl">Qdrant</div><div class="sr-val ${(st.qdrant?.online)?'sv-ok':'sv-err'}">${scPill(st.qdrant?.online??null)}</div></div>
+    `;
+  } catch(e) {
+    document.getElementById('svc-grid').innerHTML = `<div style="color:#ef4444">Load failed: ${e.message}</div>`;
+  }
+}
+
+loadAll();
+setInterval(loadAll, 20000);
+</script>
+</body>
+</html>

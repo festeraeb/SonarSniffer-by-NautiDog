@@ -1,0 +1,34 @@
+# Manual Cake topology — Qwen3.6-35B-A3B (Phase 2 idle audit)
+# Format: https://github.com/evilsocket/cake/blob/main/docs/clustering.md
+# Layer ranges are illustrative — run `cake split` / HF index after `cake pull`.
+# EXCLUDED: GTX 1070 (intake :5599), P106, laptop M2200.
+
+t440_p100_0:
+  host: "127.0.0.1:10128"
+  description: "T440 P100 #0"
+  layers:
+    - "model.layers.0-19"
+
+t440_p100_1:
+  host: "127.0.0.1:10129"
+  description: "T440 P100 #1"
+  layers:
+    - "model.layers.20-39"
+
+t440_cpu:
+  host: "127.0.0.1:10130"
+  description: "T440 DDR4 offload"
+  layers:
+    - "model.layers.40-47"
+
+cesarops2_rtx:
+  host: "10.0.0.201:10128"
+  description: "cesarops2 RTX 2060 SUPER (not 1070/P106)"
+  layers:
+    - "model.layers.48-55"
+
+cesarops2_cpu:
+  host: "10.0.0.201:10129"
+  description: "cesarops2 host RAM"
+  layers:
+    - "model.layers.56-63"

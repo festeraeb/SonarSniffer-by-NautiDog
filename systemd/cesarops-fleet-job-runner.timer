@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll NFS fleet job queue every 30s
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=30s
+Unit=cesarops-fleet-job-runner.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,36 @@
+# Qwen2.5-72B heterogeneous fleet — topology mode (no cluster-key).
+# Full layout: c2 P106/2060/1070 + T440 P100#1 + RAM. Use when P106 is NOT on PCIe x1.
+# While P106 is x1-limited: default SKIP_P106=1 → topology_fleet_hetero_70b_no_p106.yml
+# P100#0 reserved for llama Qwen integrate (:5001).
+# Nautik9 M2200 excluded (WiFi/Tailscale latency — not worth sharding).
+
+# P100#0 = llama Qwen integrate (:5001). P100#1 = Cake layers 30-49 (needs cake-p100 or sm_70+ binary).
+t440_p100_1:
+  host: "127.0.0.1:10131"
+  description: "T440 P100 #1 (16GB) — CUDA_VISIBLE_DEVICES=1"
+  layers:
+    - "model.layers.30-49"
+
+t440_ram:
+  host: "127.0.0.1:10132"
+  description: "T440 DDR4 CPU worker — layers 50-79"
+  layers:
+    - "model.layers.50-79"
+
+cesarops2_p106:
+  host: "10.0.0.201:10128"
+  description: "cesarops2 P106-100 6GB (nvidia device 0)"
+  layers:
+    - "model.layers.0-9"
+
+cesarops2_rtx:
+  host: "10.0.0.201:10129"
+  description: "cesarops2 RTX 2060 SUPER 8GB (nvidia device 1)"
+  layers:
+    - "model.layers.10-19"
+
+cesarops2_1070:
+  host: "10.0.0.201:10130"
+  description: "cesarops2 GTX 1070 8GB (nvidia device 2)"
+  layers:
+    - "model.layers.20-29"

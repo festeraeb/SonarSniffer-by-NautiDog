@@ -1,5 +1,0 @@
-List the top 5 implementation risks of using wgpu pre-recorded command
-buffers (CommandBuffer reuse via record-once-replay-many) for a
-transformer per-token decode loop.
-
-Output: numbered list, one risk per line. No prose. No header. Just the list.

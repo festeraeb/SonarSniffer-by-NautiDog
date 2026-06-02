@@ -19,7 +19,20 @@ pub fn scan_shaders(dir: &Path) -> Vec<ShaderEntry> {
                 let ext_str = ext.to_string_lossy();
                 if ext_str == "wgsl" || ext_str == "glsl" || ext_str == "comp" || ext_str == "spv" {
                     let name = path.file_stem().unwrap().to_string_lossy().to_string();
-                    let kind = detect_shader_kind(&name);
+                    let mut kind = detect_shader_kind(&name);
+                    // Coopmat kernels get classified by source content too —
+                    // a GLSL kernel may not have "coopmat" in the filename
+                    // but uses `coopMatMulAddKHR` or `gl_MatrixUseA`.
+                    if kind != "coopmat" && (ext_str == "glsl" || ext_str == "comp") {
+                        if let Ok(src) = fs::read_to_string(&path) {
+                            if src.contains("coopMatMulAdd")
+                                || src.contains("CooperativeMatrix")
+                                || src.contains("gl_MatrixUseA")
+                            {
+                                kind = "coopmat".to_string();
+                            }
+                        }
+                    }
                     out.push(ShaderEntry { name, path, kind });
                 }
             }
@@ -29,7 +42,8 @@ pub fn scan_shaders(dir: &Path) -> Vec<ShaderEntry> {
 }
 
 fn detect_shader_kind(name: &str) -> String {
-    if name.contains("iq4") { "iq4_xs".to_string() }
+    if name.contains("coopmat") { "coopmat".to_string() }
+    else if name.contains("iq4") { "iq4_xs".to_string() }
     else if name.contains("q6k") { "q6_k".to_string() }
     else if name.contains("q4") { "q4".to_string() }
     else if name.contains("fp16") || name.contains("half") { "fp16".to_string() }

@@ -31,11 +31,18 @@ logger = logging.getLogger("Scout1060")
 
 # Config — prefer local HF cache under /data/cesarops/vision_models
 VISION_ROOT = os.getenv("VISION_MODEL_ROOT", "/data/cesarops/vision_models")
-MODEL_ID = os.getenv(
-    "SCOUT_MODEL",
-    os.path.join(VISION_ROOT, "Florence-2-base"),
-)
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+# Florence-2-base (~1.5GB) fits P106 6GB; override with SCOUT_MODEL= path or HF id
+MODEL_ID = os.getenv("SCOUT_MODEL", "microsoft/Florence-2-base")
+_local = Path(VISION_ROOT) / "Florence-2-base"
+if os.getenv("SCOUT_MODEL") is None and _local.is_dir():
+    MODEL_ID = str(_local)
+# nvidia-smi: GPU0=P106-100 (6GB), GPU1=2060, GPU2=1070 — pin scout to P106
+_cuda_dev = os.getenv("CUDA_DEVICE", os.getenv("SCOUT_CUDA_DEVICE", "0"))
+if torch.cuda.is_available():
+    torch.cuda.set_device(int(_cuda_dev))
+    DEVICE = f"cuda:{_cuda_dev}"
+else:
+    DEVICE = "cpu"
 PORT = int(os.getenv("SCOUT_PORT", "5570"))
 
 # Load model
@@ -73,18 +80,41 @@ class ScoutReport(BaseModel):
 
 # --- Detection Logic ---
 
+# Florence-2 requires the task token alone (e.g. "<OD>"), not free-form text.
 DETECTION_PROMPTS = {
-    "anomaly_detection": "<OD>detect anomalies, bright spots, dark linear features, or unusual patterns on water surface",
-    "glint": "<OD>detect bright specular reflections or sun glint on water",
-    "thermal": "<OD>detect dark cold spots or thermal anomalies in water",
-    "sheen": "<OD>detect oil sheen, iridescent patterns, or SWIR anomalies on water surface",
-    "linear": "<OD>detect linear dark features, elongated shapes, or hull-like structures underwater",
+    "anomaly_detection": "<OD>",
+    "glint": "<OD>",
+    "thermal": "<OD>",
+    "sheen": "<OD>",
+    "linear": "<OD>",
+    "caption": "<CAPTION>",
+    "detailed_caption": "<DETAILED_CAPTION>",
 }
+
+MAX_IMAGE_SIDE = int(os.getenv("SCOUT_MAX_IMAGE_SIDE", "1024"))
+
+
+def _resize_for_model(image: Image.Image) -> Image.Image:
+    w, h = image.size
+    # Florence-2 OD needs at least ~32px on each side; pad extreme aspect ratios.
+    min_side = 32
+    if min(w, h) < min_side:
+        scale_up = min_side / min(w, h)
+        w, h = max(min_side, int(w * scale_up)), max(min_side, int(h * scale_up))
+        image = image.resize((w, h), Image.Resampling.LANCZOS)
+    m = max(w, h)
+    if m <= MAX_IMAGE_SIDE:
+        return image
+    scale = MAX_IMAGE_SIDE / m
+    return image.resize((max(1, int(w * scale)), max(1, int(h * scale)), Image.Resampling.LANCZOS)
+
 
 def analyze_patch(image: Image.Image, task: str = "anomaly_detection") -> dict:
     """Run Florence-2 on a tile patch."""
-    prompt = DETECTION_PROMPTS.get(task, DETECTION_PROMPTS["anomaly_detection"])
-    
+    prompt = DETECTION_PROMPTS.get(task, "<OD>")
+    image = _resize_for_model(image.convert("RGB"))
+    florence_task = "<OD>" if prompt == "<OD>" else prompt
+
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(DEVICE)
     
     with torch.no_grad():
@@ -96,7 +126,9 @@ def analyze_patch(image: Image.Image, task: str = "anomaly_detection") -> dict:
         )
     
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
-    parsed = processor.post_process_generation(generated_text, task="<OD>", image_size=(image.width, image.height))
+    parsed = processor.post_process_generation(
+        generated_text, task=florence_task, image_size=(image.width, image.height)
+    )
     
     # Extract detections
     detections = parsed.get("<OD>", {})

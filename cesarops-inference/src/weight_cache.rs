@@ -66,7 +66,9 @@ impl GpuWeightCache {
             let buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(name),
                 size,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
                 mapped_at_creation: false,
             });
 
@@ -140,10 +142,11 @@ impl GpuWeightCache {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.gpu.matmul_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, Some(&bind_group), &[]);
+            // matmul_f32.wgsl uses @workgroup_size(8, 8)
             pass.dispatch_workgroups(
-                ((n + 15) / 16) as u32,
-                ((m + 15) / 16) as u32,
+                ((n + 7) / 8) as u32,
+                ((m + 7) / 8) as u32,
                 1,
             );
         }

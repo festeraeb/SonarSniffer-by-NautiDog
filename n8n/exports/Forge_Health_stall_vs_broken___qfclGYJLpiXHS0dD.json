@@ -1,0 +1,269 @@
+{
+  "id": "qfclGYJLpiXHS0dD",
+  "name": "Forge Health (stall vs broken)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "forge-health-schedule",
+      "name": "Every 2 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "command": "bash /codebase/repos/wreckhunter2000-1/scripts/forge-health-probe.sh 2>&1; echo exit_code:$?"
+      },
+      "id": "forge-health-probe",
+      "name": "Probe Forge",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        360,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = ($input.first().json.stdout || '') + '\\n' + ($input.first().json.stderr || '');\nconst m = out.match(/\\{[\\s\\S]*\\}/);\nlet probe = {};\ntry { probe = JSON.parse(m ? m[0] : '{}'); } catch (e) { probe = { state: 'broken', reason: 'parse_error', recommended_action: 'restart_forge' }; }\nconst exitMatch = /exit_code:(\\d+)/.exec(out);\nconst exitCode = exitMatch ? Number(exitMatch[1]) : 2;\nreturn [{ json: { probe, exit_code: exitCode, log_tail: out.slice(-3000) } }];"
+      },
+      "id": "forge-health-parse",
+      "name": "Parse probe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.probe.state }}",
+              "rightValue": "stalled",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "forge-if-stalled",
+      "name": "Stalled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.probe.state }}",
+              "rightValue": "broken",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "forge-if-broken",
+      "name": "Broken?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/fleet-ops",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ node: 't440', action: 'forge_clear_busy', repo: '/codebase/repos/wreckhunter2000-1', reason: $json.probe.reason, state: $json.probe.state }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "forge-recover-stall",
+      "name": "Clear stalled run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/fleet-ops",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ node: 't440', action: 'forge_full_recovery', repo: '/codebase/repos/wreckhunter2000-1', reason: $json.probe.reason, state: $json.probe.state }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "forge-recover-broken",
+      "name": "Full Forge recovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst j = $input.first().json;\nfs.writeFileSync('/tmp/forge_health_last.json', JSON.stringify(j.probe || j, null, 2));\nreturn [{ json: { written: true, ...j } }];"
+      },
+      "id": "forge-health-write",
+      "name": "Write status file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "Every 2 min": {
+      "main": [
+        [
+          {
+            "node": "Probe Forge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probe Forge": {
+      "main": [
+        [
+          {
+            "node": "Parse probe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse probe": {
+      "main": [
+        [
+          {
+            "node": "Stalled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stalled?": {
+      "main": [
+        [
+          {
+            "node": "Clear stalled run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Broken?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Broken?": {
+      "main": [
+        [
+          {
+            "node": "Full Forge recovery",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write status file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear stalled run": {
+      "main": [
+        [
+          {
+            "node": "Write status file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Full Forge recovery": {
+      "main": [
+        [
+          {
+            "node": "Write status file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Every 2 min": {
+      "recurrenceRules": []
+    }
+  },
+  "pinData": {},
+  "meta": {},
+  "createdAt": "2026-05-28 15:43:35.668",
+  "updatedAt": "2026-05-28 15:46:08",
+  "versionId": null,
+  "triggerCount": 1
+}

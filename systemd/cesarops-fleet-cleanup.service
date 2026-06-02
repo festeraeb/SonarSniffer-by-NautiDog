@@ -1,0 +1,9 @@
+[Unit]
+Description=CESAROPS safe cleanup of generated Forge/tool artifacts
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cesarops
+WorkingDirectory=/codebase/repos/wreckhunter2000-1
+ExecStart=/codebase/repos/wreckhunter2000-1/scripts/fleet-clean-junk.sh

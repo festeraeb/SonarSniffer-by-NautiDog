@@ -1,0 +1,22 @@
+# 72B / large models on cesarops2: GPU shards + system RAM (no P100).
+# Ports: 10129 RTX 2060 | 10130 GTX 1070 | 10132 CPU/RAM
+# Start: bash scripts/cake/start-cake-c2-hybrid.sh
+
+c2_ram:
+  host: "127.0.0.1:10132"
+  description: "cesarops2 CPU/RAM — early + late layers"
+  layers:
+    - "model.layers.0-9"
+    - "model.layers.50-79"
+
+c2_rtx:
+  host: "127.0.0.1:10129"
+  description: "cesarops2 RTX 2060 SUPER (cuda device 1)"
+  layers:
+    - "model.layers.10-19"
+
+c2_1070:
+  host: "127.0.0.1:10130"
+  description: "cesarops2 GTX 1070 (cuda device 2)"
+  layers:
+    - "model.layers.20-29"

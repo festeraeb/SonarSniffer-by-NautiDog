@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll cesarops2 fleet job queue on NFS
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30s
+Unit=cesarops-fleet-job-runner-c2.service
+
+[Install]
+WantedBy=timers.target

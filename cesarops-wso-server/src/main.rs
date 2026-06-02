@@ -66,12 +66,16 @@ async fn main() {
         .init();
 
     let config = WsoConfig {
-        searxng_url: None,
-        google_cse_key: None,
-        google_cse_engine_id: None,
+        // Local Searxng instance, JSON API enabled. Override with SEARXNG_URL env.
+        searxng_url: Some(
+            std::env::var("SEARXNG_URL")
+                .unwrap_or_else(|_| "http://localhost:8888".to_string()),
+        ),
+        google_cse_key: std::env::var("GOOGLE_CSE_KEY").ok(),
+        google_cse_engine_id: std::env::var("GOOGLE_CSE_ENGINE_ID").ok(),
         max_web_context_tokens: 4000,
         cache_ttl_hours: 24,
-        enable_google_fallback: false,
+        enable_google_fallback: std::env::var("GOOGLE_CSE_KEY").is_ok(),
         sovereign_cloud_base_url: "http://localhost:8765".to_string(),
         rate_limit_rpm: 30,
     };

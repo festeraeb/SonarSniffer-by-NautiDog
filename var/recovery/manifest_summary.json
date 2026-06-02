@@ -1,0 +1,12 @@
+{
+  "scanned": 300,
+  "elapsed_s": 0.9,
+  "scan_root": "/mnt/t440/data/laptopdump",
+  "clean_repos": "/data/codebase/repos/wreckhunter2000-1/var/recovery/clean_repos",
+  "mode": "rules_only",
+  "counts": {
+    "BINARY_OR_LARGE_SKIP": 244,
+    "REVIEW_HEURISTIC_OK": 56
+  },
+  "repo_profile_samples": {}
+}

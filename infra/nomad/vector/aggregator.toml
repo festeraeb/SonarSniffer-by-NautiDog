@@ -1,0 +1,14 @@
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+[sources.vector_in]
+type = "vector"
+address = "0.0.0.0:6000"
+version = "2"
+
+[sinks.local_json]
+type = "file"
+inputs = ["vector_in"]
+path = "/var/log/vector/cluster-%Y-%m-%d.json"
+encoding.codec = "json"

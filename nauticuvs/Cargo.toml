@@ -34,8 +34,6 @@ parallel = ["rayon"]
 opt-level = 3
 lto = true
 
-# CLI binary (optional). Disabled by default since this is a library
-# integration in the workspace; the CLI lives at /codebase/projects/.
-# [[bin]]
-# name = "nauticuvs_cli"
-# path = "src/bin/nauticuvs_cli.rs"
+[[bin]]
+name = "mag_curvelet_energy"
+path = "src/bin/mag_curvelet_energy.rs"

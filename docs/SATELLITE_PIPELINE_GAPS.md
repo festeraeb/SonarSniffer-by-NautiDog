@@ -31,7 +31,19 @@ Last audit: 2026-05-24. Goal: end-to-end run of all forge satellite tools.
 | G1 | `gt_wreck_names` in spec ignored; bbox returns wrong 4 wrecks | High | Filter GT by spec list |
 | G2 | `dry_run` skips `target_known` → no CSV → `validate_gt` all `no_data` | High | Emit fixture CSV on dry-run |
 | G3 | `detection_scan` tiles from CSV have empty `image_b64` | High | Chip fetcher or placeholder PNG per lat/lon |
-| G4 | Live `download` needs NASA Earthdata / `.env` credentials | High | Document + verify `credentials.sh` |
+| G4 | Live `download` needs NASA Earthdata credentials | High | **Done** — loaded from repo `.env` (see below) |
+
+### Earthdata credential locations (T440)
+
+| Path | Notes |
+|------|--------|
+| `/codebase/repos/wreckhunter2000-1/.env` | NFS repo; primary for forge + Python |
+| `/data/cesarops/repo/.env` | Symlink/copy used by deploy bootstrap |
+| `universal_downloader.py` `bootstrap_credentials()` | Merges `.env`, `scripts/credentials.sh`, `~/.ssh/credentials.ssh`, token JSON under `backup/` |
+| `cesarops-forge-v2/src/tools.rs` `load_satellite_env()` | Injects into `sat_mission`, `download_satellite_window`, etc. |
+| `~/.ssh/credentials.ssh` | Optional KEY=VALUE mirror (not required if `.env` present) |
+
+Keys: `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`, `EARTHDATA_TOKEN`, `NASA_EARTHDATA_TOKEN`.
 | G5 | No combined runner script (LM + Straits + orchestrator) | Med | `run_great_lakes_satellite.sh` |
 | G6 | n8n JSON uses old `spec_path` under repo not `/codebase/projects` | Med | Fix paths |
 | G7 | Vision workers on CPU sim only until `VISION_MODE=gpu` on c2 | Med | Ops, not code |

@@ -156,6 +156,87 @@ pub fn dequant_q6_k(bytes: &[u8], n_elements: usize) -> Vec<f32> {
     output
 }
 
+/// IQ4_XS: 256-element super-blocks. Layout per block (136 bytes):
+///   d[fp16]   (2 bytes)  super-block scale
+///   scales_h  (2 bytes)  high 2 bits of each of 8 sub-block scales
+///   scales_l  (4 bytes)  low 4 bits of each of 8 sub-block scales (2 per byte)
+///   qs[128]              4-bit quant indices into the IQ4 codebook (2 per byte)
+///
+/// Mirrors `dequantize_row_iq4_xs` from llama.cpp.
+pub fn dequant_iq4_xs(bytes: &[u8], n_elements: usize) -> Vec<f32> {
+    const KVALUES: [i32; 16] = [
+        -127, -104, -83, -65, -49, -35, -22, -10,
+           1,   13,  25,  38,  53,  69,  89, 113,
+    ];
+    let block_size = 256;
+    let block_bytes = 136;
+    let n_blocks = (n_elements + block_size - 1) / block_size;
+    let mut out = vec![0.0f32; n_elements];
+
+    for b in 0..n_blocks {
+        let off = b * block_bytes;
+        if off + block_bytes > bytes.len() { break; }
+        let out_base = b * block_size;
+        if out_base >= n_elements { break; }
+
+        let d_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+        let d = f16::from_bits(d_bits).to_f32();
+        let scales_h = u16::from_le_bytes([bytes[off + 2], bytes[off + 3]]);
+
+        for i in 0..256usize {
+            let elem = out_base + i;
+            if elem >= n_elements { break; }
+            let ib = i / 32;
+
+            let sl_byte = bytes[off + 4 + ib / 2];
+            let scale_low = if ib % 2 == 0 { sl_byte & 0x0F } else { (sl_byte >> 4) & 0x0F };
+            let scale_high = ((scales_h >> (ib * 2)) & 0x03) as u8;
+            let scale_6bit = ((scale_high << 4) | scale_low) as i32 - 32;
+
+            let qs_byte = bytes[off + 8 + i / 2];
+            let q_idx = if i % 2 == 0 { qs_byte & 0x0F } else { (qs_byte >> 4) & 0x0F } as usize;
+
+            out[elem] = d * (scale_6bit as f32) * (KVALUES[q_idx] as f32);
+        }
+    }
+    out
+}
+
+/// IQ4_NL: 32-element blocks. Layout per block (18 bytes):
+///   d[fp16]  (2 bytes)
+///   qs[16]   4-bit quant indices into the IQ4 codebook
+///
+/// Mirrors `dequantize_row_iq4_nl` from llama.cpp.
+pub fn dequant_iq4_nl(bytes: &[u8], n_elements: usize) -> Vec<f32> {
+    const KVALUES: [i32; 16] = [
+        -127, -104, -83, -65, -49, -35, -22, -10,
+           1,   13,  25,  38,  53,  69,  89, 113,
+    ];
+    let block_size = 32;
+    let block_bytes = 18;
+    let n_blocks = (n_elements + block_size - 1) / block_size;
+    let mut out = vec![0.0f32; n_elements];
+
+    for b in 0..n_blocks {
+        let off = b * block_bytes;
+        if off + block_bytes > bytes.len() { break; }
+        let out_base = b * block_size;
+        if out_base >= n_elements { break; }
+
+        let d_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+        let d = f16::from_bits(d_bits).to_f32();
+
+        for i in 0..block_size {
+            let elem = out_base + i;
+            if elem >= n_elements { break; }
+            let qs_byte = bytes[off + 2 + i / 2];
+            let q_idx = if i % 2 == 0 { qs_byte & 0x0F } else { (qs_byte >> 4) & 0x0F } as usize;
+            out[elem] = d * (KVALUES[q_idx] as f32);
+        }
+    }
+    out
+}
+
 /// Determine the conversion function based on quantization type.
 pub fn dequantize_tensor(bytes: &[u8], quant_type: u32, n_elements: usize) -> Vec<f32> {
     match quant_type {
@@ -168,6 +249,8 @@ pub fn dequantize_tensor(bytes: &[u8], quant_type: u32, n_elements: usize) -> Ve
         8 => {                                   // Q8_0
             bytes.iter().map(|&b| (b as i8) as f32 / 127.0).collect()
         }
+        20 => dequant_iq4_nl(bytes, n_elements), // IQ4_NL
+        23 => dequant_iq4_xs(bytes, n_elements), // IQ4_XS
         _ => {
             tracing::warn!("Unknown quant type {}, treating as f16", quant_type);
             f16_bytes_to_f32(bytes)

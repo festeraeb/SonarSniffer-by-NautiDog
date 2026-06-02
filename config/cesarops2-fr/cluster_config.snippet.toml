@@ -1,0 +1,16 @@
+# Merge into cesarops-forge-v2/cluster_config.toml after cesarops2-fr joins Tailscale.
+# Replace CESAROPS2_FR_TS_IP with: tailscale ip -4  (on the FR host)
+
+[[known_nodes]]
+name = "Cesarops2-FR (Tailscale)"
+ip = "CESAROPS2_FR_TS_IP"
+alt_ip = "10.0.0.201"
+gpu = "RTX 2060 SUPER + GTX 1070 + P106"
+notes = "France — same stack as legacy ML350e cesarops2; MagicDNS hostname cesarops2-fr"
+ports = [5200, 5570, 5571, 5572, 5599, 10129, 10130]
+
+# Optional: point remote agents at FR Tailscale IP (uncomment and set IP in main cluster_config)
+# [[agent]] name = "thinker-fr" endpoint = "http://CESAROPS2_FR_TS_IP:5200" ...
+# Add to [endpoint_pool.mtp].urls and [endpoint_pool.intake].urls:
+#   "http://CESAROPS2_FR_TS_IP:5571",
+#   "http://CESAROPS2_FR_TS_IP:5200",

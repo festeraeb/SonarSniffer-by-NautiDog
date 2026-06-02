@@ -1,0 +1,27 @@
+{
+  "total_files": 1701,
+  "module_primary_counts": {
+    "geometry_context": 801,
+    "spectral_plume_clarity": 190,
+    "sar_ripple_glint": 289,
+    "thermal_sync": 124,
+    "altimetry_displacement": 19
+  },
+  "overlap_files": 813,
+  "unclassified": 278,
+  "guessed_role_counts": {
+    "llm_inference_serving": 464,
+    "data_ingest_etl": 210,
+    "docs_config": 200,
+    "orchestration_dispatch": 169,
+    "evaluation_testing": 140,
+    "devops_runtime": 127,
+    "mcp_tooling": 104,
+    "drift_analysis": 84,
+    "bag_unmasker": 68,
+    "web_ui_api": 57,
+    "sonar_analysis": 48,
+    "unknown_misc": 23,
+    "pdf_breaker": 7
+  }
+}

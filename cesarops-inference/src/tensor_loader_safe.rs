@@ -28,7 +28,8 @@ pub enum TensorType {
     Q4_K = 12,
     Q5_K = 13,
     Q6_K = 14,
-    IQ4_XS = 17,
+    IQ4_NL = 20,
+    IQ4_XS = 23,
     BF16 = 28,
 }
 
@@ -46,8 +47,9 @@ impl TensorType {
             12 => Some(Self::Q4_K),
             13 => Some(Self::Q5_K),
             14 => Some(Self::Q6_K),
-            17 => Some(Self::IQ4_XS),
-            28 => Some(Self::BF16),
+            20 => Some(Self::IQ4_NL),
+            23 => Some(Self::IQ4_XS),
+            28 | 30 => Some(Self::BF16),
             _ => None,
         }
     }
@@ -78,6 +80,7 @@ impl TensorType {
             Self::Q4_K => (n_elements + 255) / 256 * 176,
             Self::Q5_K => (n_elements + 255) / 256 * 176, // 2+2+12+32+128
             Self::Q6_K => (n_elements + 255) / 256 * 210,
+            Self::IQ4_NL => (n_elements + 31) / 32 * 18,    // 2 (d fp16) + 16 nibbles
             Self::IQ4_XS => (n_elements + 255) / 256 * 136, // 2+2+4+128
         }
     }
@@ -359,6 +362,7 @@ fn dequantize_to_f32(data: &[u8], n_elements: usize, dtype: TensorType) -> Vec<f
         TensorType::Q6_K => dequant_q6_k(data, n_elements),
         TensorType::Q5_K => dequant_q5_k(data, n_elements),
         TensorType::IQ4_XS => dequant_iq4_xs(data, n_elements),
+        TensorType::IQ4_NL => dequant_iq4_nl(data, n_elements),
         _ => {
             // Fallback: treat as raw f32
             let mut out = vec![0.0f32; n_elements];
@@ -714,4 +718,36 @@ fn extract_6bit(data: &[u8], idx: usize) -> u32 {
         val |= (data[byte_idx + 1] as u32) << (8 - bit_shift);
     }
     val & 0x3F
+}
+
+/// IQ4_NL: block_size=32, layout: d[fp16=2] + qs[16] = 18 bytes per block.
+/// One scale per block; nibbles indexed into the IQ4 codebook.
+/// Mirrors llama.cpp `dequantize_row_iq4_nl`.
+fn dequant_iq4_nl(data: &[u8], n_elements: usize) -> Vec<f32> {
+    const KVALUES: [i32; 16] = [
+        -127, -104, -83, -65, -49, -35, -22, -10,
+           1,   13,  25,  38,  53,  69,  89, 113,
+    ];
+    let block_size = 32;
+    let block_bytes = 18;
+    let n_blocks = (n_elements + block_size - 1) / block_size;
+    let mut out = vec![0.0f32; n_elements];
+
+    for b in 0..n_blocks {
+        let off = b * block_bytes;
+        if off + block_bytes > data.len() { break; }
+        let out_base = b * block_size;
+        if out_base >= n_elements { break; }
+
+        let d = f16_to_f32(u16::from_le_bytes([data[off], data[off + 1]]));
+
+        for i in 0..block_size {
+            let elem = out_base + i;
+            if elem >= n_elements { break; }
+            let qs_byte = data[off + 2 + i / 2];
+            let q_idx = if i % 2 == 0 { qs_byte & 0x0F } else { (qs_byte >> 4) & 0x0F } as usize;
+            out[elem] = d * (KVALUES[q_idx] as f32);
+        }
+    }
+    out
 }

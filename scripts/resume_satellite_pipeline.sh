@@ -13,6 +13,12 @@
 #
 set -euo pipefail
 
+REPO_BOOT="${REPO:-/codebase/repos/wreckhunter2000-1}"
+[[ -f /data/cesarops/repo/.env ]] && set -a && source /data/cesarops/repo/.env && set +a
+[[ -f "$REPO_BOOT/.env" ]] && set -a && source "$REPO_BOOT/.env" && set +a
+[[ -f "$REPO_BOOT/scripts/credentials.sh" ]] && source "$REPO_BOOT/scripts/credentials.sh"
+python3 -c "import sys; sys.path.insert(0,'$REPO_BOOT'); from universal_downloader import bootstrap_credentials; bootstrap_credentials()" >/dev/null 2>&1 || true
+
 FORGE="${FORGE_URL:-http://127.0.0.1:9100}"
 REPO="${REPO:-/codebase/repos/wreckhunter2000-1}"
 SPEC="${SPEC:-/codebase/projects/pipelines/satellite/missions/straits_known_wreck_validation.json}"

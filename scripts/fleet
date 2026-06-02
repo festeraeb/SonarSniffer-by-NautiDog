@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# Unified fleet control plane — one entry for services, n8n, catalog, recovery.
+#
+#   fleet status              # health: Forge, n8n, webhooks, LLM slots, job queue
+#   fleet up [core|llm|n8n] # start host-appropriate services
+#   fleet down                # stop LLM layout + n8n (local)
+#   fleet recover             # import/activate n8n + mission watchdog tick
+#   fleet import-n8n          # import workflows + activate families
+#   fleet jobs                # process NFS fleet-jobs queue once
+#   fleet dispatch NODE ACTION [ARGS…]  # fleet-ops / NFS
+#   fleet catalog …           # fleet_file_catalog.sh passthrough
+#   fleet rs-summarize …      # RS LLM summarize passthrough
+#   fleet env                 # print resolved manifest env
+#   fleet unified on|off|up   # full cluster mode (see fleet_unified_up.sh)
+#   fleet peer-jobs           # drain T440 NFS queue from c2
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/fleet_resolve.sh
+source "${SCRIPT_DIR}/lib/fleet_resolve.sh"
+# shellcheck source=lib/fleet_unified.sh
+source "${SCRIPT_DIR}/lib/fleet_unified.sh"
+
+log() { echo "[fleet] $*"; }
+
+probe_url() {
+  local name="$1" url="$2"
+  local code
+  code=$(curl -sf -o /dev/null -w "%{http_code}" --max-time 4 "$url" 2>/dev/null || echo "000")
+  if [[ "$code" =~ ^[23] ]]; then
+    echo "  ok   $name  $url  ($code)"
+  else
+    echo "  DOWN $name  $url  ($code)"
+  fi
+}
+
+cmd_status() {
+  log "node=$FLEET_NODE  repo=$REPO  unified=$(fleet_unified_enabled && echo on || echo off)"
+  echo "--- core ---"
+  probe_url "forge" "${FORGE_URL}/forge/status"
+  local n8n_probe
+  n8n_probe="$(fleet_n8n_probe_url)"
+  probe_url "n8n_primary" "$(fleet_n8n_primary_url)/healthz"
+  if [[ "$n8n_probe" != "$(fleet_n8n_primary_url)" ]]; then
+    probe_url "n8n_bridge" "${n8n_probe}/healthz"
+  fi
+  probe_mcp_stack
+  echo "--- ssh peers ---"
+  if command -v fleet_ssh &>/dev/null || [[ -f "${REPO}/scripts/lib/fleet_ssh.sh" ]]; then
+    # shellcheck source=lib/fleet_ssh.sh
+    source "${REPO}/scripts/lib/fleet_ssh.sh"
+    if fleet_ssh t440 'echo ok' 2>/dev/null | grep -q ok; then
+      echo "  ok   ssh t440 (catalog + rs-deep remote)"
+    else
+      echo "  DOWN ssh t440 (check ~/.ssh/config Host t440 + id_ed25519_t440)"
+    fi
+  fi
+  echo "--- peers (LAN) ---"
+  probe_url "t440_llm_5001" "http://${T440_LAN}:5001/v1/models"
+  probe_url "t440_llm_5002" "http://${T440_LAN}:5002/v1/models"
+  echo "--- n8n webhooks (probe @ ${n8n_probe}) ---"
+  local wh
+  for wh in fleet-ops tool-route llm-translate pamp-route; do
+    code=$(curl -sf -o /dev/null -w "%{http_code}" --max-time 5 \
+      -X POST "${n8n_probe}/webhook/${wh}" \
+      -H 'Content-Type: application/json' \
+      -d '{"probe":true}' 2>/dev/null || echo "000")
+    if [[ "$code" =~ ^[23] ]] || [[ "$code" == "400" ]]; then
+      echo "  ok   webhook/${wh} ($code)"
+    else
+      echo "  DOWN webhook/${wh} ($code)"
+    fi
+  done
+  echo "--- llm slots ---"
+  python3 -c "
+import json
+from pathlib import Path
+m=json.loads(Path('${FLEET_MANIFEST}').read_text())
+for s in m.get('llm_slots',{}).get('${FLEET_NODE}',[]):
+    print(f\"  :{s['port']}  {s.get('role','')}  ({s.get('model_hint','')})\")
+" 2>/dev/null || true
+  for port in 5200 5203 5202 5001 5002 5678 9100; do
+    curl -sf --max-time 2 "http://127.0.0.1:${port}/v1/models" >/dev/null 2>&1 \
+      && echo "  up   :${port} /v1/models" \
+      || true
+  done
+  echo "--- fleet-jobs queue ---"
+  local q="${REPO}/var/fleet-jobs/pending/${FLEET_NODE}"
+  local n
+  n=$(find "$q" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+  echo "  pending/${FLEET_NODE}: ${n}"
+  echo "--- pipelines ---"
+  echo "  catalog:  ${FLEET_CATALOG_DIR}"
+  [[ -f "${FLEET_CATALOG_DIR}/rs_llm_summarize_progress.json" ]] \
+    && python3 -c "import json; print('  rs-summarize:', json.load(open('${FLEET_CATALOG_DIR}/rs_llm_summarize_progress.json')).get('status','?'))" \
+    || echo "  rs-summarize: (no progress file)"
+}
+
+cmd_unified() {
+  local sub="${1:-status}"
+  shift || true
+  case "$sub" in
+    on) fleet_unified_on; log "unified mode enabled"; ;;
+    off) fleet_unified_off; log "unified mode disabled (isolation may return on next fleet_roles start)"; ;;
+    up) bash "${REPO}/scripts/fleet_unified_up.sh" "$@" ;;
+    check) bash "${REPO}/scripts/fleet_unified_up.sh" --check ;;
+    status)
+      fleet_unified_enabled && log "unified ON" || log "unified OFF"
+      ;;
+    *) echo "Usage: fleet unified {on|off|up|check|status}"; return 1 ;;
+  esac
+}
+
+cmd_peer_jobs() {
+  run_t440_queue_from_c2
+}
+
+cmd_up() {
+  local layer="${1:-core}"
+  if [[ "$layer" == "all" || "$layer" == "unified" ]]; then
+    cmd_unified up
+    return
+  fi
+  case "$FLEET_NODE" in
+    cesarops2)
+      if fleet_unified_enabled; then
+        if [[ "$layer" == "core" || "$layer" == "llm" || "$layer" == "all" ]]; then
+          FLEET_UNIFIED=1 bash "${REPO}/scripts/cesarops2_unified_layout.sh" start
+        fi
+      elif [[ "$layer" == "core" || "$layer" == "llm" || "$layer" == "all" ]]; then
+        log "LLM layout (fleet roles)"
+        bash "${REPO}/scripts/cesarops2_fleet_roles.sh" start
+      fi
+      if [[ "$layer" == "core" || "$layer" == "mcp" || "$layer" == "all" ]]; then
+        bash "${REPO}/cesarops-forge-v2/scripts/mcp-stack-up.sh" 2>/dev/null || true
+      fi
+      if [[ "$layer" == "core" || "$layer" == "all" ]]; then
+        if [[ -x "${REPO}/cesarops-forge-v2/target/release/cesarops-forge-v2" ]]; then
+          log "Forge binary present — use systemd or: bash ${REPO}/start_forge.sh"
+        fi
+        fleet_unified_enabled && FLEET_UNIFIED=1 bash "${REPO}/scripts/forge_apply_dual_coder_zaya.sh" || true
+      fi
+      ;;
+    t440)
+      if [[ "$layer" == "core" || "$layer" == "n8n" || "$layer" == "all" ]]; then
+        bash "${REPO}/scripts/start_n8n.sh"
+      fi
+      if [[ "$layer" == "core" || "$layer" == "llm" || "$layer" == "all" ]]; then
+        bash "${REPO}/scripts/p100_gemma_r1_dual.sh" start 2>/dev/null \
+          || log "p100 layout script not runnable on this host"
+      fi
+      ;;
+  esac
+  cmd_status
+}
+
+cmd_down() {
+  case "$FLEET_NODE" in
+    cesarops2) bash "${REPO}/scripts/cesarops2_fleet_roles.sh" stop ;;
+    t440) bash "${REPO}/scripts/p100_gemma_r1_dual.sh" stop 2>/dev/null || true ;;
+  esac
+  pkill -f "node_modules/n8n/bin/n8n" 2>/dev/null || true
+  log "stopped local LLM layout and n8n"
+}
+
+cmd_recover() {
+  fleet_unified_enabled || fleet_unified_on
+  log "health poll → var/fleet-health/latest.json"
+  bash "${REPO}/scripts/fleet_health_poll.sh" || true
+  cmd_import_n8n
+  log "mission watchdog tick"
+  bash "${REPO}/scripts/mission_service_watchdog.sh" || true
+  log "gpu slot watchdog tick"
+  bash "${REPO}/scripts/gpu_slot_watchdog.sh" tick 2>/dev/null || true
+  run_t440_queue_from_c2
+  FLEET_NODE=cesarops2 bash "${REPO}/scripts/fleet-job-runner.sh" || true
+}
+
+cmd_import_n8n() {
+  bash "${REPO}/scripts/import_n8n_health_workflows.sh"
+}
+
+cmd_jobs() {
+  bash "${REPO}/scripts/fleet-job-runner.sh"
+}
+
+cmd_dispatch() {
+  bash "${REPO}/scripts/fleet-n8n-dispatch.sh" "$@"
+}
+
+cmd_env() {
+  python3 "${REPO}/scripts/fleet_manifest.py" --repo "${REPO}" env
+}
+
+usage() {
+  sed -n '3,14p' "$0" | sed 's/^# \?//'
+  echo ""
+  echo "Manifest: ${FLEET_MANIFEST}"
+}
+
+main() {
+  local cmd="${1:-status}"
+  shift || true
+  case "$cmd" in
+    status) cmd_status ;;
+    up) cmd_up "${1:-core}" ;;
+    down) cmd_down ;;
+    recover) cmd_recover ;;
+    unified) cmd_unified "$@" ;;
+    peer-jobs|peer_jobs) cmd_peer_jobs ;;
+    import-n8n|import_n8n) cmd_import_n8n ;;
+    jobs) cmd_jobs ;;
+    dispatch) cmd_dispatch "$@" ;;
+    catalog|inventory|pipeline-inventory|pipelines|rs-recovery) bash "${REPO}/scripts/fleet_file_catalog.sh" "$@" ;;
+    rs-summarize|rs_summarize) bash "${REPO}/scripts/fleet_rs_llm_summarize.sh" "$@" ;;
+    env) cmd_env ;;
+    help|-h|--help) usage ;;
+    *)
+      echo "Unknown command: $cmd" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

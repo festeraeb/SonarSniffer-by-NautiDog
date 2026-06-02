@@ -1,18 +1,18 @@
 [[agent]]
-endpoint = "http://127.0.0.1:5001"
-hardware = "P100 #1 (T440) — Gemma integrate coder"
+endpoint = "http://10.0.0.61:5001"
+hardware = "P100 #1 (T440) — Gemma-4 coder/UX specialist"
 model = "Gemma-4-26B-MoE-IQ4_XS"
 name = "gemma"
-role = "Integrate coder"
+role = "Integrate coder / UX specialist"
 template = "gemma"
 
 [[agent]]
-endpoint = "http://127.0.0.1:5002"
-hardware = "P100 #0 (T440) — R1 reviewer/corrector"
-model = "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M"
+endpoint = "http://10.0.0.61:5002"
+hardware = "P100 #0 (T440) — Qwen3.6 science reviewer/corrector"
+model = "Qwen3.6-35B-A3B-Q4_K_M"
 name = "r1-32b"
-role = "Reviewer / corrector / thinker"
-template = "deepseek-r1"
+role = "Reviewer / corrector / scientific reasoner"
+template = "qwen2.5"
 
 [[agent]]
 endpoint = "http://10.0.0.201:5200"
@@ -24,11 +24,11 @@ template = "qwen2.5"
 
 [[agent]]
 endpoint = "http://10.0.0.201:5201"
-hardware = "cesarops2 P106 — R1 7B"
-model = "DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M"
-name = "c2-r1-7b"
-role = "Fast thinker / corrector"
-template = "deepseek-r1"
+hardware = "cesarops2 P106 — Gemma-4-E4B PAMP bootstrap"
+model = "gemma-4-E4B-it-Q4_K_M"
+name = "c2-pamp-bootstrap"
+role = "PAMP bootstrap / thinker_fast"
+template = "llama3"
 
 [[agent]]
 endpoint = "http://10.0.0.201:5202"
@@ -37,6 +37,14 @@ model = "Phi-3-mini-4k-instruct-Q4_K_M"
 name = "c2-phi"
 role = "Validator / draft"
 template = "llama3"
+
+[[agent]]
+endpoint = "http://10.0.0.201:5203"
+hardware = "cesarops2 GTX 1070 — ZAYA1-8B Vulkan"
+model = "ZAYA1-8B-Q4_K_M.gguf"
+name = "c2-zaya-1070"
+role = "Reasoning / math / code specialist (Vulkan)"
+template = "qwen2.5"
 
 [[agent]]
 endpoint = "http://127.0.0.1:5001"
@@ -99,6 +107,17 @@ model = "DeepSeek-R1-Distill-Qwen-7B-Uncensored.Q4_K_M"
 port = 5201
 template = "deepseek-r1"
 
+[endpoint_pool.accelerator_tpu]
+urls = ["http://10.0.0.201:8092", "http://127.0.0.1:8092"]
+
+[endpoint_pool.accelerator_jitter]
+urls = [
+    "http://10.0.0.61:8180",
+    "http://10.0.0.61:8080",
+    "http://10.0.0.201:8080",
+    "http://127.0.0.1:8180",
+]
+
 [endpoint_pool.cake]
 urls = ["http://127.0.0.1:8081"]
 
@@ -137,43 +156,55 @@ port = 5001
 
 [[gpu]]
 bus_id = "5E:00.0"
-host = "local"
+host = "10.0.0.61"
 id = 0
 name = "P100 #1"
+node = "t440cesarops"
+notes = "Run POST /cluster/gpus/sync-uuids when T440 SSH from forge works"
 port_base = 5001
 vram_mb = 16384
 
 [[gpu]]
 bus_id = "AF:00.0"
-host = "local"
+host = "10.0.0.61"
 id = 1
 name = "P100 #2"
+node = "t440cesarops"
 port_base = 5002
 vram_mb = 16384
 
 [[gpu]]
+bus_id = "00000000:21:00.0"
 cuda_index = 1
+gpu_uuid = "GPU-de3ce5bc-1a27-10e4-be70-97993d287aed"
 host = "10.0.0.201"
 id = 2
 name = "RTX 2060 SUPER"
-notes = "cesarops2 — llama CUDA0 / thinker MTP :5200"
+node = "cesarops2"
+notes = "cesarops2 — llama CUDA1 / MoE :5200 (port discovered at runtime)"
 port_base = 5200
 vram_mb = 8192
 
 [[gpu]]
+bus_id = "00000000:24:00.0"
 cuda_index = 2
+gpu_uuid = "GPU-ab73312e-a709-96b4-802b-482a1f129686"
 host = "10.0.0.201"
 id = 3
 name = "GTX 1070"
-notes = "cesarops2 — stable card endpoint :5202"
-port_base = 5202
+node = "cesarops2"
+notes = "cesarops2 — ZAYA Vulkan :5203 (legacy :5202 optional)"
+port_base = 5203
 vram_mb = 8192
 
 [[gpu]]
+bus_id = "00000000:0D:00.0"
 cuda_index = 0
+gpu_uuid = "GPU-b0226e38-4c3f-a408-b7a8-e168c29b2724"
 host = "10.0.0.201"
 id = 5
 name = "P106-100"
+node = "cesarops2"
 notes = "cesarops2 — P106-100 4GB :5201 R1 7B"
 port_base = 5201
 vram_mb = 4096
@@ -182,9 +213,20 @@ vram_mb = 4096
 host = "100.110.214.86"
 id = 4
 name = "Quadro M2200"
-notes = "Nautik9 laptop — koboldcpp; start on Windows host"
+node = "nautik9"
+notes = "nautik9 laptop — koboldcpp; start on Windows host"
 port_base = 5571
 vram_mb = 4096
+
+[spec_draft]
+enabled = true
+# gemini | local | auto (Gemini with local fallback on failure)
+thinker = "auto"
+draft_url = "http://127.0.0.1:5200"
+local_fallback_urls = "http://127.0.0.1:5200,http://127.0.0.1:5203"
+gemini_model = "gemini-2.5-flash"
+require_approval_before_send = true
+timeout_secs = 300
 
 [inference]
 chat_completion_endpoints = [
@@ -193,6 +235,7 @@ chat_completion_endpoints = [
     "http://10.0.0.201:5200",
     "http://10.0.0.201:5201",
     "http://10.0.0.201:5202",
+    "http://10.0.0.201:5203",
 ]
 merge_reasoning_content = true
 use_chat_completions = true
@@ -217,20 +260,22 @@ alt_ip = "100.72.129.86"
 gpu = "RTX 2060 SUPER + GTX 1070 + P106"
 ip = "10.0.0.201"
 name = "Cesarops2 (ML350e)"
-notes = "LAN 10.0.0.201 / Tailscale 100.72.129.86 (cesarops2-1; retire stale 100.102.158.111 in admin) — :5200=2060, :5201=P106, :5202=1070"
+notes = "LAN 10.0.0.201 / Tailscale 100.72.129.86 (cesarops2-1; retire stale 100.102.158.111 in admin) — :5200=2060, :5201=P106, :5202=legacy-phi, :5203=1070 ZAYA Vulkan"
 ports = [
     5200,
     5201,
     5202,
+    5203,
     5570,
     5572,
     5599,
 ]
 
 [[known_nodes]]
-gpu = "GTX 1060 6GB"
+gpu = "orchestrator hub (P1000 when online)"
 ip = "100.105.77.74"
-name = "Cesarops3 (1060)"
+name = "Cesarops3 (scout)"
+notes = "Lightweight orchestrator / wake-on-LAN; probe when online — not the P106 (that is on cesarops2)"
 ports = [5570]
 
 [[known_nodes]]
@@ -295,17 +340,18 @@ n8n_tool_url = "http://127.0.0.1:5678/webhook/tool-route"
 
 [roles]
 bootstrap = "http://10.0.0.201:5201"
-coder = "http://10.0.0.201:5200"
-coding = "http://10.0.0.201:5200"
-corrector = "http://10.0.0.201:5202"
-general = "http://10.0.0.201:5200"
+coder = "http://10.0.0.61:5001"
+coding = "http://10.0.0.61:5001"
+corrector = "http://10.0.0.61:5002"
+general = "http://10.0.0.61:5002"
 idle = "http://127.0.0.1:8081"
-reviewer = "http://10.0.0.201:5202"
-reviewer_moe = "http://10.0.0.201:5200"
-thinker = "http://10.0.0.201:5200"
+reviewer = "http://10.0.0.61:5002"
+reviewer_moe = "http://10.0.0.61:5002"
+thinker = "http://10.0.0.201:5203"
 thinker_fast = "http://10.0.0.201:5201"
-validator = "http://10.0.0.201:5202"
-validator_phi = "http://10.0.0.201:5202"
+validator = "http://10.0.0.201:5203"
+validator_phi = "http://10.0.0.201:5203"
+validator_zaya = "http://10.0.0.201:5203"
 
 [routing]
 default_mode = "auto"
@@ -313,17 +359,61 @@ default_mode = "auto"
 [[routing_preset]]
 baseline_id = "integrate_dispatch"
 chat_agent = "gemma"
-coder_endpoint = "http://127.0.0.1:5001"
-corrector_endpoint = "http://127.0.0.1:5002"
-description = "Gemma :5001 codes; R1-32B :5002 reviews/corrects (dual P100)"
-draft_endpoint = "http://127.0.0.1:5002"
+coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.61:5002"
+description = "Gemma-4 :5001 codes/UX; Qwen3.6-35B :5002 reviews/science (dual P100), RTX :5200 thinker lane"
+draft_endpoint = "http://10.0.0.61:5002"
 fleet_action = ""
 fleet_node = "t440"
 id = "p100-gemma-r1"
-name = "P100 Gemma coder + R1 validator"
+name = "P100 Gemma+Qwen specialists"
 parallel_dual_grade = false
-reviewer_endpoint = "http://127.0.0.1:5002"
-thinker_endpoint = "http://127.0.0.1:5002"
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.61:5002"
+description = "ZAYA :5203 thinker; Gemma :5001 + c2 MoE :5200 parallel coders; Qwen :5002 reviewer → opposite coder round 2"
+draft_endpoint = "http://10.0.0.201:5200"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "dual-coder-zaya"
+name = "Dual coder + ZAYA thinker (geo fleet)"
+parallel_dual_coders = true
+parallel_dual_grade = true
+parallel_dual_grade_rounds = [
+    1,
+    2,
+]
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5203"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "qwen-moe"
+coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.61:5002"
+description = "Edge alias: dual-coder-zaya (ZAYA thinker, :5001+:5200 coders, :5002 reviewer)"
+draft_endpoint = "http://10.0.0.201:5200"
+fleet_action = ""
+fleet_node = "cesarops2"
+id = "c2-edge-default"
+name = "C2 edge default (dual coder ZAYA)"
+parallel_dual_coders = true
+parallel_dual_grade = true
+parallel_dual_grade_rounds = [
+    1,
+    2,
+]
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5203"
 workers_start = []
 workers_stop = []
 
@@ -345,6 +435,44 @@ parallel_dual_grade_rounds = [
 ]
 reviewer_endpoint = "http://10.0.0.201:5200"
 thinker_endpoint = "http://127.0.0.1:5002"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.201:5202"
+description = "Fleet hetero 2026-06: P100 Gemma+Qwen workers; RTX E4B thinker; 1070 Qwen2.5-Coder-7B; T440 CPU Coder-Next polisher :5010"
+draft_endpoint = "http://10.0.0.201:5202"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "fleet-hetero-20260601"
+name = "Fleet hetero (P100 + c2 + CPU polisher)"
+parallel_dual_coders = true
+parallel_dual_grade = true
+parallel_dual_grade_rounds = [1, 2]
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.201:5202"
+description = "Cross-review bench: Gemma+Qwen coders review each other; 1070 fast coder; RTX E4B thinker; polisher :5010 via run_fleet_hetero_pipeline.sh (not parallel_dual_coders)"
+draft_endpoint = "http://10.0.0.61:5002"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "fleet-hetero-cross-review"
+name = "Fleet hetero cross-review (bench pipeline)"
+parallel_dual_coders = false
+parallel_dual_grade = false
+parallel_dual_grade_rounds = []
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5200"
 workers_start = []
 workers_stop = []
 
@@ -418,21 +546,6 @@ workers_start = []
 workers_stop = []
 
 [[routing_preset]]
-chat_agent = "qwen-moe"
-coder_endpoint = "http://10.0.0.201:5200"
-corrector_endpoint = "http://10.0.0.201:5202"
-description = "Live c2 edge: 5200 coder+thinker and 5202 reviewer+corrector+draft; no 5571 dependency"
-draft_endpoint = "http://10.0.0.201:5202"
-fleet_action = "sync_llm_endpoints"
-fleet_node = "cesarops2"
-id = "c2-edge-default"
-name = "C2 edge — NautiInferer base"
-reviewer_endpoint = "http://10.0.0.201:5202"
-thinker_endpoint = "http://10.0.0.201:5200"
-workers_start = []
-workers_stop = []
-
-[[routing_preset]]
 chat_agent = "picasso"
 coder_endpoint = "http://127.0.0.1:5001"
 corrector_endpoint = "http://10.0.0.201:5200"
@@ -447,8 +560,56 @@ thinker_endpoint = "http://10.0.0.201:5200"
 workers_start = []
 workers_stop = []
 
+[corrector_preset.small_tool_strict]
+think_tolerance = 8
+loop_threshold = 2
+suggest_after = 4
+demand_ack_after = 6
+reboot_after = 8
+wso_auto = true
+vector_inject = true
+correction_strength = "heavy"
+description = "Small/faster models: strict tool JSON contract, low loop tolerance"
+
+[corrector_preset.balanced_tooling]
+think_tolerance = 14
+loop_threshold = 3
+suggest_after = 10
+demand_ack_after = 14
+reboot_after = 18
+wso_auto = true
+vector_inject = true
+correction_strength = "medium"
+description = "Balanced tool contract for mid-size models"
+
+[corrector_preset.reasoning_relaxed]
+think_tolerance = 22
+loop_threshold = 4
+suggest_after = 18
+demand_ack_after = 24
+reboot_after = 30
+wso_auto = false
+vector_inject = true
+correction_strength = "light"
+description = "Larger reasoning models: less coercive prompt, still enforce loop safety"
+
+[[corrector_preset_match]]
+pattern = 'phi|tinyllama|1\.1b|3b|7b'
+preset = "small_tool_strict"
+
+[[corrector_preset_match]]
+pattern = 'qwen2\.5-coder|qwen3-8b|gemma-2-9b'
+preset = "balanced_tooling"
+
+[[corrector_preset_match]]
+pattern = 'deepseek-r1-distill-qwen-32b|qwen3\.6-35b|gemma-4-26b'
+preset = "reasoning_relaxed"
+
 [tuning]
+# Same tool N times → progress-report demands (break think/repeat loops).
 corrector_hard_repeat_cap = 6
+# Only after this many repeats → force plain-text final answer.
+corrector_hard_terminate_after = 12
 corrector_llm_loop_judge = true
 corrector_think_only_after = 8
 corrector_tool_fix = false
@@ -567,10 +728,10 @@ gpu = 3
 host = "10.0.0.201"
 inject_vectors = true
 memory_pool = ""
-model = ""
+model = "ZAYA1-8B-Q4_K_M.gguf"
 name = "GTX1070"
-port = 5202
-role = "idle"
+port = 5203
+role = "thinker"
 template = "qwen2.5"
 
 [[worker]]

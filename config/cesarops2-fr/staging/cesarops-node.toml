@@ -1,0 +1,15 @@
+# cesarops-node — cesarops2-fr (France / Tailscale). Cloned from cesarops-node-cesarops2.toml.
+# Forge on T440 via Tailscale. Update models_dir if using NFS mount vs local cache.
+
+forge_url = "http://100.72.182.77:9100"
+node_name = "cesarops2-fr"
+models_dir = "/mnt/t440/models"
+listen_port = 5500
+# llama.cpp -dev CUDA indices (NOT nvidia-smi order): CUDA0=2060, CUDA1=1070, CUDA2=P106
+gpu_id = 0
+backend = "cuda"
+engine = "llama-server"
+llama_server_path = "/home/cesarops/src/llama.cpp/build/bin/llama-server"
+koboldcpp_path = ""
+heartbeat_interval_secs = 10
+max_restarts = 3

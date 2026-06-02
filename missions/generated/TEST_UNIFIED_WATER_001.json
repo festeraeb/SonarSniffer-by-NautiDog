@@ -1,0 +1,96 @@
+{
+  "mission_id": "TEST_UNIFIED_WATER_001",
+  "domain": "water",
+  "objective": "wreck_hunt",
+  "target_name": "template_target",
+  "bbox": [
+    41.8,
+    -82.5,
+    42.5,
+    -80.0
+  ],
+  "date_range": [
+    "2025-01-01",
+    "2025-01-03"
+  ],
+  "weather_filter": "calm_and_post_storm",
+  "sensors": [
+    "hls",
+    "sentinel1",
+    "swot",
+    "icesat2"
+  ],
+  "profiles": {
+    "water": {
+      "drift_weight": 0.9,
+      "plume_weight": 0.8,
+      "sonar_weight": 1.0,
+      "bag_weight": 1.0,
+      "mag_weight": 0.7
+    },
+    "land": {
+      "canopy_weight": 0.9,
+      "thermal_weight": 0.8,
+      "sar_weight": 0.8,
+      "mag_weight": 0.8,
+      "road_access_weight": 0.7
+    }
+  },
+  "pipeline": {
+    "run_satellite": true,
+    "run_magnetic": true,
+    "run_drift": true,
+    "run_bag": true,
+    "run_pdf_breaker": true,
+    "run_sonar": true,
+    "run_fusion": true
+  },
+  "stages": {
+    "satellite": {
+      "slice_px": 1024,
+      "slice_overlap_px": 128,
+      "temporal_windows": [
+        "pre_event",
+        "event",
+        "post_event"
+      ],
+      "stitch_for_review": true
+    },
+    "magnetic": {
+      "mode": "full",
+      "sources": [
+        "usgs_namag",
+        "usgs_usmag"
+      ],
+      "threshold": 0.3
+    },
+    "drift": {
+      "hours_forward": 72,
+      "hours_backward": 24,
+      "step_minutes": 30
+    },
+    "pdf_breaker": {
+      "pdf_paths": [],
+      "pdf_skip_ocr": true,
+      "pdf_save_images": false
+    }
+  },
+  "knobs": {
+    "max_download_results": 200,
+    "post_storm_days": 3,
+    "calm_max_wind_kmh": 15,
+    "storm_min_wind_kmh": 28,
+    "fusion_high_threshold": 0.85,
+    "fusion_medium_threshold": 0.6
+  },
+  "output": {
+    "db_path": null,
+    "scan_group": null,
+    "emit_admin_package": true,
+    "emit_field_package": true
+  },
+  "meta": {
+    "pipeline_type": "water_wreck_hunt",
+    "resolved_by": "unified_pipeline_worker_bee.py"
+  }
+}

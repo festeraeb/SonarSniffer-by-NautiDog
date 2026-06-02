@@ -35,15 +35,25 @@ pub fn inference_url_for(host: &str, port: i64) -> String {
     }
 }
 
-/// Static fallback when Forge is offline (cesarops2 + T440).
+/// Static fallback when Forge is offline (cesarops2 local first; T440/P100 when not isolated).
 pub fn fallback_fleet() -> Vec<NodeMetadata> {
-    vec![
-        fleet_node("RTX2060", "http://10.0.0.201:5200", "thinker", "RTX 2060 SUPER", 8192),
-        fleet_node("GTX1070", "http://10.0.0.201:5571", "reviewer", "GTX 1070", 8192),
+    let isolated = std::env::var("CESAROPS2_ISOLATED").ok().as_deref() == Some("1")
+        || std::env::var("NAUTI_AVOID_P100").ok().as_deref() == Some("1");
+    let mut nodes = vec![
+        fleet_node("RTX2060", "http://127.0.0.1:5200", "thinker", "RTX 2060 SUPER", 8192),
+        fleet_node("GTX1070", "http://127.0.0.1:5571", "reviewer", "GTX 1070", 8192),
+    ];
+    if isolated {
+        return nodes;
+    }
+    nodes.extend([
+        fleet_node("RTX2060-LAN", "http://10.0.0.201:5200", "thinker", "RTX 2060 SUPER", 8192),
+        fleet_node("GTX1070-LAN", "http://10.0.0.201:5571", "reviewer", "GTX 1070", 8192),
         fleet_node("M2200", "http://100.110.214.86:5571", "validator", "Quadro M2200", 4096),
         fleet_node("P100-Coder", "http://127.0.0.1:5001", "coder", "P100 #1", 16384),
         fleet_node("P100-Reviewer", "http://127.0.0.1:5002", "reviewer", "P100 #2", 16384),
-    ]
+    ]);
+    nodes
 }
 
 fn fleet_node(

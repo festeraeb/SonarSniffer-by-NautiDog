@@ -1,0 +1,28 @@
+nodes:
+  - id: mission-intake
+    build: /codebase/repos/wreckhunter2000-1/target/release/mission_intake_node
+
+  - id: context-enrich
+    build: /codebase/repos/wreckhunter2000-1/target/release/context_enrich_node
+
+  - id: infer-dispatch
+    build: /codebase/repos/wreckhunter2000-1/target/release/infer_dispatch_node
+
+  - id: result-validate
+    build: /codebase/repos/wreckhunter2000-1/target/release/result_validate_node
+
+  - id: publish-out
+    build: /codebase/repos/wreckhunter2000-1/target/release/publish_out_node
+
+connections:
+  - from: mission-intake/output
+    to: context-enrich/input
+
+  - from: context-enrich/output
+    to: infer-dispatch/input
+
+  - from: infer-dispatch/output
+    to: result-validate/input
+
+  - from: result-validate/output
+    to: publish-out/input

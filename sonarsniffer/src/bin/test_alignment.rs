@@ -19,9 +19,17 @@ struct Args {
     #[arg(short, long, default_value = "4")]
     channel: u32,
     
-    /// Number of pings to test
-    #[arg(short, long, default_value = "10")]
-    count: usize,
+    /// Number of pings per tile (stacked into 2-D strips for feature detection)
+    #[arg(short, long, default_value = "64")]
+    tile_height: usize,
+
+    /// Number of consecutive tile-pairs to test
+    #[arg(short, long, default_value = "8")]
+    tiles: usize,
+
+    /// Skip this many channel pings before sampling (use mid-survey data)
+    #[arg(long, default_value = "10000")]
+    offset: usize,
     
     /// Verbose output
     #[arg(short, long, default_value = "false")]
@@ -35,7 +43,10 @@ fn main() -> Result<()> {
     println!("═══════════════════════════════════");
     println!("Input: {}", args.input);
     println!("Channel: {}", args.channel);
-    println!("Testing {} pings", args.count);
+    println!(
+        "Tiles: {} × {} pings, offset {}",
+        args.tiles, args.tile_height, args.offset
+    );
     println!();
     
     // Parse RSD file
@@ -56,112 +67,106 @@ fn main() -> Result<()> {
         .pings
         .iter()
         .filter(|p| p.channel == args.channel)
-        .take(args.count)
+        .skip(args.offset)
         .collect();
     
-    if channel_pings.is_empty() {
-        anyhow::bail!("No pings found for channel {}", args.channel);
+    if channel_pings.len() < args.tile_height * 2 {
+        anyhow::bail!(
+            "Need at least {} pings on ch{} after offset {} (got {})",
+            args.tile_height * 2,
+            args.channel,
+            args.offset,
+            channel_pings.len()
+        );
     }
     
-    println!("📊 Found {} pings on channel {}", channel_pings.len(), args.channel);
+    println!(
+        "📊 {} pings on channel {} (offset {})",
+        channel_pings.len(),
+        args.channel,
+        args.offset
+    );
     println!();
     
-    // Create feature aligner
-    println!("🔧 Initializing feature detector...");
     let aligner = FeatureAligner::new()?;
-    println!("✅ ORB detector ready");
+    let detector = OrbDetector::default_detector()?;
+    println!("🔧 FAST+BRIEF feature aligner ready");
     println!();
     
-    // Test feature detection on each ping
-    println!("🎯 Testing feature detection:");
-    println!("─────────────────────────────");
-    
-    for (i, ping) in channel_pings.iter().enumerate() {
-        // Convert ping samples to image
-        let image = ping_to_grayscale(ping);
-        
-        // Detect features
-        let detector = OrbDetector::default_detector()?;
-        let keypoints = detector.detect(&image)?;
-        
-        println!("  Ping {:3}: {} features (depth: {:.1}m, GPS: {:.4}, {:.4})", 
-                 i, 
-                 keypoints.len(),
-                 ping.depth_m,
-                 ping.latitude,
-                 ping.longitude);
-        
-        if args.verbose && !keypoints.is_empty() {
-            println!("           Top 3 features:");
-            let mut sorted_kps = keypoints.clone();
-            sorted_kps.sort_by(|a, b| b.response.partial_cmp(&a.response).unwrap_or(std::cmp::Ordering::Equal));
-            
-            for (j, kp) in sorted_kps.iter().take(3).enumerate() {
-                println!("             {}: ({:.1}, {:.1}) size={:.1}, response={:.2}", 
-                         j, kp.x, kp.y, kp.size, kp.response);
-            }
+    let mut tile_images: Vec<GrayImage> = Vec::new();
+    let step = args.tile_height;
+    let need = (args.tiles + 1) * step;
+    for start in (0..need).step_by(step) {
+        if start + step > channel_pings.len() {
+            break;
         }
+        let tile = pings_to_tile(&channel_pings[start..start + step]);
+        if args.verbose {
+            let kps = detector.detect(&tile)?;
+            println!("  Tile @{}: {}×{} · {} features", start, tile.width(), tile.height(), kps.len());
+        }
+        tile_images.push(tile);
     }
     
-    println!();
+    if tile_images.len() < 2 {
+        anyhow::bail!("Not enough tiles built ({})", tile_images.len());
+    }
     
-    // Test pair-wise alignment
-    println!("🔗 Testing pair-wise alignment:");
+    println!("🔗 Tile-pair alignment (SoundTiles-style {}-ping stacks):", step);
     println!("──────────────────────────────");
     
     let mut success_count = 0;
     let mut total_inliers = 0;
     let mut total_matches = 0;
+    let pairs = tile_images.len() - 1;
     
-    for window in channel_pings.windows(2) {
-        let img1 = ping_to_grayscale(window[0]);
-        let img2 = ping_to_grayscale(window[1]);
-        
-        match aligner.align(&img1, &img2) {
+    for (i, window) in tile_images.windows(2).enumerate() {
+        match aligner.align(&window[0], &window[1]) {
             Ok(result) => {
                 let quality = if result.is_good() { "✅ GOOD" } else { "⚠️  POOR" };
-                println!("  Ping {}→{}: {} inliers/{} ({:.1}%) {} roll={:.2}°", 
-                         window[0].sequence,
-                         window[1].sequence,
-                         result.inlier_count,
-                         result.total_matches,
-                         result.inlier_ratio * 100.0,
-                         quality,
-                         result.roll_deg);
-                
+                println!(
+                    "  Tile {}→{}: {} inliers/{} ({:.1}%) {} roll={:.2}° scale={:.3}",
+                    i,
+                    i + 1,
+                    result.inlier_count,
+                    result.total_matches,
+                    result.inlier_ratio * 100.0,
+                    quality,
+                    result.roll_deg,
+                    result.scale
+                );
                 if result.is_good() {
                     success_count += 1;
                 }
                 total_inliers += result.inlier_count;
                 total_matches += result.total_matches;
             }
-            Err(e) => {
-                println!("  Ping {}→{}: ❌ Failed - {}", 
-                         window[0].sequence,
-                         window[1].sequence,
-                         e);
-            }
+            Err(e) => println!("  Tile {}→{}: ❌ {}", i, i + 1, e),
         }
     }
     
     println!();
     println!("═══════════════════════════════════");
     println!("📈 Summary:");
-    println!("   Successful alignments: {}/{}", success_count, channel_pings.len() - 1);
-    println!("   Average inliers: {:.1}", 
-             if channel_pings.len() > 1 { 
-                 total_inliers as f64 / (channel_pings.len() - 1) as f64 
-             } else { 
-                 0.0 
-             });
-    println!("   Average match ratio: {:.1}%", 
-             if total_matches > 0 {
-                 total_inliers as f64 / total_matches as f64 * 100.0
-             } else {
-                 0.0
-             });
+    println!("   Successful alignments: {}/{}", success_count, pairs);
+    println!(
+        "   Average inliers: {:.1}",
+        if pairs > 0 {
+            total_inliers as f64 / pairs as f64
+        } else {
+            0.0
+        }
+    );
+    println!(
+        "   Average match ratio: {:.1}%",
+        if total_matches > 0 {
+            total_inliers as f64 / total_matches as f64 * 100.0
+        } else {
+            0.0
+        }
+    );
     
-    if success_count as f64 / (channel_pings.len() - 1) as f64 > 0.6 {
+    if pairs > 0 && success_count as f64 / pairs as f64 > 0.6 {
         println!();
         println!("🎉 Feature alignment is working well!");
         println!("   Ready for full mosaic processing.");
@@ -174,34 +179,28 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-/// Convert ping samples to grayscale image for feature detection
-fn ping_to_grayscale(ping: &sonarsniffer_lib::garmin_rsd_parser::Ping) -> GrayImage {
-    let samples = &ping.samples;
-    
-    if samples.is_empty() {
-        // Return minimal image if no samples
-        return GrayImage::new(100, 100);
+/// Stack consecutive pings into a 2-D tile (SoundTiles-style).
+fn pings_to_tile(pings: &[&sonarsniffer_lib::garmin_rsd_parser::Ping]) -> GrayImage {
+    if pings.is_empty() {
+        return GrayImage::new(64, 64);
     }
-    
-    // Create waterfall strip: width = samples, height = 1 (single ping line)
-    // Stretch to make features more detectable
-    let width = samples.len().min(2048);
-    let height = 64;  // Stretch vertically for better feature detection
-    
-    let mut img = GrayImage::new(width as u32, height as u32);
-    
-    // Find max sample for normalization
-    let max_sample = samples.iter().copied().max().unwrap_or(1) as f32;
-    
-    // Draw samples as horizontal strip
-    for (x, &sample) in samples.iter().take(width).enumerate() {
-        let intensity = ((sample as f32 / max_sample) * 255.0) as u8;
-        
-        // Fill vertical column
-        for y in 0..height {
+    let width = pings
+        .iter()
+        .map(|p| p.samples.len())
+        .max()
+        .unwrap_or(1)
+        .min(2048);
+    let height = pings.len() as u32;
+    let mut img = GrayImage::new(width as u32, height);
+    for (y, ping) in pings.iter().enumerate() {
+        if ping.samples.is_empty() {
+            continue;
+        }
+        let max_sample = ping.samples.iter().copied().max().unwrap_or(1) as f32;
+        for (x, &sample) in ping.samples.iter().take(width).enumerate() {
+            let intensity = ((sample as f32 / max_sample) * 255.0) as u8;
             img.put_pixel(x as u32, y as u32, image::Luma([intensity]));
         }
     }
-    
     img
 }

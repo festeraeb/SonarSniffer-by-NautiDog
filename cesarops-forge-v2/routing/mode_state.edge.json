@@ -1,0 +1,16 @@
+{
+  "mode": "inference",
+  "activated_at": 0,
+  "extras": {
+    "layout": "cesarops2-edge",
+    "routing_preset": "",
+    "chat_agent": "qwen-moe",
+    "coder_endpoint": "http://127.0.0.1:5200",
+    "reviewer_endpoint": "http://127.0.0.1:5571",
+    "thinker_endpoint": "http://127.0.0.1:5200",
+    "corrector_endpoint": "http://127.0.0.1:5571",
+    "draft_endpoint": "http://127.0.0.1:5571",
+    "parallel_dual_grade": false,
+    "avoid_p100": true
+  }
+}

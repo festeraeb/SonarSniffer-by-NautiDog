@@ -1,1 +1,0 @@
-Entrypoint for CLI build, calls rsd_parse_cli::main() by default.

@@ -1,0 +1,21 @@
+[package]
+name = "cesarops-pingora-edge"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight role-based HTTP edge router for the unified cluster (Pingora-phase scaffold)"
+
+[[bin]]
+name = "cesarops-pingora-edge"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["trace"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }

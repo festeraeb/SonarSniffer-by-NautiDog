@@ -9,7 +9,7 @@ Resilient layout: **T440 (2× P100) is primary**; **cesarops2 (ML350e Gen8)** au
 |------|-----|------|------|
 | **T440** | `10.0.0.61` / `127.0.0.1` | 2× Tesla P100 16GB | Forge :9100, MoE/Gemma LLM, detection orchestrator :5580, CPU vision fallback |
 | **cesarops2** | `10.0.0.201` (eno2) · `10.0.0.200` (eno1) | P106 + RTX 2060 SUPER + GTX 1070 | Remote LLM + vision CPU sim; NFS client → T440 |
-| **Nautik9** | Tailscale | M2200 | Mobile optional |
+| **Nautik9** | Tailscale | M2200 | Mobile optional — **not** in Cake 72B fleet (WiFi latency); kobold `:5571` only |
 
 ## cesarops2 hardware (live inventory)
 
@@ -33,7 +33,11 @@ Resilient layout: **T440 (2× P100) is primary**; **cesarops2 (ML350e Gen8)** au
 
 llama.cpp reorders devices by capability — always use **CUDA0/CUDA1** in launch scripts, not nvidia-smi index.
 
-Vision triple-lock uses **CPU sim** on `:5570`, `:5572`, `:8080` so GPUs stay free for LLM.
+Vision triple-lock uses **CPU sim** on `:5570`, `:5572`; jitter on **`:8180` on T440** (cesarops2 keeps `:8080`). Port **`:8080` on T440** serves static web for `app.cesarops.org` (cloudflared).
+
+### Public API (`api.cesarops.org`)
+
+Cloudflared → wrecks-api `:8099` proxies **`/health`**, **`/monitor`**, **`/validate/*`**, **`/cluster/*`** to Forge `:9100`. Wrecks DB health moved to **`/db/health`**.
 
 ### Network
 

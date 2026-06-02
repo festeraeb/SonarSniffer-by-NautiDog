@@ -1,0 +1,10 @@
+[Unit]
+Description=CESAROPS fleet job runner (NFS queue on this node)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cesarops
+Environment=FLEET_NODE=t440
+Environment=REPO=/codebase/repos/wreckhunter2000-1
+ExecStart=/codebase/repos/wreckhunter2000-1/scripts/fleet-job-runner.sh

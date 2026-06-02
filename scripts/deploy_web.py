@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
-Deploy tauri/dist-web/ to cesarops3 (backup frontend) via SCP.
-Also keeps IONOS SFTP as secondary deploy target.
+Deploy tauri/dist-web/ static site (index, tools.html, mission-control).
+
+Targets:
+    (default) T440 /var/www/cesarops  -> https://app.cesarops.org
+    --ionos   IONOS SFTP /wh2000/     -> https://cesarops.com/wh2000/
+    --backup  cesarops3 (retired backup host)
 
 Usage:
-    python scripts/deploy_web.py            # upload dist-web -> cesarops3
-    python scripts/deploy_web.py --build    # run npm run build:web first, then upload
-    python scripts/deploy_web.py --dry-run  # list files without uploading
-    python scripts/deploy_web.py --ionos    # deploy to IONOS SFTP (legacy)
+    python scripts/deploy_web.py                 # T440 (primary)
+    python scripts/deploy_web.py --ionos         # IONOS public site
+    python scripts/deploy_web.py --dry-run       # list files only
+    python scripts/deploy_web.py --ionos --dry-run
+    python scripts/deploy_web.py --build         # npm run build:web first (if tauri web app exists)
 
-Reads from .env:
-    P1000_TAILSCALE   100.105.77.74 (cesarops3)
-    IONOS_SFTP_HOST   access-5019147877.webspace-host.com (legacy)
+Reads from repo .env (symlink on NFS: /data/cesarops/repo/.env on T440):
+    T440_TAILSCALE, T440_USER, T440_PASS
+    IONOS_SFTP_HOST, IONOS_SFTP_USER, IONOS_SFTP_PASS, IONOS_SFTP_PORT
+    P1000_TAILSCALE, P1000_PASS  (--backup only)
 """
 
 import argparse
@@ -109,6 +115,8 @@ def upload(dry_run: bool = False):
             sftp.put(str(local_file), remote_file)
 
         print(f"\n[DONE] Deployed to https://cesarops.com/wh2000/")
+        print("       https://cesarops.com/wh2000/tools.html")
+        print("       https://cesarops.com/wh2000/mission-control/")
     finally:
         sftp.close()
         transport.close()
@@ -154,6 +162,7 @@ def deploy_t440(dry_run: bool = False):
             sftp.put(str(local_file), remote_file)
 
         print(f"\n[DONE] Deployed to https://app.cesarops.org (T440)")
+        print("       /tools.html  /mission-control/  (under site root)")
     finally:
         sftp.close()
         transport.close()

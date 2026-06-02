@@ -21,7 +21,9 @@ if systemctl is-active --quiet nautivecs 2>/dev/null; then
 elif pgrep -f 'nautivecs.*serve' >/dev/null; then
   pkill -f 'nautivecs.*serve' || true
   sleep 1
-  nohup "$REPO/nautivecs/target/release/nautivecs" serve --port 5003 \
+  NAUTI="$REPO/target/release/nautivecs-cli"
+  [[ -x "$NAUTI" ]] || NAUTI="$REPO/nautivecs/target/release/nautivecs-cli"
+  nohup "$NAUTI" serve --port 5003 \
     > /tmp/nautivecs.log 2>&1 &
 fi
 

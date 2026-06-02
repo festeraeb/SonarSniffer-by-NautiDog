@@ -1,0 +1,13 @@
+{
+  "total_runs": 2219,
+  "success_runs": 0,
+  "fail_runs": 1098,
+  "mismatch_hits": 0,
+  "cargo_missing_hits": 2,
+  "timeout_hits": 2,
+  "wrong_port_hits": 2,
+  "pkill_pattern_hits": 2,
+  "rewrite_count": 0,
+  "self_check_failures": 0,
+  "last_updated": "2026-06-02T11:30:33Z"
+}

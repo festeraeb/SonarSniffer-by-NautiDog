@@ -1,0 +1,1 @@
+{"message":"Routing saved","routing_state":{"chat_agent":"gemma","coder_endpoint":"http://10.0.0.61:5001","corrector_endpoint":"http://127.0.0.1:5202","draft_endpoint":"http://10.0.0.61:5002","reviewer_endpoint":"http://10.0.0.61:5002","thinker_endpoint":"http://127.0.0.1:5200"}}

@@ -8,6 +8,7 @@
 //! Usage: call `run_agent_loop(endpoint_url, user_message, project_root)` and
 //! it handles the full multi-turn tool-calling loop.
 
+use async_recursion::async_recursion;
 use tracing::{info, warn};
 use std::path::PathBuf;
 use tokio::process::Command;
@@ -33,18 +34,18 @@ pub struct AgentConfig {
     pub chat_template: String,
     /// Inference engine: None/llama-server → OpenAI API; "koboldcpp" → Kobold generate API.
     pub engine: Option<String>,
+    /// Nesting depth for fleet sub-agent delegation (0 = primary agent).
+    pub fleet_delegate_depth: u32,
 }
 
 /// The system prompt injected for agent mode. Same tools as forge-v2.
 fn agent_system_prompt(project_root: &str) -> String {
-    format!(r#"You are CESAROPS Agent, an autonomous developer running on local GPUs. You have access to tools for file operations, code checking, web search, and memory.
-
-/no_think
+    format!(r#"You are CESAROPS Agent, an autonomous developer running on local GPUs. You have access to tools for file operations, code checking, web search, memory, and satellite mission execution.
 
 ## RULES
 1. You MUST use your tools. NEVER ask the user to do things you can do yourself.
 2. ALWAYS save your work using write_file.
-3. ALWAYS call think_harder FIRST before writing code or making claims.
+3. Use think_harder when blocked, after a failed attempt, or when facts are missing.
 4. After completing a task, use remember to save lessons learned.
 
 ## Tools
@@ -61,15 +62,45 @@ Call tools using this exact format:
 - **cargo_check**: Run cargo check. Args: {{"dir": "relative/path"}}
 - **run_command**: Execute a shell command. Args: {{"cmd": "command string"}}
 - **remember**: Save a lesson. Args: {{"content": "what to remember", "tags": "comma,separated,tags"}}
+- **list_fleet_agents**: List loaded LLMs on T440 + cesarops2 (online/offline, roles). Args: {{}}
+- **call_sub_agent**: Ask another fleet model one question. Args: {{"target": "thinker|reviewer|coder|draft|gemma|marvin|picasso|http://...", "message": "your question"}}
+- **delegate_sub_agent**: Run a full tool-enabled sub-agent on another GPU. Args: {{"target": "thinker", "task": "detailed sub-task"}}
+- **download_satellite_window**: Run universal_downloader window job. Args: {{"bbox":"lat_min,lon_min,lat_max,lon_max","provider":"aws|all|sentinel2|landsat|...","days":14,"max_results":20}}
+- **sat_mission**: Run mission orchestrator from JSON spec. Args: {{"spec_path":"path/to/spec.json","dry_run":false}}
+- **sat_read_mission_report**: Read mission/validation reports. Args: {{"output_dir":"...","which":"mission|validation|both"}}
+- **weather_window**: Get weather-conditioned scan windows. Args: {{"bbox":"lat_min,lon_min,lat_max,lon_max","check":"post_storm|calm","days":14}}
+- **detection_health**: Probe triple-lock detection service. Args: {{}}
+- **detection_scan**: Submit tile scan job. Args: {{"region":"label","tiles":[{{"lat":..,"lon":..,"image_b64":"..."}}]}}
+- **detection_poll**: Poll a detection job id. Args: {{"job_id":"..."}}
+- **search_symbols**: Symbol-aware code search (SymForge-compatible). Args: {{"query":"...","limit":20}}
+- **get_symbol**: Read a symbol definition and context. Args: {{"name":"symbol_name","path":"optional/file"}}
+- **get_file_context**: Summarize file symbols/imports/dependencies. Args: {{"path":"relative/path"}}
+- **search_text**: Project text/regex search. Args: {{"query":"...","glob":"*.rs","max_results":50}}
+- **replace_symbol_body**: Replace symbol implementation body. Args: {{"name":"...","new_body":"..."}}
+- **edit_within_symbol**: Scoped find/replace in symbol range. Args: {{"name":"...","find":"...","replace":"..."}}
+- **insert_symbol**: Insert symbol before/after target symbol. Args: {{"target":"...","position":"before|after","code":"..."}}
+- **delete_symbol**: Delete symbol by name. Args: {{"name":"..."}}
+- **batch_edit**: Multi-file structural edits. Args: {{"edits":[...]}}
+- **batch_rename**: Rename symbol and references. Args: {{"old_name":"...","new_name":"..."}}
 
 ## Context:
 - Project root: {}
 - You have FULL filesystem access. Use it."#, project_root)
 }
 
+/// Sub-agent entry (non-recursive async path for fleet delegation).
+pub async fn run_sub_agent_loop(config: &AgentConfig, user_message: &str) -> String {
+    run_agent_loop_inner(config, user_message).await
+}
+
 /// Run the full agent loop: send message, parse tool calls, execute, repeat.
 /// Returns the final text response from the model.
 pub async fn run_agent_loop(config: &AgentConfig, user_message: &str) -> String {
+    run_agent_loop_inner(config, user_message).await
+}
+
+#[async_recursion]
+async fn run_agent_loop_inner(config: &AgentConfig, user_message: &str) -> String {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(600))
         .build()
@@ -113,7 +144,11 @@ pub async fn run_agent_loop(config: &AgentConfig, user_message: &str) -> String 
 
             info!("Agent tool call: {} args={}", tool_name, arguments);
 
-            let result = execute_tool(tool_name, &arguments, config).await;
+            let result = if config.fleet_delegate_depth >= 1 {
+                execute_tool_sub_agent_only(tool_name, &arguments, config).await
+            } else {
+                execute_tool(tool_name, &arguments, config).await
+            };
 
             // Append the tool call and result to conversation
             conversation.push_str(&text);
@@ -181,8 +216,53 @@ fn extract_tool_call(text: &str) -> Option<serde_json::Value> {
     None
 }
 
+async fn fleet_delegate_impl(args: &serde_json::Value, config: &AgentConfig) -> String {
+    let task = args
+        .get("task")
+        .or_else(|| args.get("message"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if task.is_empty() {
+        return "Error: task required".to_string();
+    }
+    let target = args
+        .get("target")
+        .or_else(|| args.get("role"))
+        .or_else(|| args.get("agent"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("thinker");
+    let Some(ep) = crate::model_command::resolve_fleet_target(target).await else {
+        return format!("Error: fleet target '{}' not found", target);
+    };
+    if !ep.online {
+        return format!("Error: {} is offline", ep.label);
+    }
+    let cluster = crate::routing::load_cluster_routing();
+    let mut sub = config.clone();
+    sub.endpoint_url = ep.url;
+    sub.fleet_delegate_depth = 1;
+    sub.chat_template = crate::routing::template_for_endpoint(&cluster, &sub.endpoint_url);
+    let out = run_agent_loop_inner(&sub, task).await;
+    format!("[sub-agent {}]\n{}", ep.label, out)
+}
+
+/// Tools available inside a delegated sub-agent (no nested delegate).
+async fn execute_tool_sub_agent_only(name: &str, args: &serde_json::Value, config: &AgentConfig) -> String {
+    if name == "delegate_sub_agent" {
+        return "Error: nested delegate_sub_agent blocked (max depth 1)".to_string();
+    }
+    execute_tool_core(name, args, config).await
+}
+
 /// Execute a tool and return the result string.
 async fn execute_tool(name: &str, args: &serde_json::Value, config: &AgentConfig) -> String {
+    if name == "delegate_sub_agent" {
+        return fleet_delegate_impl(args, config).await;
+    }
+    execute_tool_core(name, args, config).await
+}
+
+async fn execute_tool_core(name: &str, args: &serde_json::Value, config: &AgentConfig) -> String {
     if let Some(ref mcp_base) = config.mcp_worker_url {
         if !mcp_base.is_empty() && crate::mcp_delegate::is_delegatable_tool(name) {
             if let Ok(r) = crate::mcp_delegate::execute_on_mcp_at(mcp_base, name, args).await {
@@ -198,6 +278,8 @@ async fn execute_tool(name: &str, args: &serde_json::Value, config: &AgentConfig
         "think_harder" => tool_think_harder(args, config).await,
         "remember" => tool_remember(args, &config.project_root, &config.nautivecs_url).await,
         "run_command" => tool_run_command(args, &config.project_root, config.safe_mode).await,
+        "list_fleet_agents" => crate::model_command::tool_list_fleet_agents().await,
+        "call_sub_agent" => crate::model_command::tool_call_sub_agent(args).await,
         _ => format!("Unknown tool: '{}'", name),
     }
 }

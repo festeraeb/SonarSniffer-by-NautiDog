@@ -1,0 +1,14 @@
+{
+  "label": "P100-Gemma-MoE",
+  "url": "http://10.0.0.61:5001",
+  "words": 209,
+  "elapsed_s": 18.5,
+  "usage": {
+    "completion_tokens": 379,
+    "prompt_tokens": 2267,
+    "total_tokens": 2646,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  }
+}

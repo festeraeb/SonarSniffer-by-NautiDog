@@ -1,0 +1,47 @@
+{
+  "spec_version": 1,
+  "title": "Cesarops Forge v2 Local Ping OperatorSpec",
+  "architecture_overview": "This OperatorSpec defines a 'ping' operation for local P100/RTX coders within the cesarops-forge-v2 environment. It ensures basic system health, network connectivity to critical services, and local GPU availability, while strictly adhering to the T440 LLM port isolation constraint.",
+  "constraints": [
+    "T440 P100 LLM ports (:5001/:5002 on 10.0.0.61) must remain free during satellite runs."
+  ],
+  "repo_root": "/data/codebase/repos/wreckhunter2000-1",
+  "needs_user_approval": true,
+  "risks": [
+    "Scripts might require specific environment variables or configurations not explicitly listed, leading to execution failures.",
+    "The 'ping' might not cover all potential failure points, leading to a false sense of security.",
+    "The cesarops2-isolate-from-t440.sh script might not fully prevent port conflicts if other rogue processes are running."
+  ],
+  "ordered_tasks": [
+    {
+      "target_file_path": "/data/codebase/repos/wreckhunter2000-1/scripts/cesarops2-isolate-from-t440.sh",
+      "injected_context_files": [],
+      "explicit_steps": [
+        "Execute /data/codebase/repos/wreckhunter2000-1/scripts/cesarops2-isolate-from-t440.sh to ensure no local services conflict with T440 LLM ports.",
+        "Review script output for confirmation of isolation."
+      ],
+      "done_condition": "The cesarops2-isolate-from-t440.sh script reports successful isolation and no port conflicts with 10.0.0.61:5001/5002."
+    },
+    {
+      "target_file_path": "/data/codebase/repos/wreckhunter2000-1/scripts/cesarops-activity-watch.sh",
+      "injected_context_files": [
+        "/data/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/cluster_config.toml",
+        "/data/codebase/repos/wreckhunter2000-1/config/fleet_manifest.json"
+      ],
+      "explicit_steps": [
+        "Execute /data/codebase/repos/wreckhunter2000-1/scripts/cesarops-activity-watch.sh --quick-status to get a snapshot of running cesarops-forge-v2 services and network health.",
+        "Analyze the output for any critical service failures or network connectivity issues."
+      ],
+      "done_condition": "The cesarops-activity-watch.sh script reports all essential cesarops-forge-v2 services are active or reachable, and no critical network errors are present."
+    },
+    {
+      "target_file_path": "/data/codebase/repos/wreckhunter2000-1/scripts/accelerator_fleet_probe.sh",
+      "injected_context_files": [],
+      "explicit_steps": [
+        "Execute /data/codebase/repos/wreckhunter2000-1/scripts/accelerator_fleet_probe.sh to detect and verify the health of local P100/RTX GPUs.",
+        "Confirm that at least one P100 or RTX GPU is detected and reported as healthy."
+      ],
+      "done_condition": "The accelerator_fleet_probe.sh script successfully identifies at least one P100 or RTX GPU and reports its operational status as healthy."
+    }
+  ]
+}

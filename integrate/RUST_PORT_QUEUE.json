@@ -1,0 +1,980 @@
+[
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "",
+    "source_py": "dual_scan_downloader.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1000/rust__dual_scan_downloader.md",
+    "rust_path": "cesarops-inference/src/integrate/lake_michigan_dual_scan.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/ai_director/ai_director.py",
+    "source_py": "ai_director.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__ai_director.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/analysis/analyze_crossref.py",
+    "source_py": "analyze_crossref.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__analyze_crossref.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/line5_fuel_leak_detection/analyze_fuel_leaks.py",
+    "source_py": "analyze_fuel_leaks.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__analyze_fuel_leaks.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "",
+    "source_py": "detection_sorter.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1000/rust__detection_sorter.md",
+    "rust_path": "cesarops-inference/src/integrate/detection_sorter.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/drive_identity/drive_identity.py",
+    "source_py": "drive_identity.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__drive_identity.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/forge_tools/dynamic_db_key.py",
+    "source_py": "dynamic_db_key.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__dynamic_db_key.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "",
+    "source_py": "fast_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__fast_scan.md",
+    "rust_path": "cesarops-inference/src/integrate/tiff_fast.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/wreckhunter/full_basin_scan.py",
+    "source_py": "full_basin_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__full_basin_scan.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/integrated_forensic_scan.py",
+    "source_py": "integrated_forensic_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__integrated_forensic_scan.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/lake_michigan_scan.py",
+    "source_py": "lake_michigan_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__lake_michigan_scan.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/wreckhunter/prioritized_pull.py",
+    "source_py": "prioritized_pull_v2.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__prioritized_pull_v2.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "`/codebase/projects/pipelines/wreckhunter/triple_lock_fusion.py`",
+    "source_py": "triple_lock_fusion.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__triple_lock_fusion.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "analyze_resolution_comparison.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__analyze_resolution_comparison.md",
+    "rust_path": "cesarops-inference/src/integrate/resolution_comparison.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "anchor_lock_display.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__anchor_lock_display.md",
+    "rust_path": "cesarops-inference/src/integrate/anchor_lock_display.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/analysis/geometry/andaste_geometry_test.py",
+    "source_py": "andaste_geometry_test.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__andaste_geometry_test.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "`tools/cesarops_agent_gui.py`",
+    "source_py": "cesarops_agent_gui.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cesarops_agent_gui.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/cesarops/cesarops_cli.py",
+    "source_py": "cesarops_cli.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__cesarops_cli.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/cesarops/cesarops_engine.py",
+    "source_py": "cesarops_engine.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cesarops_engine.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "check_xenon_cuda.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__check_xenon_cuda.md",
+    "rust_path": "cesarops-inference/src/integrate/xenon_cuda_checker.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter2000/scripts/tools/cuda_direct.py",
+    "source_py": "cuda_direct.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cuda_direct.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/daily_satellite_pull.py",
+    "source_py": "daily_satellite_pull.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__daily_satellite_pull.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "daily_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__daily_scan.md",
+    "rust_path": "cesarops-inference/src/integrate/daily_scan.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "diagnose_gpu.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__diagnose_gpu.md",
+    "rust_path": "cesarops-inference/src/integrate/gpu_diagnostic.rs",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/hard_pixel_audit.py",
+    "source_py": "hard_pixel_audit.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__hard_pixel_audit.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/lake_michigan_scan/lake_michigan_full_scan.py",
+    "source_py": "lake_michigan_full_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__lake_michigan_full_scan.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/analysis/material_density_audit.py",
+    "source_py": "monster_material_audit.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/p1001/int__monster_material_audit.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/sensor_scan/multi_sensor_scan.py",
+    "source_py": "multi_sensor_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__multi_sensor_scan.md",
+    "rust_path": "",
+    "rust_status": "ported"
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "/codebase/projects/pipelines/integrate/unmapped/laptopdump_wreckhunter_build/cleanup_and_organize.py",
+    "source_py": "cleanup_and_organize.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__cleanup_and_organize.md",
+    "rust_path": "",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/integrate/unmapped/laptopdump_wreckhunter_build/cleanup_and_organize.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "/codebase/projects/pipelines/archive/laptopdump_wreckhunter_build/config_agent.py",
+    "source_py": "config_agent.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__config_agent.md",
+    "rust_path": "",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/archive/laptopdump_wreckhunter_build/config_agent.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "/codebase/projects/pipelines/archive/deep_wreck_validation.py",
+    "source_py": "deep_wreck_validation.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__deep_wreck_validation.md",
+    "rust_path": "",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/archive/deep_wreck_validation.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "/codebase/projects/pipelines/archive/laptopdump_wreckhunter_build/detailed_analysis.py",
+    "source_py": "detailed_analysis.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__detailed_analysis.md",
+    "rust_path": "",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/archive/laptopdump_wreckhunter_build/detailed_analysis.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "",
+    "source_py": "test_ai_callable.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__test_ai_callable.md",
+    "rust_path": "cesarops-inference/src/integrate/stubs/laptopdump_wreckhunter_build.rs",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tests/test_ai_callable_demo.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "`integrate/archived/laptopdump_wreckhunter_build/test_cuda_simple.py`",
+    "source_py": "test_cuda_simple.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__test_cuda_simple.md",
+    "rust_path": "",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/repos/wreckhunter2000-1/integrate/archived/laptopdump_wreckhunter_build/test_cuda_simple.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "ARCHIVE_STUB",
+    "target": "",
+    "source_py": "wipe_database.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__wipe_database.md",
+    "rust_path": "cesarops-inference/src/integrate/unmapped/laptopdump_wreckhunter_build/wipe_database.rs",
+    "rust_status": "archived",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/utils/wipe_database.py",
+      "action": "copied"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "",
+    "source_py": "cuda_env.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__cuda_env.md",
+    "rust_path": "cesarops-inference/src/integrate/cuda_env.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tools/cuda_env.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/cuda_env.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/tests/benchmarks/cuda_test_kmz.py",
+    "source_py": "cuda_test_kmz.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__cuda_test_kmz.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tests/benchmarks/cuda_test_kmz.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/cuda_test_kmz.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/wreckhunter/tools/generate_db_master_key.py",
+    "source_py": "generate_db_master_key.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__generate_db_master_key.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tools/generate_db_master_key.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/generate_db_master_key.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/global_controls.py",
+    "source_py": "global_controls.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__global_controls.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/global_controls.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/global_controls.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/cesarops/db/init_database.py",
+    "source_py": "init_database.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__init_database.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/cesarops/db/init_database.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/init_database.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/wreckhunter/run_configured_pipeline.py",
+    "source_py": "run_configured_pipeline.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__run_configured_pipeline.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/run_configured_pipeline.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/run_configured_pipeline.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "",
+    "source_py": "test_cuda_minimal.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__test_cuda_minimal.md",
+    "rust_path": "cesarops-inference/src/integrate/gpu_health.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tests/hardware/test_cuda_minimal.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/test_cuda_minimal.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "",
+    "source_py": "test_m2200.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__test_m2200.md",
+    "rust_path": "cesarops-inference/src/integrate/m2200_gpu_test.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/gpu_engine/tests/test_m2200_hardware.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/test_m2200.py"
+    }
+  },
+  {
+    "verdict": "MERGE_INTO_LIVE",
+    "target": "/codebase/projects/pipelines/wreckhunter/tools/three_tile_offset_analysis.py",
+    "source_py": "three_tile_offset_analysis.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__three_tile_offset_analysis.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tools/three_tile_offset_analysis.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/three_tile_offset_analysis.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "audit_wrecks_db.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__audit_wrecks_db.md",
+    "rust_path": "cesarops-inference/src/integrate/audit_wrecks_db.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tools/audit_wrecks_db.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/audit_wrecks_db.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "b02_download.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__b02_download.md",
+    "rust_path": "cesarops-inference/src/integrate/hls_b02_download.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/satellite/b02_download.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/b02_download.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "batch_download_manager.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__batch_download_manager.md",
+    "rust_path": "cesarops-inference/src/integrate/batch_download_manager.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/batch_download_manager.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/batch_download_manager.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "bridge_calibrate.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__bridge_calibrate.md",
+    "rust_path": "cesarops-inference/src/integrate/bridge_calibrate.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/bridge_calibrate.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/bridge_calibrate.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/utils/database_connector.py",
+    "source_py": "database_connector.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/p1000/int__database_connector.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/utils/database_connector.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/database_connector.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "db_ingestor.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__db_ingestor.md",
+    "rust_path": "cesarops-inference/src/integrate/db_ingestor.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/db_ingestor.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/db_ingestor.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "download_erie_multiyear.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__download_erie_multiyear.md",
+    "rust_path": "cesarops-inference/src/integrate/erie_multiyear_downloader.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/download_erie_multiyear.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_programming_root/download_erie_multiyear.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/leaking_boat/extract_oil_spills_kmz.py",
+    "source_py": "extract_oil_spills_kmz.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__extract_oil_spills_kmz.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/leaking_boat/extract_oil_spills_kmz.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/extract_oil_spills_kmz.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/fetcher.py",
+    "source_py": "fetcher.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__fetcher.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/fetcher.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/fetcher.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "`/codebase/projects/pipelines/satellite/swot/find_swot_dates.py`",
+    "source_py": "find_swot_dates.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__find_swot_dates.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/satellite/swot/find_swot_dates.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/find_swot_dates.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "`/codebase/projects/pipelines/wreckhunter/full_lake_michigan_run.py`",
+    "source_py": "full_lake_michigan_run.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__full_lake_michigan_run.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/full_lake_michigan_run.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/full_lake_michigan_run.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/full_scan.py",
+    "source_py": "full_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__full_scan.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/full_scan.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/full_scan.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "gpu_stress_test.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__gpu_stress_test.md",
+    "rust_path": "cesarops-inference/src/integrate/gpu_stress_test.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/benchmarks/gpu_stress_test.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/gpu_stress_test.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "inventory_all_files.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__inventory_all_files.md",
+    "rust_path": "cesarops-inference/src/integrate/file_inventory.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/archives/wreckhunter_recovery/inventory_all_files.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/inventory_all_files.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "inventory_geotiffs.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__inventory_geotiffs.md",
+    "rust_path": "cesarops-inference/src/integrate/geotiff_inventory.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tasks/inventory_geotiffs.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/inventory_geotiffs.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/iowa_202_analysis.py",
+    "source_py": "iowa_202_analysis.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/p1001/int__iowa_202_analysis.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/iowa_202_analysis.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/iowa_202_analysis.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/cesarops/live_feed_server.py",
+    "source_py": "live_feed_server.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__live_feed_server.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/cesarops/live_feed_server.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/live_feed_server.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "`/codebase/projects/pipelines/analysis/monster_site_analysis.py`",
+    "source_py": "monster_analysis.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__monster_analysis.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/analysis/monster_site_analysis.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/monster_analysis.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "monster_candidate.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__monster_candidate.md",
+    "rust_path": "cesarops-inference/src/integrate/monster_candidate.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/analysis/monster_candidate.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/monster_candidate.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "populate_database.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__populate_database.md",
+    "rust_path": "cesarops-inference/src/integrate/lake_michigan/populate_database.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/populate_database.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/populate_database.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/prioritized_satellite_pull.py",
+    "source_py": "prioritized_satellite_pull.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__prioritized_satellite_pull.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/prioritized_satellite_pull.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/prioritized_satellite_pull.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "process_tiles.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__process_tiles.md",
+    "rust_path": "cesarops-inference/src/integrate/laptopdump_wreckhunter_build/process_tiles.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/process_tiles.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/process_tiles.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "process_with_coordinates.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__process_with_coordinates.md",
+    "rust_path": "cesarops-inference/src/integrate/unmapped/laptopdump_wreckhunter_build/process_with_coordinates.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/processing/anomaly_extractor.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/process_with_coordinates.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/pull_altimetry_anonymous.py",
+    "source_py": "pull_altimetry_anonymous.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__pull_altimetry_anonymous.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/pull_altimetry_anonymous.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/pull_altimetry_anonymous.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "raw_scan_reprocess.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__raw_scan_reprocess.md",
+    "rust_path": "cesarops-inference/src/integrate/raw_scan_reprocess.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tools/raw_scan_reprocess.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/raw_scan_reprocess.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/tools/repeatability_check.py",
+    "source_py": "repeatability_check.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__repeatability_check.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tools/repeatability_check.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/repeatability_check.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "run_straits_fox.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__run_straits_fox.md",
+    "rust_path": "cesarops-inference/src/integrate/straits_fox_pipeline.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/straits_fox_runner.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/run_straits_fox.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/benchmarks/run_zero.py",
+    "source_py": "run_zero.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__run_zero.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/benchmarks/run_zero.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/run_zero.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "`/codebase/projects/pipelines/wreckhunter/small_batch_anomaly_test.py`",
+    "source_py": "small_batch_test.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__small_batch_test.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/small_batch_anomaly_test.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/small_batch_test.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/smart_daily_scan.py",
+    "source_py": "smart_daily_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__smart_daily_scan.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/smart_daily_scan.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/smart_daily_scan.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "start_xenon_db_sync.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__start_xenon_db_sync.md",
+    "rust_path": "cesarops-inference/src/integrate/xenon_sync.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/sync_xenon_db.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/start_xenon_db_sync.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "sync_to_xenon.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__sync_to_xenon.md",
+    "rust_path": "cesarops-inference/src/integrate/sync_xenon.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/deploy_xenon.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/sync_to_xenon.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "test_gpu.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__test_gpu.md",
+    "rust_path": "cesarops-inference/src/integrate/gpu_detection.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tests/hardware/test_gpu_validation.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/test_gpu.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "test_m2200_minimal.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__test_m2200_minimal.md",
+    "rust_path": "cesarops-inference/src/integrate/gpu_test.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/cesarops-gpu/tests/test_m2200_minimal.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/test_m2200_minimal.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "test_pipeline.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__test_pipeline.md",
+    "rust_path": "cesarops-inference/src/integrate/pipeline_test.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tests/test_end_to_end_gpu.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/test_pipeline.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/tests/test_repeatability.py",
+    "source_py": "test_repeatability.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1001/int__test_repeatability.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/tests/test_repeatability.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/test_repeatability.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "tpu_client.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__tpu_client.md",
+    "rust_path": "cesarops-inference/src/integrate/tpu_client.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/utils/tpu_client.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/tpu_client.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/wreckhunter/tpu_server.py",
+    "source_py": "tpu_server.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__tpu_server.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tpu_server.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/tpu_server.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "validate_detection.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__validate_detection.md",
+    "rust_path": "cesarops-inference/src/integrate/thermal_validation.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/tests/validate_detection.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/validate_detection.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "",
+    "source_py": "verify_cuda.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/split_rust/p1001/rust__verify_cuda.md",
+    "rust_path": "cesarops-inference/src/integrate/cuda_verification.rs",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/wreckhunter/utils/verify_cuda.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/verify_cuda.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/forensics/viirs_multi_year_scan.py",
+    "source_py": "viirs_multi_year_scan.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__viirs_multi_year_scan.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/forensics/viirs_multi_year_scan.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/viirs_multi_year_scan.py"
+    }
+  },
+  {
+    "verdict": "PORT_TO_PIPELINES",
+    "target": "/codebase/projects/pipelines/missions/zion_trench_squeeze.py",
+    "source_py": "zion_trench_squeeze.py",
+    "plan_file": "/codebase/repos/wreckhunter2000-1/integrate_out/qwen_moe/p1000/int__zion_trench_squeeze.md",
+    "rust_path": "",
+    "rust_status": "merged",
+    "apply_note": {
+      "ok": true,
+      "dest": "/codebase/projects/pipelines/missions/zion_trench_squeeze.py",
+      "source": "/codebase/repos/wreckhunter2000-1/integrate/unmapped/laptopdump_wreckhunter_build/zion_trench_squeeze.py"
+    }
+  }
+]

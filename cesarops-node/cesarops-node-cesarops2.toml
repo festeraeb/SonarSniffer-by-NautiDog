@@ -1,11 +1,15 @@
-# cesarops-node config for cesarops2 (GTX 1070 + P1000)
-# P1000 is gpu_id=1, the intake brain.
-forge_url = "http://10.0.0.1:9100"
+# cesarops-node config — HP ProLiant ML350e Gen8 (cesarops2)
+forge_url = "http://127.0.0.1:9100"
 node_name = "cesarops2"
-models_dir = "/mnt/storage/models"
+models_dir = "/mnt/t440/models"
 listen_port = 5500
-gpu_id = 1
+# llama.cpp -dev CUDA indices (NOT nvidia-smi order): CUDA0=2060, CUDA1=1070, CUDA2=P106
+# Thinker on :5200 uses CUDA0 → RTX 2060. Draft :5571 uses CUDA1 → 1070 (see research_lab.sh).
+gpu_id = 0
 backend = "cuda"
-koboldcpp_path = "/home/cesarops/benchmark/koboldcpp"
+engine = "llama-server"
+llama_server_path = "/home/cesarops/src/llama.cpp/build/bin/llama-server"
+# LLM endpoints for Forge preset golden-test-b5: start via scripts/cesarops2_research_lab.sh
+koboldcpp_path = ""
 heartbeat_interval_secs = 10
 max_restarts = 3
