@@ -1,0 +1,19 @@
+[Unit]
+Description=Nightly NCEI Great Lakes survey sync (incremental, skips existing)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=cesarops
+Group=cesarops
+WorkingDirectory=/codebase/repos/wreckhunter2000-1
+ExecStart=/usr/bin/bash /codebase/repos/wreckhunter2000-1/scripts/ncei_nightly_sync.sh
+# Be a good neighbor: low IO/CPU priority so it never starves live work.
+Nice=10
+IOSchedulingClass=idle
+# Don't let a stuck crawl run forever.
+TimeoutStartSec=6h
+
+[Install]
+WantedBy=multi-user.target

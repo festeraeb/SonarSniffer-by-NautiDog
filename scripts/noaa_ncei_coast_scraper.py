@@ -45,6 +45,33 @@ BASE_URL = "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/"
 DEFAULT_OUT = Path("/data/cesarops/bathymetry/ncei_coast")
 UA = "cesarops-ncei-scraper/1.0"
 
+# Named product presets. Encodes the team decision about which per-survey
+# product folders + file types we actually want, so nightly runs use a single
+# stable flag instead of a fragile multi-flag command line.
+#
+# Survey vintage changes the backscatter folder name:
+#   * older surveys (H12001-era): TIFF/  (side-scan, SSSAB)
+#   * newer surveys (H13252+):    MBAB/  (multibeam acoustic backscatter)
+# so the "detect" preset includes BOTH and lets subdir filtering pick whichever
+# a given survey actually has.
+PRODUCT_PRESETS: dict[str, dict[str, list[str]]] = {
+    # Everything useful to the wreck/redaction detectors + the stitch-seam work.
+    "detect": {
+        "subdirs": ["BAG", "TIFF", "MBAB", "DR", "GEODAS", "Bottom_Samples"],
+        "exts": [".bag", ".tif", ".tiff", ".pdf", ".xml", ".gz", ".ascii", ".zip"],
+    },
+    # Bathymetry only (smallest footprint).
+    "bag": {
+        "subdirs": ["BAG"],
+        "exts": [".bag"],
+    },
+    # Bathy + backscatter image (fast first-pass pair), no metadata.
+    "imagery": {
+        "subdirs": ["BAG", "TIFF", "MBAB"],
+        "exts": [".bag", ".tif", ".tiff"],
+    },
+}
+
 # Mission support:
 # - "greatlakes": use each survey report's Locality field (e.g. "Lake Erie")
 #   to filter and save outputs under .../files/<lake>/...
@@ -304,6 +331,15 @@ def main() -> int:
         "Example: --include-subdir BAG --include-subdir TIFF --include-subdir DR "
         "--include-subdir GEODAS. Skips TIDES/project_sketches when set.",
     )
+    ap.add_argument(
+        "--products",
+        choices=sorted(PRODUCT_PRESETS.keys()),
+        default=None,
+        help="Named product preset selecting subdirs + extensions. "
+        "'detect' = BAG+backscatter(TIFF/MBAB)+DR(pdf/xml)+GEODAS+Bottom_Samples; "
+        "'bag' = bathymetry only; 'imagery' = bathy+backscatter. "
+        "Explicit --download-ext / --include-subdir override the preset.",
+    )
     ap.add_argument("--metadata-only", action="store_true", help="Crawl index + write metadata only")
     ap.add_argument("--output-root", default=str(DEFAULT_OUT))
     ap.add_argument(
@@ -318,6 +354,19 @@ def main() -> int:
     base_url = args.base_url if args.base_url.endswith("/") else args.base_url + "/"
     roots = [r.strip() for r in args.roots.split(",") if r.strip()]
     include_prefix = [p.strip() for p in args.include_prefix if p.strip()]
+
+    # Apply a named product preset unless the user explicitly set ext/subdir.
+    # argparse default for --download-ext is [".bag"]; treat that exact default
+    # as "unset" so a preset can fill it in.
+    ext_overridden = args.download_ext != [".bag"]
+    subdir_overridden = bool(args.include_subdir)
+    if args.products:
+        preset = PRODUCT_PRESETS[args.products]
+        if not ext_overridden:
+            args.download_ext = list(preset["exts"])
+        if not subdir_overridden:
+            args.include_subdir = list(preset["subdirs"])
+
     include_ext = {e.lower() if e.startswith(".") else f".{e.lower()}" for e in args.download_ext}
     include_subdir = {s.strip().upper() for s in args.include_subdir if s.strip()}
 
@@ -391,6 +440,7 @@ def main() -> int:
         "include_prefix": include_prefix,
         "download_ext": sorted(include_ext),
         "include_subdir": sorted(include_subdir),
+        "products_preset": args.products,
         "matched_files": len(files),
         "downloaded_files": 0,
         "downloaded_bytes": 0,

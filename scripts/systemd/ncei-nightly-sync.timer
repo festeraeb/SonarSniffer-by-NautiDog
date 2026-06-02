@@ -1,0 +1,11 @@
+[Unit]
+Description=Run NCEI Great Lakes survey sync nightly
+
+[Timer]
+# 03:15 local time every day; if the machine was off, run at next boot.
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target
