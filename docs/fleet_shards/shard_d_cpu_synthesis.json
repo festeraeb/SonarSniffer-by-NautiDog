@@ -1,0 +1,10 @@
+{
+  "id": "shard_d_cpu_synthesis",
+  "label": "CPU-Mixtral",
+  "url": "http://127.0.0.1:5211",
+  "role": "synthesizer",
+  "system": "You synthesize risks and optional GPU path. Be concise.",
+  "text": "",
+  "seconds": 0,
+  "error": "HTTPConnectionPool(host='127.0.0.1', port=5211): Read timed out. (read timeout=900)"
+}

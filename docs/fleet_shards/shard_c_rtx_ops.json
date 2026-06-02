@@ -1,0 +1,18 @@
+{
+  "id": "shard_c_rtx_ops",
+  "label": "RTX-2060",
+  "url": "http://127.0.0.1:5200",
+  "role": "ops_planner",
+  "system": "You are the ops planner. Exact shell commands and acceptance checks.",
+  "text": "\n\n<!-- reasoning -->\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Context:** Handoff from a previous agent for running `cesarops-satellite` (`sat-run`) on local Sentinel-2 tiles to detect a masked wreck (Robert Burns) and calibrate on a known wreck (Cedarville).\n   - **Mission:** Run `sat-run` with local offline data, parallelized with rayon, on P100 GPUs (optional later). Focus on STEPS 3-4 + ACCEPTANCE.\n   - **Key Targets:**\n     - Cedarville: 45.7873\u00b0N, -84.6708\u00b0W (calibration target)\n     - Robert Burns (masked target): 45.87127\u00b0N, -84.58642\u00b0W\n     - Distance threshold: ~300m\n   - **Data Paths:** `data",
+  "seconds": 120.0,
+  "usage": {
+    "completion_tokens": 203,
+    "prompt_tokens": 2869,
+    "total_tokens": 3072,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "error": null
+}
