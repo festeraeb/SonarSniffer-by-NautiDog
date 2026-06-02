@@ -45,6 +45,22 @@ BASE_URL = "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/"
 DEFAULT_OUT = Path("/data/cesarops/bathymetry/ncei_coast")
 UA = "cesarops-ncei-scraper/1.0"
 
+# Mission support:
+# - "greatlakes": use each survey report's Locality field (e.g. "Lake Erie")
+#   to filter and save outputs under .../files/<lake>/...
+GREAT_LAKES = {
+    "Lake Superior": "lake_superior",
+    "Lake Michigan": "lake_michigan",
+    "Lake Huron": "lake_huron",
+    "Lake Erie": "lake_erie",
+    "Lake Ontario": "lake_ontario",
+}
+
+LOCALITY_RE = re.compile(
+    r"<b>\s*Locality:\s*</b>\s*</td>\s*<td[^>]*>\s*([^<]+?)\s*</td>",
+    re.IGNORECASE | re.DOTALL,
+)
+
 
 @dataclass
 class IndexItem:
@@ -133,6 +149,24 @@ def prefix_ok(rel: str, prefixes: list[str]) -> bool:
     return any(top.upper().startswith(p.upper()) for p in prefixes)
 
 
+def subdir_ok(rel: str, subdirs: set[str]) -> bool:
+    """Per-survey product-folder filter.
+
+    NCEI survey layout is ``<range>/<survey>/<subdir>/<file>`` e.g.
+    ``H12001-H14000/H12001/BAG/H12001_MB_1m_MLLW_1of2.bag``. When ``subdirs`` is
+    non-empty we only descend into / keep paths whose 3rd component (the product
+    folder: BAG, TIFF, DR, GEODAS, ...) is allowed. Paths shallower than the
+    subdir level (range or survey directories) always pass so the crawler can
+    still reach the product folders. This lets us skip TIDES/project_sketches.
+    """
+    if not subdirs:
+        return True
+    parts = [p for p in rel.strip("/").split("/") if p]
+    if len(parts) < 3:
+        return True  # range or survey level — keep descending
+    return parts[2].upper() in subdirs
+
+
 def crawl(
     base_url: str,
     roots: Iterable[str],
@@ -140,7 +174,9 @@ def crawl(
     include_ext: set[str],
     metadata_jsonl: Path,
     manifest_tsv: Path,
+    include_subdir: set[str] | None = None,
 ) -> list[dict]:
+    include_subdir = include_subdir or set()
     stack = [urljoin(base_url, r) for r in roots]
     seen = set()
     files: list[dict] = []
@@ -173,10 +209,12 @@ def crawl(
                 child = urljoin(url, it.href)
                 rel = rel_from_base(child, base_url)
                 if it.is_dir:
-                    if prefix_ok(rel, include_prefix):
+                    if prefix_ok(rel, include_prefix) and subdir_ok(rel, include_subdir):
                         stack.append(child)
                     continue
                 if not prefix_ok(rel, include_prefix):
+                    continue
+                if not subdir_ok(rel, include_subdir):
                     continue
                 if not ext_ok(it.name, include_ext):
                     continue
@@ -258,8 +296,22 @@ def main() -> int:
         default=[".bag"],
         help="File extension to keep/download (repeatable). Example: .bag .xml",
     )
+    ap.add_argument(
+        "--include-subdir",
+        action="append",
+        default=[],
+        help="Per-survey product folder to keep (repeatable, case-insensitive). "
+        "Example: --include-subdir BAG --include-subdir TIFF --include-subdir DR "
+        "--include-subdir GEODAS. Skips TIDES/project_sketches when set.",
+    )
     ap.add_argument("--metadata-only", action="store_true", help="Crawl index + write metadata only")
     ap.add_argument("--output-root", default=str(DEFAULT_OUT))
+    ap.add_argument(
+        "--mission",
+        default="general",
+        choices=["general", "greatlakes"],
+        help="How to interpret survey reports during download",
+    )
     ap.add_argument("--limit", type=int, default=0, help="Max files to download (0 = all)")
     args = ap.parse_args()
 
@@ -267,6 +319,7 @@ def main() -> int:
     roots = [r.strip() for r in args.roots.split(",") if r.strip()]
     include_prefix = [p.strip() for p in args.include_prefix if p.strip()]
     include_ext = {e.lower() if e.startswith(".") else f".{e.lower()}" for e in args.download_ext}
+    include_subdir = {s.strip().upper() for s in args.include_subdir if s.strip()}
 
     out = Path(args.output_root)
     out.mkdir(parents=True, exist_ok=True)
@@ -276,6 +329,51 @@ def main() -> int:
     summary_json = out / f"summary_{ts}.json"
     dl_root = out / "files"
 
+    # Map survey ID (e.g. H13607) to its Hxxxx-Hyyyy range so we can build the survey report URL.
+    root_ranges: list[tuple[int, int, str]] = []
+    for r in roots:
+        clean = r.rstrip("/")
+        m = re.match(r"^H(\d+)-H(\d+)$", clean, flags=re.IGNORECASE)
+        if not m:
+            continue
+        lo = int(m.group(1))
+        hi = int(m.group(2))
+        root_ranges.append((lo, hi, clean))
+    if not root_ranges:
+        # Fall back to empty (greatlakes mission may still work by skipping if range is unknown).
+        print("[warn] could not parse any Hxxxx-Hyyyy roots")
+
+    def range_for_survey_id(survey_id: str) -> str | None:
+        m = re.match(r"^H(\d+)$", survey_id, flags=re.IGNORECASE)
+        if not m:
+            return None
+        n = int(m.group(1))
+        for lo, hi, root_range in root_ranges:
+            if lo <= n <= hi:
+                return root_range
+        return None
+
+    def classify_great_lakes(survey_id: str) -> str | None:
+        """
+        Returns canonical lake folder name (e.g. lake_erie) or None if not a Great Lake.
+        """
+        root_range = range_for_survey_id(survey_id)
+        if not root_range:
+            return None
+
+        # Example (from NOAA pages):
+        # https://www.ngdc.noaa.gov/nos/H12001-H14000/H13607.html
+        report_url = f"https://www.ngdc.noaa.gov/nos/{root_range}/{survey_id}.html"
+        html_text = fetch_text(report_url, timeout=30, retries=4)
+        m = LOCALITY_RE.search(html_text)
+        if not m:
+            return None
+        locality = m.group(1).strip()
+        for k, v in GREAT_LAKES.items():
+            if locality.lower() == k.lower():
+                return v
+        return None
+
     files = crawl(
         base_url=base_url,
         roots=roots,
@@ -283,6 +381,7 @@ def main() -> int:
         include_ext=include_ext,
         metadata_jsonl=metadata_jsonl,
         manifest_tsv=manifest_tsv,
+        include_subdir=include_subdir,
     )
     print(f"[crawl] matched files={len(files)} metadata={metadata_jsonl} manifest={manifest_tsv}")
 
@@ -291,9 +390,12 @@ def main() -> int:
         "roots": roots,
         "include_prefix": include_prefix,
         "download_ext": sorted(include_ext),
+        "include_subdir": sorted(include_subdir),
         "matched_files": len(files),
         "downloaded_files": 0,
         "downloaded_bytes": 0,
+        "skipped_files": 0,
+        "skipped_bytes": 0,
         "ts": ts,
     }
 
@@ -302,13 +404,42 @@ def main() -> int:
         print(f"[done] metadata-only summary={summary_json}")
         return 0
 
+    lake_cache: dict[str, str | None] = {}
+    downloaded_by_lake: dict[str, int] = {}
+
     to_dl = files[: args.limit] if args.limit and args.limit > 0 else files
     for i, item in enumerate(to_dl, start=1):
         rel = item["rel"]
         url = item["url"]
+        survey_id = rel.split("/", 1)[0] if "/" in rel else ""
+
         dst = dl_root / rel
-        print(f"[dl {i}/{len(to_dl)}] {rel}")
+        if args.mission == "greatlakes" and survey_id:
+            if survey_id not in lake_cache:
+                lake_cache[survey_id] = classify_great_lakes(survey_id)
+            lake = lake_cache[survey_id]
+            if not lake:
+                print(f"[skip {i}/{len(to_dl)}] {rel} (not a Great Lake)")
+                continue
+            dst = dl_root / lake / rel
+            downloaded_by_lake[lake] = downloaded_by_lake.get(lake, 0) + 1
+
         sz = file_size(url)
+
+        # If the destination file already exists and matches the server's
+        # declared content length, treat it as "identical" and skip.
+        if dst.exists() and sz is not None:
+            try:
+                if dst.stat().st_size == sz:
+                    print(f"[skip {i}/{len(to_dl)}] {rel} (size match {sz} bytes)")
+                    summary["skipped_files"] += 1
+                    summary["skipped_bytes"] += sz
+                    continue
+            except OSError:
+                # If stat fails for any reason, fall back to the normal download flow.
+                pass
+
+        print(f"[dl {i}/{len(to_dl)}] {rel} -> {dst}")
         download_one(url, dst)
         summary["downloaded_files"] += 1
         if sz:
@@ -320,6 +451,12 @@ def main() -> int:
                 pass
 
     summary_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if args.mission == "greatlakes":
+        # Persist download distribution for later auditing.
+        summary_json.write_text(
+            json.dumps({**json.loads(summary_json.read_text(encoding="utf-8")), "downloaded_by_lake": downloaded_by_lake}, indent=2),
+            encoding="utf-8",
+        )
     print(f"[done] downloaded={summary['downloaded_files']} bytes={summary['downloaded_bytes']} summary={summary_json}")
     return 0
 
