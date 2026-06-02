@@ -330,5 +330,103 @@
     "confidence": "side_scan_verified",
     "source": "Mark and Joe (side-scan discovery, north of Arch Rock)",
     "notes": "Unidentified barge. Re-detected in NOAA BAG anomaly scan 2026-06-02."
+  },
+  "masked_target_e_of_elva": {
+    "name": "MASKED TARGET (primary hyp: Robert Burns)",
+    "lat_min": 45.8706,
+    "lat_max": 45.8719,
+    "lon_min": -84.5871,
+    "lon_max": -84.5858,
+    "depth_ft": 113,
+    "type": "barquentine?",
+    "confidence": "bag_unmask_candidate",
+    "source": "cesarops BAG uncertainty-unmask (H13255), NOAA-masked zone E of Elva",
+    "notes": "Intact upright wreck, 32ft relief in 113ft. Measured 110-130ft x 30-40ft beam. Candidates by size+location: Robert Burns (126ft, E of Bois Blanc - PRIMARY, matches recall), Flight (114ft, Bois Blanc), Commodore Foote (112ft, E Straits). Ruled out: Handy/Young/St.Andrews (located elsewhere)."
+  },
+  "robert_burns": {
+    "name": "Robert Burns",
+    "length_ft": 126,
+    "type": "barquentine",
+    "area": "E of Bois Blanc (Huron)",
+    "source": "swayze/place_estimated",
+    "confidence": "archival"
+  },
+  "flight": {
+    "name": "Flight",
+    "length_ft": 114,
+    "type": "",
+    "area": "Bois Blanc Island",
+    "source": "place_estimated",
+    "confidence": "archival"
+  },
+  "commodore_foote": {
+    "name": "Commodore Foote",
+    "length_ft": 112,
+    "type": "",
+    "area": "eastern Straits",
+    "source": "lake_center",
+    "confidence": "archival"
+  },
+  "hattie_johnson": {
+    "name": "Hattie Johnson",
+    "length_ft": 150,
+    "beam_ft": 30,
+    "depth_ft": 13,
+    "type": "",
+    "area": "lake_center",
+    "source": "lake_center",
+    "confidence": "archival"
+  },
+  "odd_fellow": {
+    "name": "Odd Fellow",
+    "length_ft": 107,
+    "beam_ft": 24,
+    "depth_ft": 9,
+    "type": "",
+    "area": "",
+    "source": "place_estimated",
+    "confidence": "archival"
+  },
+  "senator_blood": {
+    "name": "Senator Blood",
+    "length_ft": 127,
+    "type": "",
+    "area": "Les Cheneaux / Goose Island",
+    "source": "lake_center",
+    "confidence": "archival"
+  },
+  "remora": {
+    "name": "Remora",
+    "length_ft": 100,
+    "type": "",
+    "area": "St. Ignace / Straits",
+    "source": "lake_center",
+    "confidence": "archival"
+  },
+  "john_jewett": {
+    "name": "John Jewett",
+    "length_ft": 92,
+    "beam_ft": 21,
+    "depth_ft": 8,
+    "type": "wood schooner",
+    "source": "swayze_parsed",
+    "confidence": "archival"
+  },
+  "john_c_likens": {
+    "name": "John C. Likens",
+    "length_ft": 90,
+    "beam_ft": 21,
+    "depth_ft": 5,
+    "type": "",
+    "source": "swayze_parsed",
+    "confidence": "archival"
+  },
+  "augustus_handy": {
+    "name": "Augustus Handy",
+    "length_ft": 126,
+    "type": "",
+    "area": "Spectacle Reef",
+    "source": "place_estimated",
+    "confidence": "archival"
   }
 }
