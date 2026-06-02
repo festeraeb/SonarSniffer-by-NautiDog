@@ -35,7 +35,19 @@ pub fn meyer_nu(t: f64) -> f64 {
     let t2 = t * t;
     let t3 = t2 * t;
     let t4 = t3 * t;
-    t4 * (35.0 - 84.0 * t + 70.0 * t2 - 20.0 * t3)
+    // Clamp: the polynomial can exceed 1.0 slightly below t=1, which would
+    // make `(1 - nu).sqrt()` NaN and poison the whole transform at n≥128.
+    (t4 * (35.0 - 84.0 * t + 70.0 * t2 - 20.0 * t3)).clamp(0.0, 1.0)
+}
+
+/// `sqrt(x)` for partition-of-unity ramps; treats tiny negative x as 0.
+#[inline]
+fn sqrt_ramp(x: f64) -> f64 {
+    if x <= 0.0 {
+        0.0
+    } else {
+        x.sqrt()
+    }
 }
 
 /// Compute the radial frequency band boundaries for `num_scales` scales.
@@ -96,7 +108,7 @@ pub fn build_radial_window(
                     w[[i, j]] = 1.0;
                 } else if r < b2 {
                     let t = (r - b1) / (b2 - b1);
-                    w[[i, j]] = (1.0 - meyer_nu(t)).sqrt();
+                    w[[i, j]] = sqrt_ramp(1.0 - meyer_nu(t));
                 }
             }
         }
@@ -114,7 +126,7 @@ pub fn build_radial_window(
                     w[[i, j]] = 1.0;
                 } else if r > bj_1 {
                     let t = (r - bj_1) / (bj - bj_1);
-                    w[[i, j]] = meyer_nu(t).sqrt();
+                    w[[i, j]] = sqrt_ramp(meyer_nu(t));
                 }
             }
         }
@@ -134,10 +146,10 @@ pub fn build_radial_window(
             }
             w[[i, j]] = if r <= b_mid {
                 let t = (r - b_lo) / (b_mid - b_lo);
-                meyer_nu(t).sqrt()
+                sqrt_ramp(meyer_nu(t))
             } else {
                 let t = (r - b_mid) / (b_hi - b_mid);
-                (1.0 - meyer_nu(t)).sqrt()
+                sqrt_ramp(1.0 - meyer_nu(t))
             };
         }
     }
@@ -173,7 +185,7 @@ pub fn build_angular_window(theta: &Array2<f64>, dir_idx: usize, num_dirs: usize
             let abs_dt = dtheta.abs();
             if abs_dt < sector_width {
                 let t = abs_dt / sector_width;
-                w[[i, j]] = (1.0 - meyer_nu(t)).sqrt();
+                w[[i, j]] = sqrt_ramp(1.0 - meyer_nu(t));
             }
         }
     }
@@ -268,6 +280,70 @@ mod window_tests {
             max_deviation < 1e-10,
             "Radial POU max deviation: {max_deviation}"
         );
+    }
+
+    #[test]
+    fn test_full_frame_pou_128_scales_4() {
+        let num_scales = 4;
+        let n = 128;
+        let cfg = crate::config::CurveletConfig::new(num_scales).unwrap();
+        let (xi_row, xi_col) = crate::utils::freq_grid_2d_f64(n);
+        let radial = crate::utils::radial_freq_f64(&xi_row, &xi_col);
+        let theta = crate::utils::angular_freq_f64(&xi_row, &xi_col);
+
+        let mut pou = Array2::<f64>::zeros((n, n));
+        let coarse = build_radial_window(&radial, 0, num_scales);
+        let fine = build_radial_window(&radial, num_scales - 1, num_scales);
+        for i in 0..n {
+            for j in 0..n {
+                pou[[i, j]] += coarse[[i, j]].powi(2) + fine[[i, j]].powi(2);
+            }
+        }
+        for d in 0..cfg.num_detail_scales() {
+            let scale_idx = d + 1;
+            let num_dirs = cfg.directions_at_detail_scale(d);
+            let rad_w = build_radial_window(&radial, scale_idx, num_scales);
+            for l in 0..num_dirs {
+                let w = build_combined_window(&rad_w, &theta, l, num_dirs);
+                for i in 0..n {
+                    for j in 0..n {
+                        pou[[i, j]] += w[[i, j]].powi(2);
+                    }
+                }
+            }
+        }
+
+        let mut min_pou = f64::INFINITY;
+        let mut max_pou = 0.0f64;
+        let mut bad = 0usize;
+        for i in 0..n {
+            for j in 0..n {
+                let v = pou[[i, j]];
+                if !v.is_finite() {
+                    bad += 1;
+                }
+                if v < min_pou {
+                    min_pou = v;
+                }
+                if v > max_pou {
+                    max_pou = v;
+                }
+            }
+        }
+        assert_eq!(bad, 0, "non-finite POU cells");
+        assert!(
+            min_pou > 1e-12,
+            "POU has near-zero cells: min={min_pou} max={max_pou}"
+        );
+        let mut max_dev = 0.0f64;
+        for i in 0..n {
+            for j in 0..n {
+                if radial[[i, j]] > 1e-10 {
+                    max_dev = max_dev.max((pou[[i, j]] - 1.0).abs());
+                }
+            }
+        }
+        assert!(max_dev < 1e-8, "frame POU max deviation {max_dev}");
     }
 
     #[test]

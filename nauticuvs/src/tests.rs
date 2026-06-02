@@ -188,6 +188,28 @@ fn test_reconstruction_5_scales_64() {
     assert!(err < 1e-6, "5-scale 64×64 reconstruction error: {err}");
 }
 
+#[test]
+fn test_reconstruction_gaussian_bump_256_scales_4() {
+    let n = 256;
+    let img = Array2::from_shape_fn((n, n), |(r, c)| {
+        let x = (r as f32 - n as f32 / 2.0) / 40.0;
+        let y = (c as f32 - n as f32 / 2.0) / 40.0;
+        1.0 + 0.5 * (-(x * x + y * y)).exp() + 0.1
+    });
+    let coeffs = curvelet_forward(&img, 4).unwrap();
+    assert!(
+        coeffs.coarse.iter().all(|c| c.is_finite()),
+        "forward coarse has non-finite"
+    );
+    let recon = curvelet_inverse(&coeffs).unwrap();
+    assert!(
+        recon.iter().all(|v| v.is_finite()),
+        "inverse produced non-finite values"
+    );
+    let err = relative_l2_error(&img, &recon);
+    assert!(err < 1e-4, "256×256 scales=4 gaussian reconstruction error: {err}");
+}
+
 // ===== Coefficient structure =====
 
 #[test]
@@ -244,4 +266,38 @@ fn test_two_scales() {
     let recon = curvelet_inverse(&coeffs).unwrap();
     let err = relative_l2_error(&img, &recon);
     assert!(err < 1e-6, "2-scale reconstruction error: {err}");
+}
+
+#[test]
+fn test_reconstruction_256_constant() {
+    let img = Array2::from_elem((256, 256), 1.5f32);
+    let coeffs = curvelet_forward(&img, 4).unwrap();
+    assert!(coeffs.coarse.iter().all(|c| c.is_finite()));
+    let recon = curvelet_inverse(&coeffs).unwrap();
+    let err = relative_l2_error(&img, &recon);
+    assert!(err < 1e-4, "256 constant reconstruction error: {err}");
+}
+
+#[test]
+fn test_reconstruction_64_scales_4_constant() {
+    let img = Array2::from_elem((64, 64), 2.0f32);
+    let coeffs = curvelet_forward(&img, 4).unwrap();
+    assert!(coeffs.coarse.iter().all(|c| c.is_finite()));
+    let recon = curvelet_inverse(&coeffs).unwrap();
+    assert!(recon.iter().all(|v| v.is_finite()));
+}
+
+#[test]
+fn test_reconstruction_128_scales_4() {
+    let n = 128;
+    let img = Array2::from_shape_fn((n, n), |(r, c)| {
+        let x = (r as f32 - n as f32 / 2.0) / 20.0;
+        let y = (c as f32 - n as f32 / 2.0) / 20.0;
+        1.0 + 0.5 * (-(x * x + y * y)).exp()
+    });
+    let coeffs = curvelet_forward(&img, 4).unwrap();
+    assert!(coeffs.coarse.iter().all(|c| c.is_finite()));
+    let recon = curvelet_inverse(&coeffs).unwrap();
+    let err = relative_l2_error(&img, &recon);
+    assert!(err < 1e-4, "128 gaussian reconstruction error: {err}");
 }

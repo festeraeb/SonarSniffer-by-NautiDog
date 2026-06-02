@@ -37,3 +37,7 @@ lto = true
 [[bin]]
 name = "mag_curvelet_energy"
 path = "src/bin/mag_curvelet_energy.rs"
+
+[[bin]]
+name = "curvelet_bandpass"
+path = "src/bin/curvelet_bandpass.rs"

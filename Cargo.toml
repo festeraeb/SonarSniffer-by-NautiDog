@@ -20,6 +20,7 @@ members = [
     "cesarops-bag-scan",
     "cesarops-pingora-edge",
     "cesarops-dora-runner",
+    "cesarops-export",
 ]
 # The top-level cesarops-adaptive package below is also a member implicitly
 # (because [package] is at the root).
