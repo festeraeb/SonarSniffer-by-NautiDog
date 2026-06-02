@@ -144,3 +144,61 @@ No nvcc → use cudarc with prebuilt PTX or cuBLAS. This is optional polish.
 - Don't reduce nauticuvs to 32-bit (native f64 build is intentional).
 - Don't work military/defense framing — humanitarian SAR + survey only.
 - Don't trust a Burns hit unless Cedarville calibration passed first.
+
+
+---
+
+## ADDENDUM: c2 (ML350e) disk + NFS issues (2026-06-02 late)
+
+### c2 /data is 100% FULL (456/481GB, 0 avail)
+Root cause: **354GB model weights** in `/data/cesarops/models` + 66GB in `/data/models`.
+These are LOCAL COPIES of LLM weights that are ALREADY accessible from T440 via
+NFS (`/mnt/t440/models`, mounted read-only). They're redundant.
+
+**To clean:** remove the redundant local model copies that are accessible via NFS:
+```bash
+# On c2 — CONFIRM the NFS mount resolves first:
+ls /mnt/t440/models/  # should show the same models
+# Then remove the local redundant copies:
+rm -rf /data/cesarops/models  # 354GB
+rm -rf /data/models           # 66GB
+# Result: /data goes from 100% → ~8% used (33GB bathymetry left)
+```
+CAUTION: only do this if the T440 NFS export stays up. If T440 goes down, c2
+loses model access. For production, keep at least ONE critical model local.
+
+### Sentinel-2 tiles NOT on c2 (they're on T440 raid0)
+The tiles live at T440: `/mnt/raid0/wreckhunter2000-1-data/data/straits_optical_*`.
+The repo symlink `data/ → /mnt/raid0/wreckhunter2000-1-data/data` only resolves
+on T440 (or any machine that mounts T440's raid0 at that path).
+
+**Option A (recommended): Add NFS mount on c2 for raid0:**
+```bash
+# On c2:
+sudo mkdir -p /mnt/raid0
+sudo mount -t nfs 10.0.0.61:/mnt/raid0 /mnt/raid0
+# Add to /etc/fstab for persistence:
+# 10.0.0.61:/mnt/raid0 /mnt/raid0 nfs defaults,_netdev 0 0
+```
+Then the repo `data/` symlink resolves naturally on c2.
+
+**Option B: Use the existing NFS mount paths directly:**
+c2 already mounts T440's `/data` at `/mnt/t440/data`, but the satellite tiles
+are on raid0 not /data. The tiles ARE also reachable via:
+```
+/mnt/t440/repo/data/straits_optical_clear/sentinel2_aws/
+```
+(because /mnt/t440/repo is NFS of the whole repo, and NFS follows the symlink
+on the server side). **Test this path first before adding a new mount.**
+
+### The "first set in the same spot" (duplicate data on c2)
+`/data/cesarops/bathymetry` (33GB) on c2 — this is likely the early unfiltered
+NCEI BAG download that ran on c2 before we killed it and cleaned up. It's
+already synced to T440's /data drive. Can be removed from c2 if confirmed to be
+a subset of what T440 has at `/data/cesarops/bathymetry/nos_surveys/` (325GB).
+
+### Mixtral :5211
+Not running / not responding on LAN. Was likely on the llama-servers we killed
+on T440. If needed for fleet grading, restart on T440 after the satellite
+detection run completes (P100s are currently free for compute; models can reload
+later since watchdogs are off).
