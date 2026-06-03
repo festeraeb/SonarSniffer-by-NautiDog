@@ -170,6 +170,9 @@ pub enum Stage {
     Download,
     TargetKnown,
     PocAoi,
+    SarLocal,
+    BagLocal,
+    BathyMap,
     TemporalStack,
     ValidateGt,
     Report,
@@ -327,6 +330,12 @@ pub struct StageResults {
     pub target_known: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poc_aoi: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sar_local: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bag_local: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bathy_map: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temporal_stack: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]

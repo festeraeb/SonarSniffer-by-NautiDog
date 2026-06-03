@@ -454,7 +454,7 @@ pub fn decode_local_band(
 
 /// Compute a pixel window (x, y, w, h) in the dataset for a WGS84 bbox,
 /// reprojecting the bbox corners into the dataset CRS via OSR.
-fn bbox_to_pixel_window(
+pub fn bbox_to_pixel_window(
     ds: &gdal::Dataset,
     gt: &[f64; 6],
     full_w: usize,

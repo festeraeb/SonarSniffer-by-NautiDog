@@ -17,8 +17,10 @@
 //! | historical_drift.py + buoy_analog.py | drift            |
 //! | (new)                                | fusion           |
 
+pub mod bathymetry_map;
 pub mod chip;
 pub mod concept;
+pub mod engine_error;
 pub mod downloads;
 pub mod drift;
 pub mod env_conditions;
@@ -28,6 +30,7 @@ pub mod magnetic;
 pub mod mission;
 pub mod nasa_fusion;
 pub mod overlay_grid;
+pub mod phase_corr;
 pub mod poc;
 pub mod sar;
 pub mod spectral;

@@ -13,11 +13,13 @@
 //! used `sklearn.cluster.DBSCAN`).
 
 use crate::types::SarCluster;
+use ndarray::Array2;
+use serde::Serialize;
 use std::collections::HashMap;
 // ── Orbit grouping ────────────────────────────────────────────────────────────
 
 /// A single SAR detection point with an orbit direction tag.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SarPoint {
     pub lat: f64,
     pub lon: f64,
@@ -209,6 +211,375 @@ pub fn run_sar_persistence(points: &[SarPoint], knobs: &crate::types::Knobs) -> 
     out
 }
 
+// ── Local RTC GeoTIFF extraction (FLEET TOOL 1) ───────────────────────────────
+
+/// Default bright/dark threshold in local σ units.
+pub const DEFAULT_SAR_SIGMA: f64 = 3.0;
+const SAR_STAT_WINDOW: usize = 50;
+const SAR_MIN_CLUSTER_PX: usize = 8;
+const SAR_MAX_DIM: usize = 1536;
+
+/// Infer orbit tag from Sentinel-1 filename tokens.
+pub fn orbit_from_filename(path: &std::path::Path) -> String {
+    let s = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_uppercase();
+    if s.contains("1SDV") || s.contains("DESC") {
+        "descending".into()
+    } else if s.contains("1SSH") || s.contains("ASC") {
+        "ascending".into()
+    } else {
+        "descending".into()
+    }
+}
+
+fn downsample_factor_for_dim((h, w): (usize, usize), max_dim: usize) -> usize {
+    let m = h.max(w);
+    if m <= max_dim {
+        1
+    } else {
+        (m + max_dim - 1) / max_dim
+    }
+}
+
+/// Box-mean downsample (NaN-aware), matching POC `downsample`.
+fn downsample_mean(arr: &Array2<f32>, factor: usize) -> Array2<f32> {
+    if factor <= 1 {
+        return arr.clone();
+    }
+    let (h, w) = arr.dim();
+    let nh = h / factor;
+    let nw = w / factor;
+    if nh == 0 || nw == 0 {
+        return Array2::zeros((0, 0));
+    }
+    let mut out = Array2::<f32>::from_elem((nh, nw), f32::NAN);
+    for r in 0..nh {
+        for c in 0..nw {
+            let mut sum = 0.0f64;
+            let mut n = 0usize;
+            for dr in 0..factor {
+                for dc in 0..factor {
+                    let v = arr[[r * factor + dr, c * factor + dc]];
+                    if v.is_finite() {
+                        sum += v as f64;
+                        n += 1;
+                    }
+                }
+            }
+            if n > 0 {
+                out[[r, c]] = (sum / n as f64) as f32;
+            }
+        }
+    }
+    out
+}
+
+/// Separable box mean (finite pixels only; NaN excluded from mean).
+fn box_mean(arr: &Array2<f32>, win: usize) -> Array2<f32> {
+    let (h, w) = arr.dim();
+    if win <= 1 || h == 0 || w == 0 {
+        return arr.clone();
+    }
+    let half = win / 2;
+    let mut out = Array2::<f32>::from_elem((h, w), f32::NAN);
+    for r in 0..h {
+        for c in 0..w {
+            let mut sum = 0.0f64;
+            let mut n = 0usize;
+            for dr in 0..win {
+                for dc in 0..win {
+                    let rr = r.saturating_sub(half).saturating_add(dr);
+                    let cc = c.saturating_sub(half).saturating_add(dc);
+                    if rr >= h || cc >= w {
+                        continue;
+                    }
+                    let v = arr[[rr, cc]];
+                    if v.is_finite() {
+                        sum += v as f64;
+                        n += 1;
+                    }
+                }
+            }
+            if n >= win * win / 4 {
+                out[[r, c]] = (sum / n as f64) as f32;
+            }
+        }
+    }
+    out
+}
+
+fn box_std(arr: &Array2<f32>, mean: &Array2<f32>, win: usize) -> Array2<f32> {
+    let (h, w) = arr.dim();
+    let half = win / 2;
+    let mut out = Array2::<f32>::from_elem((h, w), f32::NAN);
+    for r in 0..h {
+        for c in 0..w {
+            let m = mean[[r, c]];
+            if !m.is_finite() {
+                continue;
+            }
+            let mut var = 0.0f64;
+            let mut n = 0usize;
+            for dr in 0..win {
+                for dc in 0..win {
+                    let rr = r.saturating_sub(half).saturating_add(dr);
+                    let cc = c.saturating_sub(half).saturating_add(dc);
+                    if rr >= h || cc >= w {
+                        continue;
+                    }
+                    let v = arr[[rr, cc]];
+                    if v.is_finite() {
+                        let d = v as f64 - m as f64;
+                        var += d * d;
+                        n += 1;
+                    }
+                }
+            }
+            if n >= win * win / 4 {
+                out[[r, c]] = (var / n as f64).sqrt() as f32;
+            }
+        }
+    }
+    out
+}
+
+/// Label 4-connected components; returns (centroid_row, centroid_col, pixel_count).
+fn connected_centroids(mask: &Array2<bool>, min_pixels: usize) -> Vec<(f64, f64, usize)> {
+    let (h, w) = mask.dim();
+    let mut seen = vec![false; h * w];
+    let mut out = Vec::new();
+    for sr in 0..h {
+        for sc in 0..w {
+            let idx0 = sr * w + sc;
+            if seen[idx0] || !mask[[sr, sc]] {
+                continue;
+            }
+            let mut stack = vec![(sr, sc)];
+            seen[idx0] = true;
+            let mut rs = 0.0f64;
+            let mut cs = 0.0f64;
+            let mut n = 0usize;
+            while let Some((r, c)) = stack.pop() {
+                rs += r as f64;
+                cs += c as f64;
+                n += 1;
+                for (nr, nc) in [(r.wrapping_sub(1), c), (r + 1, c), (r, c.wrapping_sub(1)), (r, c + 1)] {
+                    if nr >= h || nc >= w {
+                        continue;
+                    }
+                    let idx = nr * w + nc;
+                    if !seen[idx] && mask[[nr, nc]] {
+                        seen[idx] = true;
+                        stack.push((nr, nc));
+                    }
+                }
+            }
+            if n >= min_pixels {
+                out.push((rs / n as f64, cs / n as f64, n));
+            }
+        }
+    }
+    out
+}
+
+#[cfg(feature = "gdal")]
+struct SarWindowGeo {
+    gt: [f64; 6],
+    win_x: usize,
+    win_y: usize,
+    ds_srs_wkt: String,
+}
+
+#[cfg(feature = "gdal")]
+fn pixel_to_wgs84(geo: &SarWindowGeo, row: f64, col: f64) -> anyhow::Result<(f64, f64)> {
+    use gdal::spatial_ref::{AxisMappingStrategy, CoordTransform, SpatialRef};
+    let x = geo.gt[0] + col * geo.gt[1] + row * geo.gt[2];
+    let y = geo.gt[3] + col * geo.gt[4] + row * geo.gt[5];
+    let src = SpatialRef::from_wkt(&geo.ds_srs_wkt)?;
+    let mut dst = SpatialRef::from_epsg(4326)?;
+    dst.set_axis_mapping_strategy(AxisMappingStrategy::TraditionalGisOrder);
+    let ct = CoordTransform::new(&src, &dst)?;
+    let mut xs = [x];
+    let mut ys = [y];
+    let mut zs: [f64; 0] = [];
+    ct.transform_coords(&mut xs, &mut ys, &mut zs)?;
+    Ok((ys[0], xs[0])) // lat, lon
+}
+
+#[cfg(feature = "gdal")]
+fn read_sar_window(
+    path: &std::path::Path,
+    bbox: &crate::types::BBox,
+) -> anyhow::Result<(Array2<f32>, SarWindowGeo)> {
+    use gdal::Dataset;
+    let ds = Dataset::open(path)?;
+    let (full_w, full_h) = ds.raster_size();
+    let gt = ds.geo_transform()?;
+    let win = crate::chip::bbox_to_pixel_window(&ds, &gt, full_w, full_h, bbox)
+        .ok_or_else(|| anyhow::anyhow!("bbox outside SAR tile {}", path.display()))?;
+    let (wx, wy, ww, wh) = win;
+    let band = ds.rasterband(1)?;
+    let buf = band.read_as::<f32>((wx as isize, wy as isize), (ww, wh), (ww, wh), None)?;
+    let data = buf.data().to_vec();
+    let arr = Array2::from_shape_vec((wh, ww), data)?;
+    let srs = ds.spatial_ref()?.to_wkt()?;
+    Ok((
+        arr,
+        SarWindowGeo {
+            gt,
+            win_x: wx,
+            win_y: wy,
+            ds_srs_wkt: srs,
+        },
+    ))
+}
+
+#[cfg(feature = "gdal")]
+pub fn extract_sar_anomalies_local(
+    sar_tif_path: &std::path::Path,
+    bbox: &crate::types::BBox,
+    threshold_sigma: f64,
+) -> anyhow::Result<Vec<SarPoint>> {
+    let sigma = if threshold_sigma > 0.0 {
+        threshold_sigma
+    } else {
+        DEFAULT_SAR_SIGMA
+    };
+    let orbit = orbit_from_filename(sar_tif_path);
+    let (mut arr, geo) = read_sar_window(sar_tif_path, bbox)?;
+    let factor = downsample_factor_for_dim(arr.dim(), SAR_MAX_DIM);
+    if factor > 1 {
+        arr = downsample_mean(&arr, factor);
+    }
+    for v in arr.iter_mut() {
+        if !v.is_finite() || *v <= 0.0 {
+            *v = f32::NAN;
+        }
+    }
+    let mean = box_mean(&arr, SAR_STAT_WINDOW);
+    let std = box_std(&arr, &mean, SAR_STAT_WINDOW);
+    let (h, w) = arr.dim();
+    let mut bright = Array2::<bool>::from_elem((h, w), false);
+    let mut dark = Array2::<bool>::from_elem((h, w), false);
+    for r in 0..h {
+        for c in 0..w {
+            let v = arr[[r, c]];
+            let m = mean[[r, c]];
+            let s = std[[r, c]];
+            if !v.is_finite() || !m.is_finite() || !s.is_finite() || s < 1e-6 {
+                continue;
+            }
+            let z = (v - m) / s;
+            if z as f64 >= sigma {
+                bright[[r, c]] = true;
+            } else if z as f64 <= -sigma {
+                dark[[r, c]] = true;
+            }
+        }
+    }
+    let scale = factor as f64;
+    let mut points = Vec::new();
+    for (sign, mask) in [("bright", &bright), ("dark", &dark)] {
+        for (cr, cc, _n) in connected_centroids(mask, SAR_MIN_CLUSTER_PX) {
+            let row_full = geo.win_y as f64 + (cr + 0.5) * scale - 0.5;
+            let col_full = geo.win_x as f64 + (cc + 0.5) * scale - 0.5;
+            let (lat, lon) = pixel_to_wgs84(&geo, row_full, col_full)?;
+            let mut orbit_tag = orbit.clone();
+            orbit_tag.push('_');
+            orbit_tag.push_str(sign);
+            points.push(SarPoint { lat, lon, orbit: orbit_tag });
+        }
+    }
+    Ok(points)
+}
+
+/// Full local SAR pass: extract → DBSCAN clusters → JSON report.
+#[cfg(feature = "gdal")]
+pub fn run_sar_local(
+    sar_dir: &std::path::Path,
+    bbox: &crate::types::BBox,
+    knobs: &crate::types::Knobs,
+    known_wrecks: &[(f64, f64)],
+    output_dir: &std::path::Path,
+    threshold_sigma: f64,
+) -> anyhow::Result<serde_json::Value> {
+    use crate::chip::haversine_m;
+    let tif = std::fs::read_dir(sar_dir)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .find(|p| {
+            p.extension()
+                .and_then(|x| x.to_str())
+                .map(|x| x.eq_ignore_ascii_case("tif"))
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| anyhow::anyhow!("no .tif in {}", sar_dir.display()))?;
+    let points = match extract_sar_anomalies_local(&tif, bbox, threshold_sigma) {
+        Ok(p) => p,
+        Err(e) => {
+            let hint = if tif
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.contains("SLC") || n.contains("_SLC__"))
+                .unwrap_or(false)
+            {
+                " (file looks like raw SLC — need RTC GeoTIFF, not SLC)"
+            } else {
+                ""
+            };
+            anyhow::bail!("SAR open/extract failed for {}: {e}{hint}", tif.display());
+        }
+    };
+    let clusters = run_sar_persistence(&points, knobs);
+    let mut near_gt: Vec<serde_json::Value> = Vec::new();
+    for (i, (lat, lon)) in known_wrecks.iter().enumerate() {
+        let best = clusters
+            .iter()
+            .map(|c| (c, haversine_m(*lat, *lon, c.lat, c.lon)))
+            .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        if let Some((c, d)) = best {
+            near_gt.push(serde_json::json!({
+                "gt_index": i,
+                "nearest_cluster_m": d.round(),
+                "cluster_lat": c.lat,
+                "cluster_lon": c.lon,
+                "persistence": c.persistence,
+                "within_500m": d <= 500.0,
+            }));
+        }
+    }
+    std::fs::create_dir_all(output_dir)?;
+    std::fs::write(
+        output_dir.join("sar_points.json"),
+        serde_json::to_string_pretty(&points)?,
+    )?;
+    std::fs::write(
+        output_dir.join("sar_clusters.json"),
+        serde_json::to_string_pretty(&clusters)?,
+    )?;
+    Ok(serde_json::json!({
+        "rc": 0,
+        "mode": "rust_native_sar_local",
+        "sar_tif": tif.display().to_string(),
+        "n_points": points.len(),
+        "n_clusters": clusters.len(),
+        "near_gt": near_gt,
+        "output_dir": output_dir.display().to_string(),
+    }))
+}
+
+#[cfg(not(feature = "gdal"))]
+pub fn extract_sar_anomalies_local(
+    _sar_tif_path: &std::path::Path,
+    _bbox: &crate::types::BBox,
+    _threshold_sigma: f64,
+) -> anyhow::Result<Vec<SarPoint>> {
+    anyhow::bail!("extract_sar_anomalies_local requires --features gdal")
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -285,6 +656,25 @@ mod tests {
         assert_eq!(clusters[0].n_points, 5);
         assert!((clusters[0].persistence - 1.0).abs() < 1e-9, "all points in one cluster → persistence 1.0");
         assert!((clusters[0].lon + 81.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn orbit_from_filename_descending() {
+        let p = std::path::Path::new("rtc_S1A_IW_SLC__1SDV_20240811.tif");
+        assert_eq!(orbit_from_filename(p), "descending");
+    }
+
+    #[test]
+    fn connected_centroids_finds_blob() {
+        let mut m = Array2::<bool>::from_elem((10, 10), false);
+        for r in 3..7 {
+            for c in 3..7 {
+                m[[r, c]] = true;
+            }
+        }
+        let c = connected_centroids(&m, 5);
+        assert_eq!(c.len(), 1);
+        assert!(c[0].2 >= 16);
     }
 
     #[test]

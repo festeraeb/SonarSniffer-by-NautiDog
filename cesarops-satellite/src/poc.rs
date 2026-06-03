@@ -62,6 +62,30 @@ fn default_nearest_known_m() -> f64 {
     99999.0
 }
 
+/// OpenMemory guardrail: cap optical z-scores before peak extraction.
+pub const BLUE_GREEN_Z_CAP: f64 = 4.0;
+
+/// Mask a border band (3×3 erosion equivalent at margin px) to suppress edge false positives.
+fn mask_edge_band(arr: &mut Array2<f32>, margin: usize) {
+    if margin == 0 {
+        return;
+    }
+    let (h, w) = arr.dim();
+    for r in 0..h {
+        for c in 0..w {
+            if r < margin || c < margin || r + margin >= h || c + margin >= w {
+                arr[[r, c]] = f32::NAN;
+            }
+        }
+    }
+}
+
+fn blue_green_score_from_z(zsc: f64) -> (f64, i64) {
+    let score = (zsc / BLUE_GREEN_Z_CAP * 10.0).min(10.0).max(0.0);
+    let wreck_score = ((score * 0.8).round() as i64).clamp(0, 10);
+    (round2(score), wreck_score)
+}
+
 // ── Tunable config (wired from Knobs) ─────────────────────────────────────────
 
 /// POC tunables — wired from [`Knobs`] in `stage_poc_aoi` instead of hardcoding.
@@ -196,6 +220,63 @@ pub fn pixel_coords(rows: usize, cols: usize, bbox: &BBox) -> (Array2<f64>, Arra
 }
 
 // ── scipy.ndimage filters (separable, reflect boundary) ───────────────────────
+
+/// Local-mean baseline residual (NaN-aware). Used by temporal clarity stack per Gemini collab.
+pub fn baseline_residual(map: &Array2<f32>, win: usize) -> Array2<f32> {
+    if win <= 1 {
+        return map.clone();
+    }
+    let cleaned = map.mapv(|v| if v.is_finite() { v } else { 0.0 });
+    let bg = uniform_filter(&cleaned, win);
+    let valid = map.mapv(|v| if v.is_finite() { 1.0f32 } else { 0.0 });
+    let bg_valid = uniform_filter(&valid, win);
+    let (rows, cols) = map.dim();
+    let mut out = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            if map[[r, c]].is_finite() && bg_valid[[r, c]] > 0.1 {
+                let bg_mean = bg[[r, c]] as f64 / (bg_valid[[r, c]] as f64).max(1e-6);
+                out[[r, c]] = (map[[r, c]] as f64 - bg_mean) as f32;
+            }
+        }
+    }
+    out
+}
+
+/// Per-pixel glint roughness proxy (local B02/B03 variance), no peak extraction.
+pub fn glint_variance_map(b02: &Array2<f32>, b03: &Array2<f32>) -> Array2<f32> {
+    if b02.is_empty() || b03.is_empty() || b02.dim() != b03.dim() {
+        return Array2::zeros((0, 0));
+    }
+    let (rows, cols) = b02.dim();
+    let mut bright = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            let blue = b02[[r, c]];
+            let green = b03[[r, c]];
+            if blue > 0.001 && green > 0.001 && blue.is_finite() && green.is_finite() {
+                bright[[r, c]] = (blue + green) * 0.5;
+            }
+        }
+    }
+    let win = 5usize;
+    let mean = uniform_filter(&bright, win);
+    let mean_sq = uniform_filter(&bright.mapv(|v| if v.is_finite() { v * v } else { f32::NAN }), win);
+    let mut variance = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            let m = mean[[r, c]];
+            let ms = mean_sq[[r, c]];
+            if m.is_finite() && ms.is_finite() {
+                let v = ms - m * m;
+                if v.is_finite() && v > 0.0 {
+                    variance[[r, c]] = v;
+                }
+            }
+        }
+    }
+    variance
+}
 
 /// `scipy.ndimage.uniform_filter` (box mean) with `reflect` boundary.
 ///
@@ -830,6 +911,15 @@ mod tests {
     }
 
     #[test]
+    fn blue_green_z_cap_limits_score() {
+        let (score, ws) = blue_green_score_from_z(99.0);
+        assert!(score <= 10.0 && score > 9.0);
+        assert!(ws <= 10);
+        let (score2, _) = blue_green_score_from_z(2.0);
+        assert!(score2 < score);
+    }
+
+    #[test]
     fn find_peak_clusters_respects_threshold() {
         // Flat-ish field with no pixel above threshold → no peaks.
         let mut field = Array2::<f32>::zeros((15, 15));
@@ -927,30 +1017,137 @@ pub fn concept_blue_green_clarity(
         }
     }
 
+    mask_edge_band(&mut clarity, 3);
+
     // Z-score: negative z = lower clarity than surroundings = anomaly
     let z = masked_zscore(&clarity);
-    // Invert: we want LOW clarity (disturbance) as high score
-    let neg_z = z.mapv(|v| -v);
+    // Invert + cap |z| before NMS (OpenMemory Z_max = 4.0)
+    let mut neg_z = z.mapv(|v| {
+        if !v.is_finite() {
+            return f32::NAN;
+        }
+        let nz = -v;
+        nz.clamp(-(BLUE_GREEN_Z_CAP as f32), BLUE_GREEN_Z_CAP as f32)
+    });
 
     let min_sep = cfg.min_sep(15);
     let (lat_grid, lon_grid) = pixel_coords(rows, cols, bbox);
-    let peaks = find_peak_clusters(&neg_z, &lat_grid, &lon_grid, 2.0, min_sep, 50);
+    let z_thresh = cfg.zscore_threshold.min(BLUE_GREEN_Z_CAP);
+    let peaks = find_peak_clusters(
+        &neg_z,
+        &lat_grid,
+        &lon_grid,
+        z_thresh,
+        min_sep,
+        cfg.max_candidates,
+    );
 
     peaks
-        .iter()
-        .map(|&(lat, lon, score, metric)| {
+        .into_iter()
+        .map(|(lat, lon, metric, zsc)| {
+            let (score, wreck_score) = blue_green_score_from_z(zsc);
             OpticalCandidate {
                 concept: "blue_green_clarity".into(),
                 lat,
                 lon,
                 score,
-                wreck_score: score as i64,
+                wreck_score,
                 scene_date: scene_date.into(),
-                metric,
-                metric_zscore: score,
+                metric: round_n(metric, 6),
+                metric_zscore: round_n(zsc, 3),
                 known_wreck_nearby: false,
                 nearest_known_m: default_nearest_known_m(),
-                note: String::new(),
+                note: "blue-green clarity (z-capped)".into(),
+            }
+        })
+        .collect()
+}
+
+/// Glint / surface-roughness concept (FLEET TOOL 5): Sobel on local B02/B03 variance.
+pub fn concept_glint_roughness(
+    b02: &Array2<f32>,
+    b03: &Array2<f32>,
+    bbox: &BBox,
+    scene_date: &str,
+    cfg: &PocConfig,
+) -> Vec<OpticalCandidate> {
+    if b02.is_empty() || b03.is_empty() {
+        return vec![];
+    }
+    let factor = downsample_factor(b02.dim(), cfg.downsample_max_dim);
+    let (b02, b03) = if factor > 1 {
+        (downsample(b02, factor), downsample(b03, factor))
+    } else {
+        (b02.clone(), b03.clone())
+    };
+    if b02.dim() != b03.dim() {
+        return vec![];
+    }
+    let (rows, cols) = b02.dim();
+    let mut bright = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            let blue = b02[[r, c]];
+            let green = b03[[r, c]];
+            if blue > 0.001 && green > 0.001 && blue.is_finite() && green.is_finite() {
+                bright[[r, c]] = (blue + green) * 0.5;
+            }
+        }
+    }
+    mask_edge_band(&mut bright, 3);
+    let win = 5usize;
+    let mean = uniform_filter(&bright, win);
+    let mean_sq = uniform_filter(&bright.mapv(|v| if v.is_finite() { v * v } else { f32::NAN }), win);
+    let mut variance = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            let m = mean[[r, c]];
+            let ms = mean_sq[[r, c]];
+            if m.is_finite() && ms.is_finite() {
+                let v = ms - m * m;
+                if v.is_finite() && v > 0.0 {
+                    variance[[r, c]] = v;
+                }
+            }
+        }
+    }
+    let z_var = masked_zscore(&variance);
+    let mut grad = sobel_magnitude_raw(&z_var);
+    mask_edge_band(&mut grad, 3);
+    let z_grad = masked_zscore(&grad);
+    let score_map = z_grad.mapv(|v| {
+        if !v.is_finite() {
+            return f32::NAN;
+        }
+        v.clamp(-(BLUE_GREEN_Z_CAP as f32), BLUE_GREEN_Z_CAP as f32)
+    });
+    let min_sep = cfg.min_sep(15);
+    let (lat_grid, lon_grid) = pixel_coords(rows, cols, bbox);
+    let z_thresh = cfg.zscore_threshold.min(BLUE_GREEN_Z_CAP);
+    let peaks = find_peak_clusters(
+        &score_map,
+        &lat_grid,
+        &lon_grid,
+        z_thresh,
+        min_sep,
+        cfg.max_candidates,
+    );
+    peaks
+        .into_iter()
+        .map(|(lat, lon, metric, zsc)| {
+            let (score, wreck_score) = blue_green_score_from_z(zsc);
+            OpticalCandidate {
+                concept: "glint_roughness".into(),
+                lat,
+                lon,
+                score,
+                wreck_score,
+                scene_date: scene_date.into(),
+                metric: round_n(metric, 6),
+                metric_zscore: round_n(zsc, 3),
+                known_wreck_nearby: false,
+                nearest_known_m: default_nearest_known_m(),
+                note: "Sobel(local variance) glint transition".into(),
             }
         })
         .collect()
@@ -1020,11 +1217,19 @@ pub fn run_poc_aoi_local(
     let loaded: Vec<LocalScene> = scenes.into_iter().flatten().collect();
     tracing::info!("Local POC: loaded {} of {} scenes", loaded.len(), n_scenes);
 
-    // Run blue-green clarity concept on each scene (also parallel)
+    // Run blue-green clarity + glint roughness on each scene (parallel per scene)
     let mut all_candidates: Vec<OpticalCandidate> = loaded
         .par_iter()
         .flat_map(|scene| {
-            concept_blue_green_clarity(&scene.b02, &scene.b03, bbox, &scene.date, &cfg)
+            let mut c = concept_blue_green_clarity(&scene.b02, &scene.b03, bbox, &scene.date, &cfg);
+            c.extend(concept_glint_roughness(
+                &scene.b02,
+                &scene.b03,
+                bbox,
+                &scene.date,
+                &cfg,
+            ));
+            c
         })
         .collect();
 

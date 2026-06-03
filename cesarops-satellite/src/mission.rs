@@ -8,7 +8,7 @@ use crate::{
     downloads::preflight_sources,
     fusion::{fuse_candidates, validate_against_gt},
     stac::{search_scenes_post, StacQuery},
-    temporal::run_temporal_stack_mission,
+    temporal::{run_temporal_stack_local, run_temporal_stack_mission},
     types::{
         BBox, Knobs, MissionReport, MissionSpec, Stage, StageResults,
         WreckTarget,
@@ -504,15 +504,15 @@ async fn stage_poc_aoi(
     knobs: &Knobs,
     paths: &MissionPaths,
     dry_run: bool,
-) -> Value {
+) -> (Value, Vec<crate::types::ConceptResult>) {
     if dry_run {
-        return serde_json::json!({ "skipped": true });
+        return (serde_json::json!({ "skipped": true }), vec![]);
     }
     // Native full-scene optical POC — ports wh2k_sentinel_optical_poc.py
     // (previously this stage shelled out to `python3`).
     let bbox = match spec.bbox() {
         Ok(b) => b,
-        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+        Err(e) => return (serde_json::json!({ "error": e.to_string() }), vec![]),
     };
     let days_back = spec.days_back();
     let end = Local::now().naive_local().date();
@@ -561,18 +561,196 @@ async fn stage_poc_aoi(
                 .iter()
                 .filter(|c| c.wreck_score as f64 >= min_score)
                 .count();
-            serde_json::json!({
-                "rc": 0,
-                "mode": "rust_native_optical_poc",
-                "output_dir": poc_out,
-                "n_scenes": o.n_scenes,
-                "clear_date": o.clear_date,
-                "storm_date": o.storm_date,
-                "n_candidates": o.candidates.len(),
-                "n_candidates_above_min_score": n_kept,
-            })
+
+            // Convert OpticalCandidates -> ConceptResults so fuse_candidates
+            // can include them in the final ranked list.
+            let concept_results: Vec<crate::types::ConceptResult> = o
+                .candidates
+                .iter()
+                .filter(|c| c.score >= min_score)
+                .map(|c| crate::types::ConceptResult {
+                    wreck_id: format!("poc_{:.5}_{:.5}", c.lat, c.lon),
+                    wreck_name: format!("POC {} {:.4},{:.4}", c.concept, c.lat, c.lon),
+                    lat: c.lat,
+                    lon: c.lon,
+                    depth_m: 0.0,
+                    concept: c.concept.clone(),
+                    n_scenes: o.n_scenes,
+                    n_hits: 1,
+                    hit_rate: c.score / 10.0,
+                    mean_zscore: c.metric_zscore,
+                    best_zscore: c.metric_zscore,
+                    best_date: None,
+                    score: c.score.min(10.0),
+                    notes: String::new(),
+                })
+                .collect();
+
+            (
+                serde_json::json!({
+                    "rc": 0,
+                    "mode": "rust_native_optical_poc",
+                    "output_dir": poc_out,
+                    "n_scenes": o.n_scenes,
+                    "clear_date": o.clear_date,
+                    "storm_date": o.storm_date,
+                    "n_candidates": o.candidates.len(),
+                    "n_candidates_above_min_score": n_kept,
+                    "n_concept_results": concept_results.len(),
+                }),
+                concept_results,
+            )
         }
-        Err(e) => serde_json::json!({ "error": e.to_string() }),
+        Err(e) => (serde_json::json!({ "error": e.to_string() }), vec![]),
+    }
+}
+
+// ── Stage: sar_local ──────────────────────────────────────────────────────────
+
+async fn stage_sar_local(
+    spec: &MissionSpec,
+    wrecks: &[WreckTarget],
+    knobs: &Knobs,
+    paths: &MissionPaths,
+    dry_run: bool,
+) -> Value {
+    if dry_run {
+        return serde_json::json!({ "skipped": true });
+    }
+    if !knobs.use_local_scenes.unwrap_or(false) {
+        return serde_json::json!({ "skipped": true, "reason": "use_local_scenes=false" });
+    }
+    let bbox = match spec.bbox() {
+        Ok(b) => b,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let default_sar = std::path::PathBuf::from(
+        "/data/codebase/repos/wreckhunter2000-1/data/straits_sar/sar",
+    );
+    let sar_dir = spec
+        .paths
+        .get("sar_dir")
+        .map(std::path::PathBuf::from)
+        .unwrap_or(default_sar);
+    if !sar_dir.is_dir() {
+        return serde_json::json!({
+            "skipped": true,
+            "reason": "sar_dir missing",
+            "sar_dir": sar_dir.display().to_string(),
+        });
+    }
+    let out = paths.output_dir.join("sar_local");
+    let known: Vec<(f64, f64)> = wrecks.iter().map(|w| (w.lat, w.lon)).collect();
+    #[cfg(feature = "gdal")]
+    {
+        match crate::sar::run_sar_local(&sar_dir, &bbox, knobs, &known, &out, crate::sar::DEFAULT_SAR_SIGMA) {
+            Ok(v) => return v,
+            Err(e) => return serde_json::json!({ "error": e.to_string() }),
+        }
+    }
+    #[cfg(not(feature = "gdal"))]
+    {
+        serde_json::json!({ "error": "sar_local requires --features gdal" })
+    }
+}
+
+// ── Stage: bag_local ──────────────────────────────────────────────────────────
+
+async fn stage_bag_local(spec: &MissionSpec, paths: &MissionPaths, dry_run: bool) -> Value {
+    if dry_run {
+        return serde_json::json!({ "skipped": true });
+    }
+    let default_bag = std::path::PathBuf::from("/data/cesarops/bathymetry/straits_surveys");
+    let bag_root = spec
+        .paths
+        .get("bag_dir")
+        .map(std::path::PathBuf::from)
+        .unwrap_or(default_bag);
+    let surveys = ["H13255", "H13257"];
+    let mut manifest: Vec<serde_json::Value> = Vec::new();
+    for survey in surveys {
+        let bag_dir = bag_root.join(survey).join("BAG");
+        if !bag_dir.is_dir() {
+            warn!("bag_local: missing {}", bag_dir.display());
+            continue;
+        }
+        if let Ok(rd) = std::fs::read_dir(&bag_dir) {
+            for ent in rd.flatten() {
+                let p = ent.path();
+                if p.extension().and_then(|e| e.to_str()) != Some("bag") {
+                    continue;
+                }
+                if p.to_string_lossy().contains("Ellipsoid") {
+                    continue;
+                }
+                manifest.push(serde_json::json!({
+                    "survey": survey,
+                    "path": p.display().to_string(),
+                    "bytes": ent.metadata().ok().map(|m| m.len()).unwrap_or(0),
+                }));
+            }
+        }
+    }
+    let out = paths.output_dir.join("bag_local");
+    let _ = std::fs::create_dir_all(&out);
+    let manifest_path = out.join("bag_manifest.json");
+    let body = serde_json::json!({
+        "bag_root": bag_root.display().to_string(),
+        "surveys": surveys,
+        "bags": manifest,
+        "n_bags": manifest.len(),
+        "scan_hint": "scripts/role_bench/run_straits_bag_scan.sh",
+    });
+    if let Ok(s) = serde_json::to_string_pretty(&body) {
+        let _ = std::fs::write(&manifest_path, s);
+    }
+    body
+}
+
+// ── Stage: bathy_map (satellite SDB multi-pass) ───────────────────────────────
+
+async fn stage_bathy_map(spec: &MissionSpec, paths: &MissionPaths, knobs: &Knobs, dry_run: bool) -> Value {
+    if dry_run {
+        return serde_json::json!({ "skipped": true });
+    }
+    if !knobs.use_local_scenes.unwrap_or(false) {
+        return serde_json::json!({ "skipped": true, "reason": "use_local_scenes=false" });
+    }
+    let bbox = match spec.bbox() {
+        Ok(b) => b,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let out = paths.output_dir.join("bathy_map");
+    let target_px = knobs.downsample_max_dim.unwrap_or(2048);
+    let mut scene_dirs = vec![paths.download_dir.clone()];
+    if let Some(data_root) = paths.download_dir.parent().and_then(|p| p.parent()) {
+        for name in ["straits_optical_2022", "straits_optical_2023"] {
+            let p = data_root.join(name).join("sentinel2_aws");
+            if p.is_dir() {
+                scene_dirs.push(p);
+            }
+        }
+    }
+    #[cfg(feature = "gdal")]
+    {
+        match crate::bathymetry_map::run_bathymetry_stack_local(&scene_dirs, &bbox, target_px, &out) {
+            Ok(r) => {
+                return serde_json::json!({
+                    "rc": 0,
+                    "mode": "satellite_sdb_multi_pass",
+                    "output_dir": out,
+                    "n_passes": r.n_passes_used,
+                    "max_relief": r.max_relief,
+                    "fused_depth_stats": r.fused_depth_stats,
+                    "note": r.note,
+                });
+            }
+            Err(e) => return serde_json::json!({ "error": e.to_string() }),
+        }
+    }
+    #[cfg(not(feature = "gdal"))]
+    {
+        serde_json::json!({ "error": "bathy_map requires --features gdal" })
     }
 }
 
@@ -594,6 +772,52 @@ async fn stage_temporal_stack(
         Err(e) => return (serde_json::json!({ "error": e.to_string() }), HashMap::new()),
     };
     let stack_out = paths.output_dir.join("temporal_stack");
+    std::fs::create_dir_all(&stack_out).ok();
+
+    if knobs.use_local_scenes.unwrap_or(false) {
+        let known: Vec<(f64, f64)> = wrecks.iter().map(|w| (w.lat, w.lon)).collect();
+        let target_px = knobs.downsample_max_dim.unwrap_or(2048);
+        let mut scene_dirs = vec![paths.download_dir.clone()];
+        if let Some(data_root) = paths.download_dir.parent().and_then(|p| p.parent()) {
+            for name in ["straits_optical_2022", "straits_optical_2023"] {
+                let p = data_root.join(name).join("sentinel2_aws");
+                if p.is_dir() {
+                    scene_dirs.push(p);
+                }
+            }
+        }
+        let report = run_temporal_stack_local(
+            &scene_dirs,
+            &bbox,
+            knobs,
+            &known,
+            target_px,
+            &stack_out,
+        );
+        return match report {
+            Ok(r) => {
+                let tz_map = temporal_z_map_from_candidates(&r.candidates, wrecks);
+                let n_near = r
+                    .candidates
+                    .iter()
+                    .filter(|c| c.metric >= 0.3 && c.nearest_known_m <= 300.0)
+                    .count();
+                (
+                    serde_json::json!({
+                        "rc": 0,
+                        "mode": "rust_native_temporal_local",
+                        "output_dir": stack_out,
+                        "n_scenes": r.n_scenes,
+                        "n_candidates": r.candidates.len(),
+                        "n_candidates_persist_03_within_300m_known": n_near,
+                    }),
+                    tz_map,
+                )
+            }
+            Err(e) => (serde_json::json!({ "error": e.to_string() }), HashMap::new()),
+        };
+    }
+
     let report = run_temporal_stack_mission(
         client,
         bbox,
@@ -635,6 +859,29 @@ async fn stage_temporal_stack(
         }
         Err(e) => (serde_json::json!({ "error": e.to_string() }), HashMap::new()),
     }
+}
+
+/// Map wreck names → best nearby temporal-persistence score (for fusion knobs).
+fn temporal_z_map_from_candidates(
+    candidates: &[crate::poc::OpticalCandidate],
+    wrecks: &[WreckTarget],
+) -> HashMap<String, f64> {
+    use crate::chip::haversine_m;
+    wrecks
+        .iter()
+        .filter_map(|w| {
+            let best = candidates
+                .iter()
+                .filter(|c| haversine_m(w.lat, w.lon, c.lat, c.lon) <= 2000.0)
+                .map(|c| c.metric)
+                .fold(0.0_f64, f64::max);
+            if best > 0.0 {
+                Some((w.name.clone(), best))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 // ── Main runner ────────────────────────────────────────────────────────────────
@@ -682,8 +929,22 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
                 stage_results.target_known = Some(r);
             }
             Stage::PocAoi => {
-                let r = stage_poc_aoi(&client, &spec, &wrecks, &knobs, &paths, dry_run).await;
+                let (r, poc_results) =
+                    stage_poc_aoi(&client, &spec, &wrecks, &knobs, &paths, dry_run).await;
+                all_concept_results.extend(poc_results);
                 stage_results.poc_aoi = Some(r);
+            }
+            Stage::SarLocal => {
+                let r = stage_sar_local(&spec, &wrecks, &knobs, &paths, dry_run).await;
+                stage_results.sar_local = Some(r);
+            }
+            Stage::BagLocal => {
+                let r = stage_bag_local(&spec, &paths, dry_run).await;
+                stage_results.bag_local = Some(r);
+            }
+            Stage::BathyMap => {
+                let r = stage_bathy_map(&spec, &paths, &knobs, dry_run).await;
+                stage_results.bathy_map = Some(r);
             }
             Stage::TemporalStack => {
                 let (r, tz) = stage_temporal_stack(
