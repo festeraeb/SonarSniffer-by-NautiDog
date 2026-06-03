@@ -1,0 +1,111 @@
+{
+  "generated_from_commit": "42c35044",
+  "crate": "cesarops-satellite",
+  "note": "Wired DEFAULTS. Z-scores signed unless noted; fitness/priority terms 0-1; concept composite 0-10. knob = mission-spec knobs key.",
+  "sensors": [
+    {"id": "sentinel2", "role": "optical relief/clarity/glint", "bands": ["B02","B03","B04","B08","B11"], "archive_start": 2017, "pass": "day", "res_m": 10},
+    {"id": "landsat", "role": "thermal TIRS + optical, reaches record lows", "bands": ["B10","optical"], "archive_start": 1984, "pass": "day+night"},
+    {"id": "icesat2", "role": "laser altimetry depth assist", "archive_start": 2018},
+    {"id": "swot", "role": "surface water elevation / seiche-current", "archive_start": 2023},
+    {"id": "sentinel1_sar", "role": "steel-mass backscatter persistence", "bands": ["C-band sigma0"], "archive_start": 2014, "pass": "day+night", "caveat": "needs RTC GeoTIFF not raw SLC"},
+    {"id": "ndbc_glos_buoy", "role": "wave/wind calm-gate + turbidity", "fields": ["WVHT","WSPD"], "stations": 20},
+    {"id": "aeromag", "role": "magnetic ferrous anomaly", "weather_independent": true},
+    {"id": "bag_bathymetry", "role": "sounding/redaction unmask; mask = own candidate"}
+  ],
+  "concept_geometry": {
+    "chip_signal_m": 150.0, "chip_bg_inner_m": 350.0, "chip_bg_outer_m": 1200.0,
+    "chip_scene_radius_m": 1500.0, "hit_zscore_min": 1.5
+  },
+  "anchored_score_formula": "0.5*(hit_rate*10) + 0.5*clamp(best_zscore/4*10,0,10) [+ curvelet<=1.5]",
+  "concepts": [
+    {"id": "shadow_roughness", "bands": ["B08"], "signal_dir": "dark", "season_months": [3,4], "family": "optical"},
+    {"id": "zebra_clarity", "bands": ["B02","B04"], "signal_dir": "bright", "season_months": [7,8,9,10], "family": "optical"},
+    {"id": "sediment_plume", "bands": ["B04","B03"], "signal_dir": "turbid", "season_months": [4,5,6,7,8,9,10], "family": "optical"},
+    {"id": "blue_green_clarity", "bands": ["B02","B03"], "signal_dir": "dark", "family": "optical", "z_cap": 4.0},
+    {"id": "glint_roughness", "bands": ["B02","B03"], "signal_dir": "high_gradient", "family": "optical"},
+    {"id": "thermal_cold_heat_sink", "bands": ["B10"], "signal_dir": "cold_deep_or_cycling_shallow", "family": "thermal", "material": "strong_steel_weak_wood"},
+    {"id": "sar_temporal_persistence", "bands": ["C-band sigma0"], "signal_dir": "bright_steel", "family": "sar"},
+    {"id": "temporal_persistence", "signal_dir": "persistent", "family": "temporal"}
+  ],
+  "poc_aoi": {
+    "poc_zscore_threshold": 2.5, "blue_green_z_cap": 4.0,
+    "poc_min_separation_px": "per_concept_15_10_10", "poc_max_candidates": 25,
+    "poc_downsample_max_dim": 2000, "xref_nearby_radius_m": 2000.0
+  },
+  "thermal_regime": {
+    "photic_depth_ft": {"spring_3_5": 130, "summer": 220},
+    "always_cold": "depth_ft >= photic_depth -> persistent cold sink, any pass",
+    "sun_cycling": "depth_ft < photic_depth -> image afternoon peak / pre-dawn"
+  },
+  "sar": {"default_sigma": 3.0, "dbscan_eps": 0.5, "dbscan_min_samples": 5,
+    "cluster_score": "persistence*10 (+ nasa_fusion avg if present)"},
+  "fusion": {
+    "W_CONCEPT": 0.6, "W_TEMPORAL": 0.3, "W_DRIFT": 0.1, "W_KNOWN": 4.0,
+    "KNOWN_PROXIMITY_RADIUS_M": 300.0, "MIN_EMIT_SCORE": 3.0,
+    "composite": "W_CONCEPT*best_concept + W_TEMPORAL*temporal_contrib + W_DRIFT*drift + known_proximity*W_KNOWN",
+    "temporal_contrib": "clamp(abs(z)/4,0,1)*10"
+  },
+  "triple_lock": {
+    "families": ["thermal","sar","optical","temporal"],
+    "thermal_z": 2.5, "sar_z": 2.5, "optical_z": 2.5, "temporal_z": 2.0,
+    "tolerance_m": 300.0, "min_locks": 3,
+    "confidence": "avg_abs_z * lock_level"
+  },
+  "buoy_calm_gate": {"calm_wave_height_m": 0.30, "calm_wind_speed_ms": 5.0,
+    "fallback": "historical_stdmet -> realtime2_45d", "missing": "unknown_neutral"},
+  "intent_fitness_weights": {
+    "Bathymetry": {"calm": 0.30, "clear": 0.25, "cloud": 0.20, "post_storm_3_7": 0.25},
+    "ZebraClarity": {"calm": 0.30, "clear": 0.30, "cloud": 0.20, "post_storm_3_7": 0.20},
+    "SedimentPlume": {"storm_recency_0_2": 0.55, "cloud": 0.45},
+    "ThermalFront": {"cloud": 0.35, "post_storm_1_3": 0.40, "calm": 0.25},
+    "HeatPattern": {"cloud": 0.45, "calm": 0.30, "post_storm_3_10": 0.25},
+    "Hydrocarbon": {"calm": 0.40, "cloud": 0.35, "clear": 0.25},
+    "SunGlint": {"cloud": 0.65, "wave_tolerant": 0.35},
+    "DeepWreck": {"calm": 0.35, "clear": 0.25, "cloud": 0.25, "post_storm_2_7": 0.15}
+  },
+  "download_priority": {
+    "formula": "(thermal + clarity + stratification + calm_water + post_storm + seasonal)/6",
+    "seasonal_score": {"9": 1.0, "10": 1.0, "11": 0.8, "4": 0.9, "5": 0.9, "6": 0.7, "7": 0.6, "8": 0.6, "other": 0.2},
+    "post_storm": {"d1_3": 1.0, "d0": 0.7, "le7_fades": true, "long_calm": 0.2},
+    "stratification": {"summer_7_8": 1.0, "6_9": 0.8, "5_10": 0.5, "11_4_turnover": 0.3}
+  },
+  "temporal_isolation_gate": {
+    "state_vector": ["wind","wave","cloud","turbidity","season_phase"],
+    "min_distance": 0.20,
+    "goal": "100 distinct environmental states, not 5000 near-duplicates"
+  },
+  "scan_counts": {"min_scenes": 20, "target_scenes": 100, "batch_size": 30, "stack_window_days": 20},
+  "year_selection": {
+    "michigan_huron_low_water_ranked": [2013,2012,2011,2010,2009,2008,2007,2006,2005,2003],
+    "buckets": [
+      {"name": "historical_low_water", "tier": 1, "sensor": "landsat", "years": "2010-2013", "season": "spring_fall"},
+      {"name": "modern_thermal", "tier": 1, "sensor": "landsat,sentinel2", "years": "2018-now", "season": "fall"},
+      {"name": "fall_zebra_clarity", "tier": 2, "sensor": "sentinel2", "years": "2018-now", "season": "fall"},
+      {"name": "spring_post_ice", "tier": 2, "sensor": "sentinel2", "years": "2018-now", "season": "post_ice_out"}
+    ],
+    "overridable": "acquisition_buckets(lat,lon,years_override) pins exact years (e.g. Straits 2012,2013)",
+    "season_months": {
+      "post_ice_out": {"northern": [4,5,6], "erie_ontario": [3,4,5]},
+      "fall": [9,10,11],
+      "spring_fall": {"northern": [4,5,6,9,10,11], "erie_ontario": [3,4,5,9,10,11]},
+      "summer": [7,8,9], "open_water": {"northern": [5,6,7,8,9,10,11], "erie_ontario": [4,5,6,7,8,9,10,11]}
+    },
+    "scan_modes": {
+      "before_after": "recent sinking: 2yr PRE + sink->now POST (recent_sinking_years)",
+      "historical": "best available years per sensor by intent"
+    },
+    "scan_intents": ["low_water_wreck","recent_sinking","zebra_clarity","event_response","generic"]
+  },
+  "knob_defaults": {
+    "sensors": "sentinel2", "concepts": "all", "max_cloud": 20.0, "min_score": 4.0,
+    "scan_intent": "low_water_wreck", "season_window": "post_ice_out", "pass_time": "both",
+    "auto_low_water_years": 4, "stack_window_days": 20, "temporal_persistence_z": 2.0,
+    "triple_lock_min_locks": 3
+  },
+  "known_gaps": [
+    "SAR input is raw SLC, won't open -> 0 SAR hits -> triple-lock can't reach 3 families on optical alone",
+    "thermal not wired into local offline path (only STAC anchored path)",
+    "local POC runs only blue_green_clarity + glint_roughness (plume/thermal not in local loop)",
+    "ML: LightGBM wreck_classifier.pkl (50 feats AUC 0.868) + 426-sample dataset recoverable; geology hard-negative staged not folded in"
+  ]
+}
