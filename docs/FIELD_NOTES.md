@@ -147,3 +147,19 @@ crash took).
   Durability chain: .md docs (must survive) -> nautivecs (regenerable) ->
   agent/LLM/n8n consumer. Open data (Sentinel/Landsat/ICESat/NOAA/NDBC) is the
   same principle for INPUTS: a crash can't take a public archive; re-pullable.
+
+## Data ledger (track acquired + processed — crash-resilient bookkeeping)
+
+- `scripts/data_ledger.py` + `data/ledger/data_ledger.jsonl` (append-only,
+  plaintext, regenerable by re-scanning disk). Source of truth for "what do we
+  have / what have we processed".
+- `scan <roots>` discovers S2 scenes on disk, dedups by scene_id, records
+  sensor/year/season/bands/bytes/path/source. `mark --scene --stage --status`
+  logs a processing run. `status` = coverage matrix (sensor x year x season).
+  `pending --stage poc` = acquired but not yet processed.
+- WHY: never re-pull/re-process the same scene; see coverage gaps at a glance;
+  feeds the Temporal Isolation Gate (distinct states, not near-dupes). Auth
+  (Earthdata for ICESat-2/SAR/SWOT) is NOT the priority — tracking what we have
+  IS. SWOT is genuinely sparse (2023+, narrow swath, thin Great Lakes coverage).
+- 2026-06-03 baseline: 21 S2 scenes, 19.1 GB. fall 2024=10 (heavy), 2022=7,
+  2023=2 + summer 2023=2. Need spread (2019-2021 fall + spring) for 20-distinct floor.
