@@ -1,0 +1,112 @@
+{
+  "round_id": "cesarops_full_context",
+  "round": 7,
+  "from": "gemini",
+  "missing_tools_by_pipeline": {
+    "satellite": [
+      "land_mask_erosion_operator",
+      "sub_pixel_phase_warper",
+      "glint_baseline_normalizer"
+    ],
+    "aeromag": [
+      "diurnal_variation_station_detrender",
+      "analytic_signal_three_axis_gradient",
+      "euler_deconvolution_depth_estimator"
+    ],
+    "verification": [
+      "bag_surface_roughness_detector",
+      "side_scan_mosaic_co_register"
+    ],
+    "cross_pipeline_fusion": [
+      "material_biased_bayesian_updater"
+    ]
+  },
+  "misplaced_tools": [
+    "magnetic_chips_hints_in_satellite_pipeline"
+  ],
+  "redundant_tools": [
+    "shadow_roughness_duplicated_by_glint_roughness"
+  ],
+  "tools_we_listed_but_you_dispute": [
+    "detection_scan_on_satellite_pipeline_without_download_stage"
+  ],
+  "satellite": {
+    "detection_priority": [
+      "glint_roughness",
+      "blue_green_clarity",
+      "zebra_clarity",
+      "sediment_plume",
+      "shadow_roughness"
+    ],
+    "tool_rankings": {
+      "steel_100ft": [
+        "sar_local",
+        "blue_green_clarity",
+        "shadow_roughness",
+        "sediment_plume",
+        "glint_roughness"
+      ],
+      "wood_100ft": [
+        "glint_roughness",
+        "temporal_stack",
+        "blue_green_clarity",
+        "zebra_clarity",
+        "sediment_plume"
+      ]
+    },
+    "p100_offload_order": [
+      "phase_corr",
+      "poc_aoi",
+      "temporal_stack"
+    ],
+    "p100_risks": "HBM2 bus starvation during heavy concurrent 2D FFT allocations; lack of native INT4 hardware execution structures causes fallback slowdown on un-optimized quant matrix math."
+  },
+  "aeromag": {
+    "strike_wiring": "Port the Python elongation_azimuth angle calculation to Rust within the GPU/CPU dipole parsing loops; directly penalize structural signatures that align precisely with the local geologic NE-SW strike (~45 degrees) to isolate off-axis man-made anomalies.",
+    "monopolar_penalty": "Apply a steep structural down-weighting factor to anomalies lacking an explicit, localized conjugate paired dipole signature to instantly clear un-remineralized geological structures and uniform basement noise.",
+    "review_queue_knobs": {
+      "min_dipole_manmade_score": "Raise default from 20 to 45 to drop highly ambiguous regional returns.",
+      "cur_status_filter_mask": "Enforce strict filtering based on known OGRS active vs abandoned production fields to prioritize target validation lanes."
+    },
+    "shortlist_knobs": {
+      "max_spatial_clustering_radius_meters": 150.0,
+      "minimum_depth_to_source_meters": 5.0
+    },
+    "well_vs_wreck_features": [
+      "spatial_aspect_ratio_elongation",
+      "spatial_gradient_decay_rate",
+      "remanent_magnetization_vector_orientation"
+    ],
+    "abandoned_well_policy": "Route all isolated point dipoles that precisely intersect known historical OGRS metadata records straight to an archival background log; automatically block them from entering the high-priority target validation queue."
+  },
+  "nauticuvs": {
+    "scales_and_window": "Utilize a 4-scale execution grid matching custom anisotropic parabolic windows where length equals width-squared to capture highly localized current shear gradients and discrete dipole field anomalies.",
+    "energy_metric": "Calculate the absolute energy ratio across directional wedges; score anomalies based on their cross-wedge amplitude variations relative to the ambient, isotropic background matrix.",
+    "flight_line_handling": "Execute a 1D median de-trending filter along the active sensor flight track vector before passing spatial arrays into the FDCT layer to stop striping artifacts from inducing false linear anomalies.",
+    "satellite_fdct_recommendation": "Deploy the FDCT loop explicitly after the 50px local-mean residual clarity extraction to isolate current wake boundary alignments and current shears near ground-truth target sectors.",
+    "thresholds_by_basin": {
+      "millecoquins_reef_sector": 0.65,
+      "south_channel_corridor": 0.45,
+      "east_straits_deep_basin": 0.35
+    }
+  },
+  "defer": [
+    "thermal_landsat_integration",
+    "swot_altimetry_integration",
+    "pamp_predictive_routing_engine",
+    "bag_scan_stage_g_visualization"
+  ],
+  "pushback_on_cursor": [
+    "You have 417 optical candidates emitting from your clarity routines while your core temporal persistence pipeline is dropping target scores to near-zero. Do not attempt to add more sensor types or wire advanced altimetry modules until you optimize your spatial masking arrays. Your current metrics prove your pipeline is being overwhelmed by edge artifacts and ambient coastal clutter.",
+    "Fix your GDAL RTC interface errors on the local host before writing more extraction pipelines; silent NULL responses from your core raster handlers invalidate all downstream data fusion operations."
+  ],
+  "code_patches_rejected": [
+    "Inline radix-2 2D FFT implementations generated outside the explicit boundaries of the nauticuvs module.",
+    "Python-based raster reprojection scripts attempting to run inside the local Rust NFS execution thread pools."
+  ],
+  "collab_complete": false,
+  "gemini_confidence": 9,
+  "status": "confirm_with_additions",
+  "scraped_at": "2026-06-03T07:13:30Z",
+  "scrape_source": "cursor-ide-browser CDP"
+}

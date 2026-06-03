@@ -1,0 +1,17 @@
+{
+  "mission_id": "straits_scan_2024",
+  "target_name": "Straits of Mackinac wreck detection",
+  "bbox": [45.70, -84.95, 45.92, -84.55],
+  "days_back": 365,
+  "stages": ["target_known", "poc_aoi", "temporal_stack", "report"],
+  "knobs": {
+    "max_scenes": 20,
+    "cloud_cover_max": 15.0
+  },
+  "paths": {
+    "download_dir": "/home/cesarops/wreckhunter2000-1/data/straits_optical_clear/sentinel2_aws",
+    "known_wrecks_json": "/home/cesarops/wreckhunter2000-1/scripts/known_wrecks_straits.json",
+    "output_dir": "/data/cesarops/satellite_runs/straits_scan_2024"
+  },
+  "gt_wreck_names": ["Elva / Glad Tidings", "Unknown barge (north of Arch Rock)", "Cedarville", "Cedarville bow", "Cedarville stern", "M. Stalker", "William Young"]
+}

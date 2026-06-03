@@ -1,0 +1,14 @@
+[
+  {
+    "id": "knobs_r1_tight",
+    "route": "1",
+    "prompt_profile": "tight",
+    "task": "Fix cesarops-satellite POC blue_green_clarity for clear-water Straits: uncapped z-scores (peaks >10), edge false positives, no hits on preserve wrecks. Calibrate Cedarville 45.7873,-84.6708; check Burns 45.87127,-84.58642 within 300m. Data: NFS straits_optical_* local tiles; mission data/missions/straits_local_run.json."
+  },
+  {
+    "id": "knobs_r2_loose",
+    "route": "2",
+    "prompt_profile": "loose",
+    "task": "Fix cesarops-satellite POC blue_green_clarity for clear-water Straits: uncapped z-scores (peaks >10), edge false positives, no hits on preserve wrecks. Calibrate Cedarville 45.7873,-84.6708; check Burns 45.87127,-84.58642 within 300m. Data: NFS straits_optical_* local tiles; mission data/missions/straits_local_run.json."
+  }
+]

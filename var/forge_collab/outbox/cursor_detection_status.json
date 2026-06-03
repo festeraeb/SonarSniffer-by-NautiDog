@@ -1,0 +1,21 @@
+{
+  "round_id": "straits_detection_path",
+  "from": "cursor",
+  "status": "implementing",
+  "message": "Paste GEMINI_FULL_CONTEXT_ROUND7.md to Gemini (satellite blocked items + metrics, aeromag off-axis/well/wreck, NauticUVs science Qs, pushback). Round 6 still valid for detection-only if already answered; round 7 supersedes with full picture.",
+  "gemini_paste": "var/forge_collab/outbox/GEMINI_FULL_CONTEXT_ROUND7.md",
+  "next_cursor": [
+    "run_detection_path.sh and attach detection_path_report.json",
+    "tune temporal/glint gates from Gemini + metrics",
+    "fix SAR GDAL RTC open",
+    "phase 1 P100 scene-shard wrapper (after Gemini confirms order)"
+  ],
+  "forge_policy": "sunset_on_hot_path",
+  "p100_policy": "math_offload_not_llm",
+  "artifacts": {
+    "roadmap": "docs/DETECTION_PATH_ROADMAP.md",
+    "p100_plan": "docs/SATELLITE_P100_OFFLOAD.md",
+    "tool_brief": "docs/TOOL_STACK_GEMINI_BRIEF.md",
+    "runner": "scripts/role_bench/run_detection_path.sh"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "round_id": "straits_tune_r2",
+  "from": "gemini",
+  "hypothesis": "Phase correlation before LOO persistence should raise peak above 0.30 at Burns/Cedarville.",
+  "physics": {
+    "package": "cesarops-satellite",
+    "files": ["src/phase_corr.rs", "src/temporal.rs"],
+    "changes": [
+      "Verify sub-pixel warp before LOO map",
+      "Run sat-run and record persistence_grid max near 45.87127,-84.58642"
+    ]
+  },
+  "forge": {
+    "lane": "A",
+    "prompt_tightening": [
+      "Ban numpy; require rustfft",
+      "Require ## Files touched in Gemma output"
+    ]
+  },
+  "success_metrics": {
+    "persistence_peak_min": 0.3,
+    "gps_m_max": { "Cedarville": 300, "Burns": 300 }
+  },
+  "references": [
+    "https://www.ncei.noaa.gov/products/nos-hydro-survey"
+  ],
+  "do_not_invent": ["knobs.pon.rs", "cesarops-inference"]
+}

@@ -19,8 +19,13 @@ MAX_TRIES="${N8N_WATCHDOG_MAX_TRIES:-2}"
 # Scan-safe guard: when present, watchdog exits immediately (no health probes,
 # no restarts, avoids model-loading side effects while scanning).
 WATCHDOG_GUARD="${CESAROPS_SCAN_NO_WATCHDOG_GUARD:-/tmp/cesarops-scan-no-watchdog}"
+LLM_WATCHDOG_GUARD="${FORGE_LLM_WATCHDOG_GUARD:-/tmp/cesarops-llm-watchdog-off}"
 if [[ -f "$WATCHDOG_GUARD" ]]; then
   echo "[$(date -Iseconds)] scan-safe guard present ($WATCHDOG_GUARD); exiting n8n-watchdog" >>"$LOG" 2>/dev/null || true
+  exit 0
+fi
+if [[ -f "$LLM_WATCHDOG_GUARD" ]]; then
+  echo "[$(date -Iseconds)] llm-watchdog-off guard ($LLM_WATCHDOG_GUARD); exiting n8n-watchdog" >>"$LOG" 2>/dev/null || true
   exit 0
 fi
 

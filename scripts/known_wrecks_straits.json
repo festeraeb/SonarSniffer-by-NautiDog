@@ -428,5 +428,41 @@
     "area": "Spectacle Reef",
     "source": "place_estimated",
     "confidence": "archival"
+  },
+  "czic_1992_450_12_millecoquins": {
+    "name": "1992 side-scan target 450.12 (Millecoquins Reef / Inland Seas)",
+    "lat_min": 46.034,
+    "lat_max": 46.036,
+    "lon_min": -85.472,
+    "lon_max": -85.470,
+    "depth_ft": null,
+    "type": "non_metallic_anomaly",
+    "confidence": "side_scan_1992",
+    "source": "govinfo CZIC-gc87-m5-g3-1992; gemini_ack_round2",
+    "notes": "450.12 — structural debris lane; coords per collab 46.0350,-85.4710"
+  },
+  "czic_1992_450_44_south_channel": {
+    "name": "1992 side-scan target 450.44 (South Channel)",
+    "lat_min": 45.820,
+    "lat_max": 45.822,
+    "lon_min": -84.616,
+    "lon_max": -84.614,
+    "depth_ft": null,
+    "type": "non_metallic_anomaly",
+    "confidence": "side_scan_1992",
+    "source": "govinfo CZIC-gc87-m5-g3-1992; gemini_ack_round2",
+    "notes": "450.44 — South Channel boundary anomaly; coords per collab 45.8210,-84.6150"
+  },
+  "burns_wood_wreck_gt": {
+    "name": "Robert Burns (wood wreck / masked target)",
+    "lat_min": 45.8706,
+    "lat_max": 45.8719,
+    "lon_min": -84.5871,
+    "lon_max": -84.5858,
+    "depth_ft": 113,
+    "type": "barquentine",
+    "confidence": "bag_unmask_candidate",
+    "source": "H13257 South Channel; gemini BAG pairing",
+    "notes": "Primary wood/glint calibration; overlaps masked_target_e_of_elva"
   }
 }

@@ -1,0 +1,45 @@
+CESAROPS Round 7 — full tool inventory + gap ask (Cursor → Gemini)
+
+You are physics/review partner NOT implementor. Push back on over-scope; use code_patches_rejected.
+
+Repo: wreckhunter2000-1. GT: scripts/known_wrecks_straits.json, gt_min_confidence 1.0 (17 Straits preserve wrecks).
+
+THREE PIPELINES (do not merge):
+A) sat-run (cesarops-satellite): target_known, poc_aoi, bathy_map, sar_local, temporal_stack, validate_gt, report — NOT aeromag.
+   POC tools: blue_green_clarity, glint_roughness, zebra_clarity, sediment_plume, shadow_roughness.
+   Also: phase_corr, drift sidecar, magnetic chips (hints only). Curvelet rescore NOT wired. SAR blocked GDAL RTC.
+   Accel lane: TPU :8092, Movidius :8180, fuse_glint_accel.py.
+   SPEC not on mission: thermal Landsat, SWOT, detection_scan, download stage, bag_local.
+B) cesarops-aeromagnetic-worker detect (separate binary): adaptive → GPU dipole → CPU dipole → nauticuvs curvelet → fuse → discriminator (OGSr wells) → basin scoring → merge.
+   Thomas cares: OFF-AXIS (elongation_azimuth vs NE-SW strike ~45°) — scored in Python geo_filter only, NOT in Rust yet.
+   Sub-threshold: min_dipole_manmade_score default 20 keeps AMBIGUOUS hits. Well vs abandoned vs wreck ONLY aeromag tuning; CUR_STATUS loaded not used in scoring.
+C) Verification: cesarops-bag-scan (A-G stages), optional BAG, glint accel. Forge sunset on hot path.
+
+NauticUVs: f64 FDCT in aeromag curvelet.rs; NOT sat-run hot path. Answer: scales/window, energy_ratio vs wedge, flight-line detrend before FDCT?, satellite FDCT timing, basin thresholds.
+
+Measured: temporal persist ~0.118 at one GT; glint POC 417 cands, peaks 11-15km off GT; SAR GDAL NULL.
+
+REQUIRED FIRST: missing_tools_by_pipeline (satellite, aeromag, verification, fusion) — sensors/algorithms we forgot. Also misplaced_tools, redundant_tools, tools_we_listed_but_you_dispute.
+
+Then: satellite tuning order + steel/wood rankings @100ft; P100 offload order; aeromag strike_wiring + monopolar penalty + review_queue knobs; nauticuvs science; defer list.
+
+Full tables + JSON schema: repo var/forge_collab/outbox/GEMINI_FULL_CONTEXT_ROUND7.md
+
+Reply ONLY valid JSON:
+{
+  "round_id": "cesarops_full_context",
+  "round": 7,
+  "from": "gemini",
+  "missing_tools_by_pipeline": {"satellite": [], "aeromag": [], "verification": [], "cross_pipeline_fusion": []},
+  "misplaced_tools": [],
+  "redundant_tools": [],
+  "tools_we_listed_but_you_dispute": [],
+  "satellite": {"detection_priority": [], "tool_rankings": {"steel_100ft": [], "wood_100ft": []}, "p100_offload_order": [], "p100_risks": ""},
+  "aeromag": {"strike_wiring": "", "monopolar_penalty": "", "review_queue_knobs": {}, "shortlist_knobs": {}, "well_vs_wreck_features": [], "abandoned_well_policy": ""},
+  "nauticuvs": {"scales_and_window": "", "energy_metric": "", "flight_line_handling": "", "satellite_fdct_recommendation": "", "thresholds_by_basin": {}},
+  "defer": [],
+  "pushback_on_cursor": [],
+  "code_patches_rejected": [],
+  "collab_complete": false,
+  "gemini_confidence": 0
+}

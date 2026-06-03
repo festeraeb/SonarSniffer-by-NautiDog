@@ -1,0 +1,7 @@
+[
+  {
+    "id": "01_sat_knob_tune",
+    "route": "1",
+    "task": "Review cesarops-satellite POC blue_green_clarity scoring (uncapped z-scores). Propose concrete Knobs changes in types.rs / mission spec for clear-water Straits seasons. List 3 test commands only \u2014 no full implementations."
+  }
+]

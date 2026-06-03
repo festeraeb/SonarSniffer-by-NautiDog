@@ -13,7 +13,7 @@ import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -436,6 +436,36 @@ def discover_local_llama_ports() -> list[tuple[str, int]]:
     return out
 
 
+def qwen14_coder_port() -> int:
+    try:
+        return int(os.environ.get("QWEN14_CODER_PORT", "5002"))
+    except ValueError:
+        return 5002
+
+
+def pinned_restore_script(port: int) -> Optional[Path]:
+    """When set, port recover uses this script instead of a MoE heartbeat snapshot."""
+    if port != qwen14_coder_port():
+        return None
+    raw = os.environ.get("GPU_SLOT_PINNED_RESTORE_5002", "").strip()
+    if not raw:
+        return None
+    p = Path(raw)
+    return p if p.is_file() else None
+
+
+def restore_pinned_port(port: int) -> bool:
+    script = pinned_restore_script(port)
+    if not script:
+        return False
+    log(f"port {port}: pinned restore via {script}")
+    r = subprocess.run(["bash", str(script)], capture_output=True, text=True, timeout=600)
+    if r.returncode != 0:
+        log(f"pinned restore failed: {(r.stderr or r.stdout or '')[:400]}")
+        return False
+    return True
+
+
 def merge_forge_gpus(store: dict[str, Any]) -> None:
     """Enrich snapshots from Forge /cluster/gpus when reachable."""
     try:
@@ -458,6 +488,8 @@ def merge_forge_gpus(store: dict[str, Any]) -> None:
             continue
         if host not in ("127.0.0.1", LAN_HOST, "10.0.0.61", "local"):
             continue
+        if port == qwen14_coder_port() and pinned_restore_script(port):
+            continue  # do not seed :5002 from Forge cluster (often Qwen3.6 reviewer)
         key = slot_key(host if host != "local" else "127.0.0.1", port)
         cmd_model = (g.get("cmdline_model") or "").strip()
         uuid = (g.get("gpu_uuid") or "").strip()
@@ -520,6 +552,15 @@ def tick(record: bool = True, recover: bool = True) -> dict[str, Any]:
             else:
                 entry["action"] = "healthy_no_snapshot"
         elif not ok and recover:
+            if pinned_restore_script(port):
+                entry["action"] = "recover_pinned"
+                if restore_pinned_port(port):
+                    results["recovered"] += 1
+                    entry["recover"] = "qwen14_script"
+                else:
+                    entry["recover"] = "pinned_failed"
+                results["ports"].append(entry)
+                continue
             hb = store.get("slots", {}).get(key)
             if not hb and store.get("by_gpu_uuid"):
                 # try uuid-indexed slot on same port only

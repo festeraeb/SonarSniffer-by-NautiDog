@@ -1,0 +1,32 @@
+[
+  {
+    "id": "tool01_sar_backscatter",
+    "route": "2",
+    "task": "Implement docs/FLEET_TOOL_SPECS.md TOOL 1: extract_sar_anomalies_local in cesarops-satellite/src/sar.rs (GDAL RTC tif, local mean/std, bright/dark clusters → SarPoint). Wire mission stage when use_local_scenes. Acceptance: SarCluster within 500m Cedarville 45.7873,-84.6708; check Burns 45.87127,-84.58642. Full Rust, no network."
+  },
+  {
+    "id": "tool02_landsat_thermal",
+    "route": "2",
+    "task": "Implement docs/FLEET_TOOL_SPECS.md TOOL 2: concept_thermal_anomaly from Landsat ST_B10 in local usgs tar bundles under data/straits_multisensor/usgs. Cold and hot z anomalies. Wire mission thermal_local stage. Calibrate Cedarville steel; note wood Burns weaker."
+  },
+  {
+    "id": "tool03_swot_ssh",
+    "route": "2",
+    "task": "Implement docs/FLEET_TOOL_SPECS.md TOOL 3: SWOT SSH depression scorer from local podaac/swot NetCDF granules — persistent surface height drop, corroboration score for fusion. GDAL/netcdf. No network."
+  },
+  {
+    "id": "tool04_icesat2_atl13",
+    "route": "2",
+    "task": "Implement docs/FLEET_TOOL_SPECS.md TOOL 4: ICESat-2 ATL13 reader from local icesat2 HDF5 — surface + subsurface returns, corroboration score. Try GDAL open on .h5 first."
+  },
+  {
+    "id": "tool05_glint_roughness",
+    "route": "2",
+    "task": "Implement docs/FLEET_TOOL_SPECS.md TOOL 5: concept_glint_roughness — Sobel(local variance) on B02/B03 local tiles, multi-date persistence, concept glint_roughness. Primary Burns detector. Use existing poc/temporal patterns."
+  },
+  {
+    "id": "tool06_fusion_integration",
+    "route": "1",
+    "task": "Implement docs/FLEET_TOOL_SPECS.md INTEGRATION: extend fusion.rs SignalBundle with sar_score, thermal_score, swot_score, icesat2_score; composite_score weights by material; mission stage order sar_local, thermal_local, temporal_stack, fusion. Mixtral plans, Gemma codes sketch, Mixtral grades."
+  }
+]

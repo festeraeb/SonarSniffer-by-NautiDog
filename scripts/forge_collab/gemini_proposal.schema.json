@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GeminiProposal",
+  "type": "object",
+  "required": ["round_id", "hypothesis", "physics", "success_metrics"],
+  "properties": {
+    "round_id": { "type": "string" },
+    "from": { "const": "gemini" },
+    "hypothesis": { "type": "string" },
+    "physics": {
+      "type": "object",
+      "properties": {
+        "package": { "type": "string" },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "changes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "forge": {
+      "type": "object",
+      "properties": {
+        "lane": { "enum": ["A", "B", "both"] },
+        "prompt_tightening": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "success_metrics": { "type": "object" },
+    "references": { "type": "array", "items": { "type": "string" } },
+    "do_not_invent": { "type": "array", "items": { "type": "string" } }
+  }
+}

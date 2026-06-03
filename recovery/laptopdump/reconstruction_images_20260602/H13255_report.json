@@ -1,0 +1,4 @@
+[2m2026-06-02T17:48:28.401374Z[0m [32m INFO[0m [2mcesarops_bag_scan::bag_io[0m[2m:[0m BAG /data/cesarops/bathymetry/straits_surveys/H13255/BAG/H13255_MB_4m_LWD_6of6.bag: full 4572x5035 cells=23020020, read step=2 -> 2286x2518
+[2m2026-06-02T17:48:31.558680Z[0m [32m INFO[0m [2mcesarops_bag_scan::pipeline[0m[2m:[0m Read /data/cesarops/bathymetry/straits_surveys/H13255/BAG/H13255_MB_4m_LWD_6of6.bag: 2286x2518 cells, 760913 valid, epsg=0
+[2m2026-06-02T17:48:36.712636Z[0m [32m INFO[0m [2mcesarops_bag_scan::pipeline[0m[2m:[0m Anomaly stage: 95 candidates
+[2m2026-06-02T17:49:00.006783Z[0m [32m INFO[0m [2mcesarops_bag_scan::pipeline[0m[2m:[0m Redaction stage: 293 masked regions

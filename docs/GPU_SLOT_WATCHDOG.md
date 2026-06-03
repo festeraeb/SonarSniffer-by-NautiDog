@@ -24,6 +24,24 @@ Replaces blind `cesarops2_triple_gpu_llama.sh` / `p100_gemma_r1_dual.sh` recover
 
 Set `GPU_SLOT_DYNAMIC=0` to revert to legacy preset scripts.
 
+## Keep Qwen2.5-Coder-14B on `:5002` (not Qwen3.6 MoE)
+
+Watchdog **dynamic restore** replays the last heartbeat. If `:5002` ever ran Qwen3.6, the next recover brings MoE back.
+
+```bash
+# Stop all LLM watchdog reloads (recommended while coding on P100s)
+bash scripts/forge_llm_watchdog_off.sh
+
+bash scripts/start_qwen14_coder_p100.sh
+bash scripts/pin_qwen14_heartbeat_5002.sh
+
+# When you want auto-recover again (after pinning heartbeat)
+bash scripts/forge_llm_watchdog_on.sh
+export GPU_SLOT_PINNED_RESTORE_5002=/path/to/repo/scripts/start_qwen14_coder_p100.sh
+```
+
+MoE think/polish stays on **CPU `:5010`** only (`start_qwen36_moe_cpu_laneb.sh`).
+
 ## Operator
 
 ```bash

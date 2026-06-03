@@ -1,0 +1,44 @@
+{
+  "round_id": "straits_bag_survey_google",
+  "from": "gemini_via_scrape",
+  "source_url": "https://www.google.com/search?q=straights+of+mackinac+.bag+file+survey+numbers&rlz=1C1HKFL_enUS1207US1207&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCTEzNTQ4ajBqNKgCALACAA&sourceid=chrome&ie=UTF-8&fbs=ADc_l-aN0CWEZBOHjofHoaMMDiKpaEWjvZ2Py1XXV8d8KvlI3p-ML-906rRL_m6h4jR-tdCH-vUIlZq9RzugLEcfjf51tr9alKJEUrIxLwKVr7l76Au_q3EffIYRCnmXOfCpNqrYZeaSIZHJjR2Q-yFTLl70SDlZkeCmUGCT31CgBeSX_rSyzrDksbw95kmMFTtNYQYJl6x3e4n2p62A2__KcqnpFriA3A&aep=10&ntc=1&mstk=AUtExfDqzp8JmDKbPlkiLX-LDJAam3V1uxQ6JZsPbwC4wLMHCz2KVzITGfdUtaEaLmIEtVN8ll5HPidjS0X1vQSNcff8yZFs6MWDpr_-DJsOS4DtomWP_LMBYW7ZAX9irVYZMWoVo5xg4UJk458YiXbrrQR4ZUjjdZRKKLOgBDsdmAzJunLLaaNxoYFXAZcYLjoPtAZImCLg8HdRKn8NAuXhG3whHpM9i5lQ1hj-Y5IjCBU2Q_CH9GruAs9juMFX_gRPA3gWUEbCJFWAfw&aioh=3&csuir=1&cs=0&ccb=1&hl=en-US&biw=1536&bih=695.2000122070312&mtid=Ku4earQfiaynzg-M5bTpBg&udm=50",
+  "hypothesis": "BAG hydro survey IDs and side-scan target numbering (e.g. 450 xx.xxx) anchor GT for Straits wrecks; optical/temporal tune uses known_wrecks_straits.json with Cedarville/Burns calibration.",
+  "physics": {
+    "package": "cesarops-satellite",
+    "files": [
+      "src/temporal.rs",
+      "src/phase_corr.rs",
+      "scripts/known_wrecks_straits.json"
+    ],
+    "changes": [
+      "Cross-reference NOAA BAG surveys (NCEI) for future bathy corroboration",
+      "Primary tune: phase corr + LOO persistence; sat-run metrics >= 0.30"
+    ]
+  },
+  "forge": {
+    "lane": "A",
+    "prompt_tightening": [
+      "Use scraped context in nautivecs ingest, not chat paste",
+      "references must cite NCEI / survey IDs not invented paths"
+    ]
+  },
+  "success_metrics": {
+    "persistence_peak_min": 0.3,
+    "gps_m_max": {
+      "Cedarville": 300,
+      "Burns": 300
+    }
+  },
+  "references": [
+    "https://www.google.com/search?q=straights+of+mackinac+.bag+file+survey+numbers&rlz=1C1HKFL_enUS1207US1207&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCTEzNTQ4ajBqNKgCALACAA&sourceid=chrome&ie=UTF-8&fbs=ADc_l-aN0CWEZBOHjofHoaMMDiKpaEWjvZ2Py1XXV8d8KvlI3p-ML-906rRL_m6h4jR-tdCH-vUIlZq9RzugLEcfjf51tr9alKJEUrIxLwKVr7l76Au_q3EffIYRCnmXOfCpNqrYZeaSIZHJjR2Q-yFTLl70SDlZkeCmUGCT31CgBeSX_rSyzrDksbw95kmMFTtNYQYJl6x3e4n2p62A2__KcqnpFriA3A&aep=10&ntc=1&mstk=AUtExfDqzp8JmDKbPlkiLX-LDJAam3V1uxQ6JZsPbwC4wLMHCz2KVzITGfdUtaEaLmIEtVN8ll5HPidjS0X1vQSNcff8yZFs6MWDpr_-DJsOS4DtomWP_LMBYW7ZAX9irVYZMWoVo5xg4UJk458YiXbrrQR4ZUjjdZRKKLOgBDsdmAzJunLLaaNxoYFXAZcYLjoPtAZImCLg8HdRKn8NAuXhG3whHpM9i5lQ1hj-Y5IjCBU2Q_CH9GruAs9juMFX_gRPA3gWUEbCJFWAfw&aioh=3&csuir=1&cs=0&ccb=1&hl=en-US&biw=1536&bih=695.2000122070312&mtid=Ku4earQfiaynzg-M5bTpBg&udm=50",
+    "https://www.ncei.noaa.gov/products/nos-hydro-survey",
+    "https://www.govinfo.gov/content/pkg/CZIC-gc87-m5-g3-1992/html/CZIC-gc87-m5-g3-1992.htm"
+  ],
+  "scrape_excerpt": "# Scraped via Cursor Browser MCP (full friend URL with fbs/mstk)\n# 2026-06-03\n\nYou said:\nstraights of mackinac .bag file survey numbers\n\nThe primary hydrographic registry numbers mapping the Straits of Mackinac area for .bag (Bathymetric Attributed Grid) data files fall under NOAA's 2019 Straits of Mackinac survey project (Project OPR-X388-KR-19).\n\nThe exact survey registry numbers to locate or download these .bag files from the NOAA National Centers for Environmental Information (NCEI) Bathymetric Data Viewer are:\n\nCore Straits of Mackinac Survey Numbers\n- H13252: Covers the West Straits of Mackinac, mapping roughly 40 square nautical miles.\n- H13253: Covers the central/main passageways of the Lake Huron/Lake Michigan boundary lines.\n- H13255: Maps the East Straits of Mackinac and the vicinity of Grays Reef Passage.\n- H13257: Covers the nearshore areas surrounding Mackinac Island, Round Island, and Bois Blanc Island.\n- H13258: Continues adjoining coverage through the primary shipping channels.\n- H13259: Maps northern territory sections approximately 3 nautical miles North of Garden Island.\n- H13256: Focuses nearby in the vicinity of Ile Aux Galets.\n\nHow to Access the .bag Files\n1. Go to the NOAA NCEI Bathymetric Data Viewer.\n2. Search by entering any of the Registry Numbers listed above (e.g., H13252).\n3. Download the specific survey package containing the gridded .bag files or its accompanying text-based Descriptive Report (DR).\n\nReferences cited in thread: Office of Coast Survey (.gov), ArcGIS Online, NCEI (.gov) \u2014 NOAA releases 2019 hydrographic survey plans; H13255, H13257 survey metadata pages.\n",
+  "cursor_synthesis": "# Straits of Mackinac \u2014 survey / BAG context (Cursor synthesis)\n\n**Pinned Google URL** (friend prepped): see `../COLLAB_GOOGLE_URL.txt`  \nHeadless Playwright often gets CAPTCHA; use **Cursor Browser MCP** on that same URL while signed in.\n\n## What \u201c.bag file survey numbers\u201d means here\n\n1. **BAG (Bathymetric Attributed Grid)** \u2014 NOAA/NCEI standard grid per **hydrographic survey ID** (e.g. H13311 \u201cHydrographic Survey of Mackinac Straits\u201d), not one Mackinac-only file.  \n   - Product overview: [NCEI NOS Hydrographic Survey](https://www.ncei.noaa.gov/products/nos-hydro-survey)  \n   - Map/search: [NOS hydro dynamic MapServer](https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_hydro_dynamic/MapServer)  \n   - Example survey: [H13311 metadata](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncei:H13311_EM2040C)\n\n2. **Historic side-scan \u201c450\u201d target numbering** \u2014 1992 bottomland survey (East Moran Bay + Mackinac Island Harbor) lists targets as **`450 XX.XXXXXX depth'`** with Yes/No wreck flags, e.g.:\n   - `450 50.847840 36.67'` \u2014 Shipwreck in Mackinac Island Harbor (new)  \n   - `450 52.527840 43.10'` \u2014 Known wreck in pieces  \n   - Full report: [govinfo 1992 bottomland survey](https://www.govinfo.gov/content/pkg/CZIC-gc87-m5-g3-1992/html/CZIC-gc87-m5-g3-1992.htm)\n\n## Repo GT already aligned\n\n- `scripts/known_wrecks_straits.json` \u2014 dive-verified boxes (Cedarville, Burns, etc.)  \n- Forge calibration: Cedarville 45.7873,-84.6708; Burns 45.87127,-84.58642  \n- Optical/temporal pipeline: `data/missions/straits_local_run.json`, NFS `straits_optical_*`\n\n## Forge / physics tune (this job)\n\n| Priority | Action |\n|----------|--------|\n| Now | Phase corr + LOO in `temporal.rs`; Z-cap in `poc.rs` |\n| Measure | `sat-run` \u2192 `temporal_persistence_map.json` peak \u2265 0.30 near anchors |\n| Later | Ingest NCEI BAG for bathy fusion bonus (Lane B / fusion.rs) |\n\nBAG survey numbers feed **corroboration**, not the current Sentinel-2 clarity POC pass.\n",
+  "do_not_invent": [
+    "knobs.pon.rs",
+    "cesarops-inference",
+    "numpy"
+  ]
+}

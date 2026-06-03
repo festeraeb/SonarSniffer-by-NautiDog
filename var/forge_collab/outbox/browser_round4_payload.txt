@@ -1,0 +1,16 @@
+CESAROPS collab round 4 — tool proving vs Michigan Preserves (not BAG-dependent).
+
+PIVOT: BAG is an independent verification tool (cesarops-bag-scan). sat-run proves against dive_verified preserve wrecks only (17 in AOI: Cedarville, Eber Ward, M. Stalker, Minneapolis, etc.).
+
+SHIPPED:
+- Mission: validate_gt stage, gt_min_confidence=1.0, no bag_local on critical path
+- prove_tools_preserve_gt.sh — sat-run + optional glint accel fuse + validation report
+- Glint accel: TPU + Movidius (docs/GLINT_ACCEL_STACK.md)
+
+QUESTIONS (JSON only):
+1. For steel vs wood preserve targets in one AOI, should validate_gt use per-material fusion weights (Cedarville SAR/thermal vs wood glint-only)?
+2. Glint corroboration: persistence>=0.08 + Movidius agreed enough to count as pass for wood-class preserves with no dive coords?
+3. Which 3 preserve wrecks in bbox are best single-tool calibrators (one each: SAR, thermal, optical/glint)?
+4. SAR RTC GDAL NULL on straits_sar — path/CRS fix?
+
+Schema: round 4, from gemini, status, answers 1-4, additions, pushback_on_cursor

@@ -1,0 +1,10 @@
+{
+  "route": "1",
+  "prompt_profile": "tight",
+  "elapsed": {
+    "plan": 332.8,
+    "code": 16.6,
+    "syn": 101.1
+  },
+  "job_id": "knobs_r1_tight"
+}

@@ -1,0 +1,6 @@
+[
+  {
+    "job_id": "knobs_r2_loose",
+    "error": "400 Client Error: Bad Request for url: http://10.0.0.61:5002/v1/chat/completions"
+  }
+]

@@ -442,6 +442,44 @@ workers_stop = []
 baseline_id = "integrate_dispatch"
 chat_agent = "gemma"
 coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.201:5203"
+description = "Mixtral :5200 thinker; Gemma :5001 + Qwen :5002 on T440; Qwen2.5-Coder-14B Q4 hybrid on 1070 :5203"
+draft_endpoint = "http://10.0.0.201:5200"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "mixtral-gemma-qwen-1070"
+name = "Mixtral thinker + P100 coders + 1070 Qwen14"
+parallel_dual_coders = true
+parallel_dual_grade = true
+parallel_dual_grade_rounds = [1, 2]
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://10.0.0.61:5001"
+corrector_endpoint = "http://10.0.0.201:5203"
+description = "Dual-lane: R1 Mixtral:5200→Gemma:5001→Mixtral; R2 parallel Qwen:5002→Qwen14:5203→Qwen polish (human supervises R2)"
+draft_endpoint = "http://10.0.0.201:5200"
+fleet_action = "sync_llm_endpoints"
+fleet_node = "cesarops2"
+id = "dual-lane-mixtral-qwen"
+name = "Dual lane Mixtral sandwich + Qwen/1070"
+parallel_dual_coders = false
+parallel_dual_grade = false
+parallel_dual_grade_rounds = []
+reviewer_endpoint = "http://10.0.0.61:5002"
+thinker_endpoint = "http://10.0.0.201:5200"
+workers_start = []
+workers_stop = []
+
+[[routing_preset]]
+baseline_id = "integrate_dispatch"
+chat_agent = "gemma"
+coder_endpoint = "http://10.0.0.61:5001"
 corrector_endpoint = "http://10.0.0.201:5202"
 description = "Fleet hetero 2026-06: P100 Gemma+Qwen workers; RTX E4B thinker; 1070 Qwen2.5-Coder-7B; T440 CPU Coder-Next polisher :5010"
 draft_endpoint = "http://10.0.0.201:5202"

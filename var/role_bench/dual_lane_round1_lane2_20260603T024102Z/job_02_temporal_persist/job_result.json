@@ -1,0 +1,9 @@
+{
+  "route": "2",
+  "elapsed": {
+    "plan": 123.6,
+    "impl": 446.8,
+    "polish": 83.9
+  },
+  "job_id": "02_temporal_persist"
+}

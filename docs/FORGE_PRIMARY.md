@@ -1,22 +1,42 @@
 # Which Forge is authoritative?
 
-## Primary (use this)
+## Unified fleet (current)
+
+When `~/.cache/cesarops/fleet-unified` exists (`bash scripts/fleet unified up`):
 
 | Host | URL | Role |
 |------|-----|------|
-| **cesarops2** | `http://127.0.0.1:9100` (LAN `http://10.0.0.201:9100`) | **Active Forge** — dual-coder + ZAYA routing, punch list, Nomad client |
+| **T440** | `http://10.0.0.61:9100` (local on T440: `http://127.0.0.1:9100`) | **Forge primary** — dual-coder routing to P100 `:5001`/`:5002` |
+| **cesarops2** | Use **LAN** `http://10.0.0.61:9100` | Operator node; repo + jobs via NFS (`/mnt/t440/repo`) |
 
-On cesarops2 always:
+```bash
+source scripts/lib/fleet_resolve.sh   # sets FORGE_URL=http://10.0.0.61:9100 when unified
+bash scripts/fleet status
+curl -s http://10.0.0.61:9100/forge/status | jq .
+```
+
+Config: `config/fleet_manifest.json` → `unified.forge_url`.
+
+## Legacy (pre-unified / isolated c2)
+
+| Host | URL | Role |
+|------|-----|------|
+| **cesarops2** | `http://127.0.0.1:9100` | Forge on c2 only |
 
 ```bash
 export FORGE_URL=http://127.0.0.1:9100
-source /mnt/t440/codebase/repos/wreckhunter2000-1/scripts/cesarops2-isolated.env
 bash scripts/forge_apply_dual_coder_zaya.sh
 ```
 
-## Removed on T440
+## Do not run two Forges
 
-Forge is **not** on T440 (`:9100` free). Do **not** use `http://10.0.0.61:9100` for Forge API.
+If both `127.0.0.1:9100` (c2) and `10.0.0.61:9100` (T440) answer `/health`, stop the legacy c2 unit:
+
+```bash
+systemctl --user stop cesarops-forge-v2.service 2>/dev/null || true
+```
+
+Unified operators should **only** call T440 `:9100`.
 
 From **cesarops2** (no SSH to T440):
 

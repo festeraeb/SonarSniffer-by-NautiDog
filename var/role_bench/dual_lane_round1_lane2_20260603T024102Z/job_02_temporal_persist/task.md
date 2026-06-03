@@ -1,0 +1,1 @@
+Review temporal.rs run_temporal_stack_local persistence map (max ~0.08). Propose leave-one-out z-score and threshold tweaks. Output spec bullets for 1070 coder — files: cesarops-satellite/src/temporal.rs, mission.rs.

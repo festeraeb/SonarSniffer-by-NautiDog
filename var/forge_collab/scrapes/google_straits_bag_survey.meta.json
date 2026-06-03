@@ -1,0 +1,9 @@
+{
+  "url": "https://www.google.com/search?q=straights+of+mackinac+.bag+file+survey+numbers&rlz=1C1HKFL_enUS1207US1207&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCTEzNTQ4ajBqNKgCALACAA&sourceid=chrome&ie=UTF-8&fbs=ADc_l-aN0CWEZBOHjofHoaMMDiKpaEWjvZ2Py1XXV8d8KvlI3p-ML-906rRL_m6h4jR-tdCH-vUIlZq9RzugLEcfjf51tr9alKJEUrIxLwKVr7l76Au_q3EffIYRCnmXOfCpNqrYZeaSIZHJjR2Q-yFTLl70SDlZkeCmUGCT31CgBeSX_rSyzrDksbw95kmMFTtNYQYJl6x3e4n2p62A2__KcqnpFriA3A&aep=10&ntc=1&mstk=AUtExfDqzp8JmDKbPlkiLX-LDJAam3V1uxQ6JZsPbwC4wLMHCz2KVzITGfdUtaEaLmIEtVN8ll5HPidjS0X1vQSNcff8yZFs6MWDpr_-DJsOS4DtomWP_LMBYW7ZAX9irVYZMWoVo5xg4UJk458YiXbrrQR4ZUjjdZRKKLOgBDsdmAzJunLLaaNxoYFXAZcYLjoPtAZImCLg8HdRKn8NAuXhG3whHpM9i5lQ1hj-Y5IjCBU2Q_CH9GruAs9juMFX_gRPA3gWUEbCJFWAfw&aioh=3&csuir=1&cs=0&ccb=1&hl=en-US&biw=1536&bih=695.2000122070312&mtid=Ku4earQfiaynzg-M5bTpBg&udm=50",
+  "scraped_at": "2026-06-03T05:52:00Z",
+  "method": "cursor-ide-browser-mcp",
+  "text_chars": 2100,
+  "note": "Previous pin was truncated (missing fbs/mstk/aioh); use full URL from COLLAB_GOOGLE_URL.txt",
+  "project": "OPR-X388-KR-19",
+  "survey_ids": ["H13252", "H13253", "H13255", "H13256", "H13257", "H13258", "H13259"]
+}

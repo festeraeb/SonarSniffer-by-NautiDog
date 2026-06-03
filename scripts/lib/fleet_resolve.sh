@@ -35,10 +35,17 @@ case "$FLEET_NODE" in
 esac
 export FLEET_NODE
 
-export FORGE_URL="${FORGE_URL:-http://127.0.0.1:9100}"
-if [[ "$FLEET_NODE" == "t440" && "$REPO" == /mnt/t440/* ]]; then
-  export T440_RECOVERY="${T440_RECOVERY:-1}"
+if [[ -f "${HOME}/.cache/cesarops/fleet-unified" ]]; then
   export FORGE_URL="${FORGE_URL:-http://10.0.0.61:9100}"
+  export T440_LAN="${T440_LAN:-10.0.0.61}"
+  export GEMMA_URL="${GEMMA_URL:-http://${T440_LAN}:5001}"
+  export QWEN_URL="${QWEN_URL:-http://${T440_LAN}:5002}"
+  export MIXTRAL_URL="${MIXTRAL_URL:-http://${T440_LAN}:5211}"
+else
+  export FORGE_URL="${FORGE_URL:-http://127.0.0.1:9100}"
+fi
+if [[ "$FLEET_NODE" == "t440" ]]; then
+  export FORGE_URL="${FORGE_URL:-http://127.0.0.1:9100}"
 fi
 export N8N_URL="${N8N_URL:-http://127.0.0.1:5678}"
 export FLEET_CATALOG_DIR="${FLEET_CATALOG_DIR:-${REPO}/var/fleet-catalog}"

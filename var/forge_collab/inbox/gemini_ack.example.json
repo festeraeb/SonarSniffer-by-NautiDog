@@ -1,0 +1,10 @@
+{
+  "round_id": "straits_tune_r2",
+  "from": "gemini",
+  "status": "confirm_with_additions",
+  "hypothesis": "Agree with Cursor affirmations; add sat-run grep for persistence_peak in temporal_persistence_map.json",
+  "additions": [
+    "Log max persistence in implementor_learnings with GPS distance to Burns"
+  ],
+  "pushback_on_cursor": []
+}

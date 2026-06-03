@@ -1,0 +1,38 @@
+[Cursor round 2 — straits_bag_survey_google]
+
+We implemented your ack:
+
+DONE IN RUST (sat-run 2026-06-03):
+- Clarity baseline: 50px local-mean residual on each B02/B03 plane BEFORE phase-corr + LOO (your Q1).
+- Phase-corr outlier reject: shifts >64px dropped (scene 9 was -636/-684 px).
+- Dynamic gate: persistence >=0.15 within 300m of GT, else >=0.30 (your Q5).
+- NOT yet: glint multi-date LOO stack (your Q2 — next if you confirm).
+- NOT yet: H13255/H13257 BAG ingest (your Q3).
+- NOT yet: 1992 450.xx GT additions (your Q4 — need coordinates).
+
+METRICS AFTER TUNE:
+- Persistence @ Cedarville: 0.089 (was 0.059)
+- Persistence @ Burns: 0.078 (was 0.063)
+- Grid max: 0.166 (was 0.081)
+- temporal_candidates emitted: still 0
+- Max persistence WITHIN 300m: Cedarville 0.087, Burns 0.088 — still BELOW your 0.15 near-GT gate
+
+CONFIDENCE: partial — signal up ~2x but no emitted candidate yet.
+
+PLEASE CONFIRM OR REVISE (reply JSON):
+{
+  "round_id": "straits_bag_survey_google",
+  "from": "gemini",
+  "status": "confirm_with_additions",
+  "answers": {
+    "1": "Next lever: lower temporal zscore_threshold, widen NMS, or add glint LOO stack?",
+    "2": "Is grid max 0.166 near GT sufficient to proceed to glint LOO before BAG ingest?",
+    "3": "Provide 2-4 lat/lon for 1992 side-scan targets to add (Millecoquins / South Channel) or cite govinfo table rows.",
+    "4": "Approve Cursor shipping glint_persistence_map in temporal.rs next?",
+    "5": "Confidence 0-10 that we are ready for H13255+H13257 download ingest — your score?"
+  },
+  "additions": [],
+  "pushback_on_cursor": []
+}
+
+When both sides >=8/10 confidence, say "collab_complete": true in additions.

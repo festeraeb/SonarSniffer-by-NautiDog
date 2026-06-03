@@ -53,6 +53,43 @@ pub const ERIE_BASINS: [BasinBounds; 3] = [
 /// `_apply_basin_scoring`.
 pub const WESTERN_LOW_AMP_NT: f64 = 100.0;
 
+/// Regional Precambrian basement strike (NE–SW). Ports `REGIONAL_STRIKE_DEG` in
+/// `geo_filter_candidates.py`.
+pub const REGIONAL_STRIKE_DEG: f64 = 45.0;
+
+/// Angular deviation (0–90°) of dipole long-axis from regional strike.
+pub fn strike_deviation_deg(azimuth_deg: f64) -> f64 {
+    let diff = ((azimuth_deg % 180.0) - (REGIONAL_STRIKE_DEG % 180.0)).abs();
+    diff.min(180.0 - diff)
+}
+
+/// Multiplicative strike adjustment + reason. Ports `_extra_score` off-axis block
+/// in `geo_filter_candidates.py` (+10 when >60° off strike, −8 when <20° aligned).
+pub fn apply_strike_scoring(score: f64, elongation_azimuth_deg: Option<f64>) -> (f64, Option<String>) {
+    let Some(az) = elongation_azimuth_deg else {
+        return (score, None);
+    };
+    let dev = strike_deviation_deg(az);
+    if dev > 60.0 {
+        let bonus = 1.0 + 10.0 / 100.0; // +10 on 0–100 man-made scale → ~10% composite bump
+        (
+            score * bonus,
+            Some(format!(
+                "+10% dipole axis {az:.0}° is {dev:.0}° off regional NE-SW geology (anomalous orientation)"
+            )),
+        )
+    } else if dev < 20.0 {
+        (
+            score * 0.92,
+            Some(format!(
+                "-8% dipole axis {az:.0}° aligns with regional NE-SW strike (geological-consistent)"
+            )),
+        )
+    } else {
+        (score, None)
+    }
+}
+
 /// Identify the Lake Erie sub-basin a point falls in (first match wins, as in
 /// the Python dict iteration order). Returns `None` outside the defined basins.
 pub fn identify_basin(lat: f64, lon: f64) -> Option<&'static str> {
@@ -79,6 +116,8 @@ pub struct BasinScoringInput {
     pub amplitude_peak_abs: f64,
     /// Name of the nearest known wreck (for the reason string).
     pub nearest_known_wreck: Option<String>,
+    /// Long-axis azimuth (0–180°) from CPU dipole PCA when available.
+    pub elongation_azimuth_deg: Option<f64>,
 }
 
 /// Apply Lake Erie basin-specific multiplicative score adjustments.
@@ -149,6 +188,11 @@ pub fn apply_basin_scoring(composite_score: f64, input: &BasinScoringInput) -> (
             }
         }
         _ => {}
+    }
+
+    let (score, strike_reason) = apply_strike_scoring(score, input.elongation_azimuth_deg);
+    if let Some(r) = strike_reason {
+        reasons.push(r);
     }
 
     (score, reasons)
@@ -239,7 +283,22 @@ mod tests {
             is_dipolar: false,
             amplitude_peak_abs: 500.0,
             nearest_known_wreck: None,
+            elongation_azimuth_deg: None,
         }
+    }
+
+    #[test]
+    fn test_strike_deviation_off_axis_bonus() {
+        let (s, reason) = apply_strike_scoring(10.0, Some(120.0));
+        assert!(s > 10.0);
+        assert!(reason.is_some());
+    }
+
+    #[test]
+    fn test_strike_deviation_aligned_penalty() {
+        let (s, reason) = apply_strike_scoring(10.0, Some(45.0));
+        assert!(s < 10.0);
+        assert!(reason.is_some());
     }
 
     #[test]

@@ -315,6 +315,9 @@ pub async fn run_detection_pipeline(
                 is_dipolar: cpu_is_dipolar,
                 amplitude_peak_abs,
                 nearest_known_wreck: xref.nearest_known_wreck.clone(),
+                elongation_azimuth_deg: cpu
+                    .as_ref()
+                    .and_then(|c| c.elongation_azimuth_deg),
             },
         );
 

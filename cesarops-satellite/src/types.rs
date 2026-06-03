@@ -112,6 +112,22 @@ pub struct Knobs {
     pub curvelet_window_px: usize,
     pub curvelet_num_scales: usize,
     pub curvelet_energy_threshold: f64,
+    // ── Triple-lock multi-sensor fusion ──────────────────────────────────────
+    // Per-sensor anomaly-strength thresholds (z-score). A location must clear
+    // the family threshold to contribute a "lock". Defaults are the values the
+    // operator hand-tuned in triple_lock_fusion.py (now tunable, not hardcoded).
+    /// Thermal cold-sink / heat-sink lock threshold (|z|).
+    pub triple_lock_thermal_z: f64,
+    /// SAR steel-mass lock threshold (z).
+    pub triple_lock_sar_z: f64,
+    /// Optical (clarity / glint / shadow) lock threshold (z).
+    pub triple_lock_optical_z: f64,
+    /// Temporal-persistence lock threshold (z).
+    pub triple_lock_temporal_z: f64,
+    /// Spatial tolerance (m) for treating hits as the "same location".
+    pub triple_lock_tolerance_m: f64,
+    /// Minimum distinct sensor families required to emit a lock (3 = full triple).
+    pub triple_lock_min_locks: u8,
 }
 
 impl Default for Knobs {
@@ -158,6 +174,14 @@ impl Default for Knobs {
             curvelet_window_px: 64,
             curvelet_num_scales: 5,
             curvelet_energy_threshold: 2.5,
+            // Triple-lock defaults = operator's hand-tuned values from
+            // triple_lock_fusion.py (thermal/sar/optical = 2.5, fuse 300 m).
+            triple_lock_thermal_z: 2.5,
+            triple_lock_sar_z: 2.5,
+            triple_lock_optical_z: 2.5,
+            triple_lock_temporal_z: 2.0,
+            triple_lock_tolerance_m: 300.0,
+            triple_lock_min_locks: 3,
         }
     }
 }
@@ -354,4 +378,7 @@ pub struct MissionReport {
     pub status: String,
     pub stage_results: StageResults,
     pub candidates: Vec<Candidate>,
+    /// Multi-sensor triple-lock detections (independent sensor-family agreement).
+    #[serde(default)]
+    pub triple_locks: Vec<crate::triple_lock::TripleLockTarget>,
 }

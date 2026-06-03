@@ -23,6 +23,7 @@ serde_json     = "1"
 # numeric / signal
 ndarray        = "0.16"
 rustfft        = "6.2"
+num-complex    = "0.4"
 # parallelism
 rayon          = "1"
 # date/time

@@ -1,0 +1,8 @@
+[
+  {
+    "id": "02_temporal_persist",
+    "route": "2",
+    "task": "Review temporal.rs run_temporal_stack_local persistence map (max ~0.08). Propose leave-one-out z-score and threshold tweaks. Output spec bullets for 1070 coder \u2014 files: cesarops-satellite/src/temporal.rs, mission.rs.",
+    "prompt_profile": "loose"
+  }
+]

@@ -1,0 +1,25 @@
+# Scraped via Cursor Browser MCP (full friend URL with fbs/mstk)
+# 2026-06-03
+
+You said:
+straights of mackinac .bag file survey numbers
+
+The primary hydrographic registry numbers mapping the Straits of Mackinac area for .bag (Bathymetric Attributed Grid) data files fall under NOAA's 2019 Straits of Mackinac survey project (Project OPR-X388-KR-19).
+
+The exact survey registry numbers to locate or download these .bag files from the NOAA National Centers for Environmental Information (NCEI) Bathymetric Data Viewer are:
+
+Core Straits of Mackinac Survey Numbers
+- H13252: Covers the West Straits of Mackinac, mapping roughly 40 square nautical miles.
+- H13253: Covers the central/main passageways of the Lake Huron/Lake Michigan boundary lines.
+- H13255: Maps the East Straits of Mackinac and the vicinity of Grays Reef Passage.
+- H13257: Covers the nearshore areas surrounding Mackinac Island, Round Island, and Bois Blanc Island.
+- H13258: Continues adjoining coverage through the primary shipping channels.
+- H13259: Maps northern territory sections approximately 3 nautical miles North of Garden Island.
+- H13256: Focuses nearby in the vicinity of Ile Aux Galets.
+
+How to Access the .bag Files
+1. Go to the NOAA NCEI Bathymetric Data Viewer.
+2. Search by entering any of the Registry Numbers listed above (e.g., H13252).
+3. Download the specific survey package containing the gridded .bag files or its accompanying text-based Descriptive Report (DR).
+
+References cited in thread: Office of Coast Survey (.gov), ArcGIS Online, NCEI (.gov) — NOAA releases 2019 hydrographic survey plans; H13255, H13257 survey metadata pages.

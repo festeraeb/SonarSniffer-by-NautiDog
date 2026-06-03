@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# cesarops2 unified LLM layout for preset dual-coder-zaya:
-#   :5200 RTX — draft / MoE worker (keep if already loaded)
-#   :5203 1070 — ZAYA thinker
+# cesarops2 unified LLM layout:
+#   MIXTRAL_THINKER=1 (default when unified): :5200 RTX+CPU Mixtral thinker
+#   else dual-coder-zaya: :5200 RTX draft, :5203 1070 ZAYA thinker
 #   :5202 — stopped (frees 1070; was legacy coder)
 set -euo pipefail
 
@@ -18,12 +18,16 @@ stop_port() {
 }
 
 cmd_start() {
+  if [[ "${MIXTRAL_THINKER:-1}" == "1" ]]; then
+    log "Mixtral thinker layout (RTX :5200)"
+    bash "${REPO}/scripts/cesarops2_mixtral_thinker_layout.sh" start
+    return
+  fi
   stop_port 5202
   stop_port 5201
   if ! curl -sf --max-time 3 "http://127.0.0.1:${PORT_DRAFT}/v1/models" >/dev/null; then
     log "starting draft :${PORT_DRAFT} (RTX — keep existing Qwen MoE if configured)"
     FLEET_UNIFIED=1 bash "${REPO}/scripts/cesarops2_fleet_roles.sh" start 2>/dev/null || true
-    # fleet_roles may load Gemma; if MoE already preferred, leave running llama on :5200
   else
     log "draft :${PORT_DRAFT} already up"
   fi
@@ -35,6 +39,10 @@ cmd_start() {
 }
 
 cmd_stop() {
+  if [[ "${MIXTRAL_THINKER:-1}" == "1" ]]; then
+    bash "${REPO}/scripts/cesarops2_mixtral_thinker_layout.sh" stop
+    return
+  fi
   stop_port "$PORT_ZAYA"
   stop_port "$PORT_DRAFT"
   stop_port 5202

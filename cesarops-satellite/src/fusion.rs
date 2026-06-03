@@ -133,6 +133,21 @@ pub fn fuse_candidates_with_known(
         }
     }
 
+    // Inject known-wreck proximity boost: a candidate within
+    // KNOWN_PROXIMITY_RADIUS_M of any documented wreck gets a corroboration
+    // bonus that scales linearly from 1.0 (co-located) to 0.0 (at the radius).
+    if !known_wrecks.is_empty() {
+        for bundle in bundles.values_mut() {
+            let nearest_m = known_wrecks
+                .iter()
+                .map(|&(klat, klon)| crate::chip::haversine_m(bundle.lat, bundle.lon, klat, klon))
+                .fold(f64::INFINITY, f64::min);
+            if nearest_m <= KNOWN_PROXIMITY_RADIUS_M {
+                bundle.known_proximity = 1.0 - nearest_m / KNOWN_PROXIMITY_RADIUS_M;
+            }
+        }
+    }
+
     // Build candidates
     let mut candidates: Vec<Candidate> = bundles
         .into_values()

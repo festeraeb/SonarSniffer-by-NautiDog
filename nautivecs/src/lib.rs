@@ -47,6 +47,7 @@
 //! }
 //! ```
 
+pub mod blueprints;
 pub mod chunker;
 pub mod config;
 pub mod embeddings;

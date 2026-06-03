@@ -6,7 +6,7 @@
 use crate::{
     concept::score_wreck_all_concepts,
     downloads::preflight_sources,
-    fusion::{fuse_candidates, validate_against_gt},
+    fusion::{fuse_candidates_with_known, validate_against_gt},
     stac::{search_scenes_post, StacQuery},
     temporal::{run_temporal_stack_local, run_temporal_stack_mission},
     types::{
@@ -625,7 +625,7 @@ async fn stage_sar_local(
         Err(e) => return serde_json::json!({ "error": e.to_string() }),
     };
     let default_sar = std::path::PathBuf::from(
-        "/data/codebase/repos/wreckhunter2000-1/data/straits_sar/sar",
+        "/data/repos/wreckhunter2000-1/data/straits_sar/sar",
     );
     let sar_dir = spec
         .paths
@@ -971,12 +971,36 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
         }
     }
 
-    // Fuse candidates
-    let candidates = fuse_candidates(
+    // Fuse candidates. Boost any candidate co-located with a known wreck
+    // (corroboration via W_KNOWN) so documented targets rank above noise.
+    let known_locs: Vec<(f64, f64)> = wrecks.iter().map(|w| (w.lat, w.lon)).collect();
+    let candidates = fuse_candidates_with_known(
         &all_concept_results,
         if temporal_zscores.is_empty() { None } else { Some(&temporal_zscores) },
         None,
+        &known_locs,
         knobs.min_score,
+    );
+
+    // Triple-lock gate: require independent sensor families (thermal / SAR /
+    // optical / temporal) to agree at the same location. Thresholds are tunable
+    // (knobs.triple_lock_*); defaults match the operator's frozen Python values.
+    let mut tl_hits = crate::triple_lock::hits_from_concept_results(&all_concept_results, &knobs);
+    tl_hits.extend(crate::triple_lock::hits_from_candidates(&candidates, &knobs));
+    let triple_locks = crate::triple_lock::fuse_triple_lock(
+        &tl_hits,
+        knobs.triple_lock_tolerance_m,
+        knobs.triple_lock_min_locks,
+    );
+    info!(
+        "Triple-lock: {} multi-sensor locks (>= {} families, {:.0} m, z th/sar/opt/tmp = {}/{}/{}/{})",
+        triple_locks.len(),
+        knobs.triple_lock_min_locks,
+        knobs.triple_lock_tolerance_m,
+        knobs.triple_lock_thermal_z,
+        knobs.triple_lock_sar_z,
+        knobs.triple_lock_optical_z,
+        knobs.triple_lock_temporal_z,
     );
 
     // Determine overall status
@@ -1001,6 +1025,7 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
         status: status.into(),
         stage_results,
         candidates,
+        triple_locks,
     };
 
     let report_path = paths.output_dir.join("mission_report.json");

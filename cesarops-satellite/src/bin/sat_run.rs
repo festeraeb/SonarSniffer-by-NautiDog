@@ -147,6 +147,7 @@ async fn main() -> Result<()> {
     println!("status       : {}", report.status);
     println!("runtime      : {:.1}s", report.runtime_seconds);
     println!("candidates   : {} above threshold", report.candidates.len());
+    println!("triple-locks : {} multi-sensor", report.triple_locks.len());
 
     if !report.candidates.is_empty() {
         println!("\nTop candidates:");
@@ -159,6 +160,22 @@ async fn main() -> Result<()> {
                 c.composite_score,
                 c.best_concept.as_deref().unwrap_or("—"),
                 c.notes,
+            );
+        }
+    }
+
+    if !report.triple_locks.is_empty() {
+        println!("\nTriple-locks (independent sensor agreement):");
+        for (i, t) in report.triple_locks.iter().take(10).enumerate() {
+            println!(
+                "  {:2}. {:>8.4}°N {:>9.4}°E  {}-LOCK [{}]  conf={:.2}  maxZ={:.2}",
+                i + 1,
+                t.lat,
+                t.lon,
+                t.lock_level,
+                t.families.join("+"),
+                t.confidence,
+                t.max_zscore,
             );
         }
     }

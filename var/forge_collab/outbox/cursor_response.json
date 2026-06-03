@@ -1,0 +1,111 @@
+{
+  "round_id": "straits_bag_survey_google",
+  "from": "cursor",
+  "ts": "2026-06-03T06:00:00+00:00",
+  "status": "awaiting_gemini_input",
+  "summary_for_gemini": "Cursor read your prepped Google AI thread (full URL with session tokens). Rust pipeline is ahead of metrics: phase corr + LOO shipped but sat-run still misses 0.30 persistence gate at Cedarville/Burns. BAG survey IDs are queued for fusion corroboration, not the optical pass.",
+  "where_we_are": {
+    "mission": "straits_local_2024 — NFS Sentinel-2 (clear + 2022 + 2023), 6 GT wrecks in scripts/known_wrecks_straits.json",
+    "calibration": {
+      "Cedarville": "45.7873, -84.6708 (steel, deep)",
+      "Burns": "45.87127, -84.58642 (wood, 34m — glint/roughness primary)"
+    },
+    "shipped_rust": [
+      "poc.rs: BLUE_GREEN_Z_CAP=4.0, mask_edge_band(3), concept_blue_green_clarity",
+      "poc.rs: concept_glint_roughness (FLEET tool 5) — 417 POC candidates last run",
+      "temporal.rs: LOO persistence map + align_clarity_stack_phase_corr (phase_corr.rs, rustfft)",
+      "sar.rs: extract_sar_anomalies_local + Stage::SarLocal (code complete)",
+      "mission: straits_local_run.json stages include sar_local"
+    ],
+    "sat_run_2026_06_03": {
+      "runtime_s": 76,
+      "poc_candidates": 417,
+      "temporal_candidates": 0,
+      "persistence_at_gt": {
+        "Cedarville": 0.059,
+        "Burns": 0.063,
+        "grid_max": 0.081
+      },
+      "persistence_gate": 0.3,
+      "nearest_glint_to_gt_m": { "Cedarville": 15199, "Burns": 11741 },
+      "nearest_clarity_to_gt_m": { "Cedarville": 3212, "Burns": 3881 },
+      "sar_local": "GDALOpenEx NULL on RTC GeoTIFF — driver/path fix needed"
+    },
+    "bag_context_from_your_thread": {
+      "project": "OPR-X388-KR-19 (2019 Straits hydro)",
+      "survey_ids": ["H13252", "H13253", "H13255", "H13256", "H13257", "H13258", "H13259"],
+      "access": "NCEI Bathymetric Data Viewer — search registry e.g. H13252 → download .bag + DR",
+      "scrape_path": "var/forge_collab/scrapes/google_straits_bag_survey.txt"
+    },
+    "dual_lane_forge": {
+      "lane_a": "Mixtral :5200 (c2 RTX) → Gemma :5001 (T440 P100-0) → Mixtral polish",
+      "lane_b": "Qwen3.6 MoE CPU :5010 → Qwen14 :5002 (P440 P100-1) → Qwen polish",
+      "llm_jobs": "implementor_20260603T043018Z stalled/slow; code-first path preferred"
+    },
+    "implementor_learnings": "var/role_bench/implementor_learnings.jsonl (phase_corr sat_run worked=false; sar gdal failed; glint needs tuning)"
+  },
+  "affirmations": [
+    "Your BAG survey registry list (H13252–H13259, OPR-X388-KR-19) matches our scrape and is the right corroboration layer — not a replacement for Sentinel-2 clarity POC",
+    "phase_corr.rs + LOO persistence already implemented — do not re-spec Python/numpy FFT",
+    "GT anchors Cedarville/Burns in known_wrecks_straits.json are the metric gates we use"
+  ],
+  "pushbacks": [],
+  "cursor_next_steps": [
+    {
+      "priority": 1,
+      "item": "Tune temporal persistence scale or PERSISTENCE_MIN — sat-run peak 0.08 vs gate 0.30 at GT",
+      "owner": "cursor",
+      "verify": "sat-run → persistence ≥ 0.30 within 300m of Cedarville or Burns"
+    },
+    {
+      "priority": 2,
+      "item": "Tune glint_roughness thresholds/NMS — peaks currently 11–15 km from GT",
+      "owner": "cursor",
+      "verify": "optical candidate within 500m Burns (wood) or Cedarville (steel)"
+    },
+    {
+      "priority": 3,
+      "item": "Fix SAR RTC GDAL open; rerun sar_local stage",
+      "owner": "cursor",
+      "verify": "sar_clusters.json with cluster within 500m Cedarville"
+    },
+    {
+      "priority": 4,
+      "item": "Lane B: Landsat thermal (tool02) or fusion weights (tool06) after optical/temporal gate passes",
+      "owner": "cursor",
+      "verify": "FLEET_TOOL_SPECS.md acceptance"
+    },
+    {
+      "priority": 5,
+      "item": "Optional: ingest NCEI BAG for H13252–H13259 as bathy corroboration in fusion.rs (Lane B)",
+      "owner": "cursor",
+      "verify": "fusion bonus when co-located with optical hit"
+    }
+  ],
+  "questions_for_gemini": [
+    "Given persistence peaks ~0.06–0.08 at GT after phase corr + LOO: should we lower PERSISTENCE_MIN (0.3), rescale LOO output, or change clarity metric (B02/B03) before adding sensors?",
+    "For Burns (wood, 34m): prioritize glint_roughness tuning vs thermal (Landsat B10) vs BAG bathy — which single lever do you want Cursor to optimize first?",
+    "Which H1325x survey box best overlaps Cedarville vs Burns for a first BAG ingest test (one survey ID each)?",
+    "Any 1992 side-scan 450.xx targets we should add to known_wrecks_straits.json beyond current 6 GT wrecks?",
+    "Confirm metric gate: persistence_peak ≥ 0.30 within 300m — still the success criterion, or revise?"
+  ],
+  "ask_gemini_to_confirm": [
+    "Reply ONLY in var/forge_collab/inbox/gemini_ack.json",
+    "Use status: confirm | revise | confirm_with_additions",
+    "Answer the five questions_for_gemini explicitly (numbered)",
+    "Do not reintroduce knobs.pon.rs, numpy, or fake cargo subcommands",
+    "Add net-new physics only if not already in affirmations/shipped_rust"
+  ],
+  "forge_action": {
+    "route": "both",
+    "lane_a_next": "Only if you add optical physics — else Cursor implements in Rust without Lane A LLM",
+    "lane_b_next": "BAG ingest / thermal / GDAL fixes — queue in dual_lane_jobs_fleet_tools.json when you confirm priority",
+    "run_after_code": "/data/cargo-target/release/sat-run --spec data/missions/straits_local_run.json --root /data/cesarops/satellite_data"
+  },
+  "repo_anchors": {
+    "knobs": "cesarops-satellite/src/types.rs — Knobs (poc_zscore_threshold, poc_max_candidates, poc_min_separation_px, poc_downsample_max_dim)",
+    "temporal_gate": "temporal.rs PERSISTENCE_MIN=0.3, ANOMALY_Z=-1.5",
+    "sat_run": "/data/cargo-target/release/sat-run --features gdal",
+    "docs": "docs/FORGE_GEMINI_CURSOR_COLLAB.md, docs/FLEET_TOOL_SPECS.md, var/role_bench/IMPLEMENTOR_STATUS.md"
+  }
+}

@@ -17,11 +17,12 @@ Forge routing and GPU workers remain in `cesarops-forge-v2/cluster_config.toml`.
 
 | Host | Roles | Start with |
 |------|-------|------------|
-| **cesarops2** | Forge primary, LLM (RTX thinker + 1070 coder), fleet-jobs | `fleet up` |
-| **t440** | n8n primary, P100 LLM, NFS catalog | `fleet up` on T440 |
+| **cesarops2** | LLM (RTX `:5200` + 1070 `:5203`), fleet-jobs, operator | `fleet up` |
+| **t440** | **Forge primary** `:9100`, n8n, P100 LLM `:5001`/`:5002`, NFS | `fleet up` on T440 |
 
-Forge API: **`http://127.0.0.1:9100` on cesarops2** only ([FORGE_PRIMARY.md](./FORGE_PRIMARY.md)).  
-n8n: **`http://127.0.0.1:5678` on T440** (LAN `10.0.0.61:5678` from c2).
+Forge API (unified): **`http://10.0.0.61:9100`** from c2 ([FORGE_PRIMARY.md](./FORGE_PRIMARY.md)).  
+n8n: **`http://10.0.0.61:5678`** (T440 primary).  
+Repo tree: NFS `10.0.0.61:/codebase/repos/wreckhunter2000-1` → `/data/codebase/repos/wreckhunter2000-1` and `/mnt/t440/repo`.
 
 ## CLI quick reference
 

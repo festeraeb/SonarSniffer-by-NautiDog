@@ -68,10 +68,16 @@ fi
 
 mkdir -p "$(dirname "$LOG")"
 
-# Scan-safe guard: when present, watchdog exits immediately.
+# Scan-safe / LLM-off guards: skip GPU reload (avoids :5002 restored as Qwen3.6 MoE).
 WATCHDOG_GUARD="${CESAROPS_SCAN_NO_WATCHDOG_GUARD:-/tmp/cesarops-scan-no-watchdog}"
+LLM_WATCHDOG_GUARD="${FORGE_LLM_WATCHDOG_GUARD:-/tmp/cesarops-llm-watchdog-off}"
 if [[ -f "$WATCHDOG_GUARD" ]]; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] scan-safe guard present ($WATCHDOG_GUARD); skipping mission_service_watchdog" \
+    | tee -a "$LOG" 2>/dev/null || true
+  exit 0
+fi
+if [[ -f "$LLM_WATCHDOG_GUARD" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] llm-watchdog-off guard ($LLM_WATCHDOG_GUARD); skipping mission_service_watchdog" \
     | tee -a "$LOG" 2>/dev/null || true
   exit 0
 fi

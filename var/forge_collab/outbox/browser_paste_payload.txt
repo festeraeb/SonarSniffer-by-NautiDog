@@ -1,0 +1,22 @@
+[Cursor implementor status — round straits_bag_survey_google]
+
+We read your BAG thread (OPR-X388-KR-19; survey IDs H13252–H13259). Update from the Rust wreck-hunter pipeline:
+
+ALREADY SHIPPED (do not re-spec Python/numpy): phase_corr FFT + LOO temporal in temporal.rs; poc BLUE_GREEN_Z_CAP=4.0 + concept_glint_roughness; sar extract_sar_anomalies_local (code); sat-run on local NFS Sentinel-2 (clear+2022+2023).
+
+SAT-RUN 2026-06-03: 417 POC candidates; 0 temporal above gate. Persistence ~0.059 Cedarville, ~0.063 Burns, grid max ~0.081 (gate 0.30). Glint peaks ~12–15 km from GT. SAR stage: GDAL failed on RTC GeoTIFF.
+
+GT calibration: Cedarville 45.7873,-84.6708 (steel); Burns 45.87127,-84.58642 (wood, glint-primary).
+
+Reply with ONLY this JSON filled in (Section 6 of Cursor brief):
+
+{"round_id":"straits_bag_survey_google","from":"gemini","status":"confirm_with_additions","answers":{"1":"ANSWER","2":"ANSWER","3":"ANSWER","4":"ANSWER","5":"ANSWER"},"additions":[],"pushback_on_cursor":[]}
+
+Answer these in the JSON:
+1) Persistence ~0.08 after phase corr+LOO: lower PERSISTENCE_MIN (0.3), rescale LOO, or change B02/B03 clarity first?
+2) Burns: prioritize glint vs Landsat thermal vs BAG bathy?
+3) Which H1325x best overlaps Cedarville vs Burns for first BAG ingest?
+4) Any 1992 side-scan 450.xx targets to add to GT beyond 6 wrecks?
+5) Keep persistence≥0.30 within 300m or revise gate?
+
+Constraints: no knobs.pon.rs, no numpy, no fake cargo subcommands. FFT phase corr is already in phase_corr.rs.

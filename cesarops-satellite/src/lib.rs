@@ -38,6 +38,7 @@ pub mod sar;
 pub mod spectral;
 pub mod stac;
 pub mod temporal;
+pub mod triple_lock;
 pub mod types;
 
 pub use types::{

@@ -1,0 +1,27 @@
+{
+  "job_id": "EXPERIMENT_ID",
+  "route": "1",
+  "prompt_profile": "tight",
+  "target_package": "cesarops-satellite",
+  "target_files": [],
+  "task": "One-line task for the implementor queue.",
+  "experiment_metadata": {
+    "log_target": "implementor_learnings.jsonl",
+    "experiment_key": "experiment_name_snake_case",
+    "success_metrics": "Measurable pass condition (e.g. persistence peak >= 0.30)"
+  },
+  "pipeline_prompts": {
+    "step_1_thinker_mixtral": {
+      "role": "Master Architect",
+      "prompt": "Thinker pseudo-spec prompt (no full Rust)."
+    },
+    "step_2_coder_gemma": {
+      "role": "Algorithmic Coder",
+      "prompt": "Gemma implementation prompt (rustfft/nauticuvs, ## Files touched)."
+    },
+    "step_3_polisher_mixtral": {
+      "role": "Polisher",
+      "prompt": "Mixtral QA prompt (epsilon, f64, bounds)."
+    }
+  }
+}

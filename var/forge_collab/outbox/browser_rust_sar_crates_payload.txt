@@ -1,0 +1,22 @@
+CESAROPS follow-up (after Round 7) — Rust crates for SAR raster discovery
+
+Context: cesarops-satellite `sar.rs` `run_sar_local` takes the first `.tif` in `sar_dir`. Our file `rtc_S1A_IW_SLC__...tif` fails gdalinfo ("not recognized as supported file format") — likely raw Sentinel-1 SLC, not RTC backscatter GeoTIFF despite filename prefix.
+
+We already have: `gdal` crate, `walkdir` in Cargo.toml, `anyhow`, mission bbox in JSON.
+
+Question: Which Rust crates (2024–2026) should we use to:
+1) Recursively discover rasters under sar_dir that GDAL can actually open (probe before use)
+2) Rank/prefer RTC GRD/backscatter over SLC / invalid products (filename + probe)
+3) Optional: filter by geographic overlap with mission bbox
+4) Keep deps minimal; integrate in `sar.rs` not a new framework
+
+Reply JSON only:
+{
+  "round_id": "rust_sar_raster_discovery",
+  "from": "gemini",
+  "recommended_crates": [{"crate": "", "use_for": "", "notes": ""}],
+  "probe_pattern": "describe GDAL open probe loop",
+  "reject_filename_substrings": [],
+  "pushback_on_cursor": [],
+  "code_patches_rejected": []
+}

@@ -61,11 +61,19 @@ def host_config(manifest: dict[str, Any], node: str | None = None) -> dict[str, 
     return hosts.get("cesarops2", {})
 
 
+def _unified_mark(manifest: dict[str, Any]) -> bool:
+    mark = manifest.get("unified", {}).get("enabled_mark", "~/.cache/cesarops/fleet-unified")
+    return Path(os.path.expanduser(mark)).is_file()
+
+
 def forge_url(manifest: dict[str, Any], node: str | None = None) -> str:
     node = node or hostname_node()
     hc = host_config(manifest, node)
-    if node == "t440" and os.environ.get("T440_RECOVERY") == "1":
-        return hc.get("forge_url_recovery_only", "http://10.0.0.61:9100")
+    unified = manifest.get("unified", {})
+    if _unified_mark(manifest):
+        return unified.get("forge_url", hc.get("forge_url", "http://10.0.0.61:9100"))
+    if node == "t440":
+        return hc.get("forge_url_lan", hc.get("forge_url", "http://127.0.0.1:9100"))
     if node == "cesarops2":
         return hc.get("forge_url", "http://127.0.0.1:9100")
     return os.environ.get("FORGE_URL", "http://127.0.0.1:9100")

@@ -1,0 +1,1 @@
+Review cesarops-satellite POC blue_green_clarity scoring (uncapped z-scores). Propose concrete Knobs changes in types.rs / mission spec for clear-water Straits seasons. List 3 test commands only — no full implementations.

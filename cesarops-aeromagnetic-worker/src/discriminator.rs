@@ -116,12 +116,14 @@ pub fn cross_reference_candidate(
 
     let mut min_well_dist = f64::MAX;
     let mut nearest_well = None;
-    
+    let mut nearest_well_status = String::new();
+
     for well in wells {
         let dist = haversine_m(search_lat, search_lon, well.lat, well.lon);
         if dist < min_well_dist {
             min_well_dist = dist;
             nearest_well = Some(well.name.clone());
+            nearest_well_status = well.status.clone();
         }
     }
     
@@ -159,7 +161,11 @@ pub fn cross_reference_candidate(
         if dist <= wellhead_radius_m {
             candidate.ground_truth = "suspected_wellhead_requires_satellite_check".to_string();
             if let Some(name) = &candidate.nearest_wellhead {
-                candidate.ground_truth_name = name.clone();
+                candidate.ground_truth_name = if nearest_well_status.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{name} [well status: {nearest_well_status}]")
+                };
             }
             // Scale penalty based on proximity (up to -20.0 if right on top of it)
             let proximity_weight = 1.0 - (dist / wellhead_radius_m);

@@ -1,0 +1,23 @@
+{
+  "round_id": "straits_detection_path",
+  "rounds_completed": 3,
+  "rounds_active": 7,
+  "cursor_confidence": 8,
+  "gemini_confidence": 9,
+  "collab_complete": false,
+  "consensus": "Round 7 ack scraped from Google AI \u2014 review pushback on wells/status filter",
+  "artifacts": {
+    "gemini_ack_round1": "var/forge_collab/inbox/gemini_ack.json",
+    "gemini_ack_round2": "var/forge_collab/inbox/gemini_ack_round2.json",
+    "gemini_ack_round3": "var/forge_collab/inbox/gemini_ack_round3.json",
+    "glint_map": "detection_runs/straits_local_2024/temporal_stack/glint_persistence_map.json",
+    "glint_accel_packet": "var/role_bench/straits_glint_accel/accel_scan_packet.json",
+    "decision": "var/forge_collab/merged/round_straits_bag_survey_google_decision.json",
+    "detection_roadmap": "docs/DETECTION_PATH_ROADMAP.md",
+    "gemini_round6": "var/forge_collab/outbox/GEMINI_DETECTION_PATH_ROUND6.md",
+    "gemini_round7": "var/forge_collab/outbox/GEMINI_FULL_CONTEXT_ROUND7.md",
+    "gemini_round7_aeromag_short": "var/forge_collab/outbox/GEMINI_AEROMAG_WELL_WRECK_ROUND7.md",
+    "cursor_status": "var/forge_collab/outbox/cursor_detection_status.json",
+    "gemini_ack_round7": "var/forge_collab/inbox/gemini_ack_round7.json"
+  }
+}

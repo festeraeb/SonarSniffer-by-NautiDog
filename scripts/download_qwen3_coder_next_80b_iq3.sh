@@ -3,7 +3,7 @@
 # Official weights: Qwen/Qwen3-Coder-Next — GGUF quants: bartowski/Qwen_Qwen3-Coder-Next-GGUF
 #
 # Default quant: IQ3_M (~37 GiB). Override: QUANT=IQ3_XS|IQ3_XXS
-# Writable from cesarops2: /mnt/t440/data/cesarops/models (NFS to T440)
+# Download target: /mnt/t440/models (T440 NFS pool; use sudo mv if export is root-owned)
 #
 # Usage:
 #   bash scripts/download_qwen3_coder_next_80b_iq3.sh
@@ -25,7 +25,7 @@ HF_REPO="bartowski/Qwen_Qwen3-Coder-Next-GGUF"
 URL="https://huggingface.co/${HF_REPO}/resolve/main/${FILE}"
 
 # Prefer T440 NFS data pool (writable from cesarops2); fall back to local spill.
-DEST_DIR="${DEST_DIR:-/mnt/t440/data/cesarops/models}"
+DEST_DIR="${DEST_DIR:-/mnt/t440/models}"
 [[ -d "$DEST_DIR" ]] || DEST_DIR="${CESAROPS_DATA_ROOT:-$HOME/cesarops-data}/models"
 mkdir -p "$DEST_DIR"
 

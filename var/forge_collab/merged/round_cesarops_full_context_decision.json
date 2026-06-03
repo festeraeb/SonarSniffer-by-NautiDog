@@ -1,0 +1,18 @@
+{
+  "round_id": "cesarops_full_context",
+  "gemini_status": "confirm_with_additions",
+  "cursor_status": "awaiting_gemini_input",
+  "hypothesis": null,
+  "gemini_additions": [],
+  "gemini_pushback": [
+    "You have 417 optical candidates emitting from your clarity routines while your core temporal persistence pipeline is dropping target scores to near-zero. Do not attempt to add more sensor types or wire advanced altimetry modules until you optimize your spatial masking arrays. Your current metrics prove your pipeline is being overwhelmed by edge artifacts and ambient coastal clutter.",
+    "Fix your GDAL RTC interface errors on the local host before writing more extraction pipelines; silent NULL responses from your core raster handlers invalidate all downstream data fusion operations."
+  ],
+  "execute": true,
+  "forge_action": {
+    "route": "both",
+    "lane_a_next": "Only if you add optical physics \u2014 else Cursor implements in Rust without Lane A LLM",
+    "lane_b_next": "BAG ingest / thermal / GDAL fixes \u2014 queue in dual_lane_jobs_fleet_tools.json when you confirm priority",
+    "run_after_code": "/data/cargo-target/release/sat-run --spec data/missions/straits_local_run.json --root /data/cesarops/satellite_data"
+  }
+}

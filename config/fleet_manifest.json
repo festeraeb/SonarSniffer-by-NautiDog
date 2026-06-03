@@ -24,17 +24,34 @@
     "enabled_mark": "~/.cache/cesarops/fleet-unified",
     "bootstrap": "scripts/fleet_unified_up.sh",
     "forge_preset": "dual-coder-zaya",
+    "forge_url": "http://10.0.0.61:9100",
     "c2_llm_layout": "scripts/cesarops2_unified_layout.sh",
     "mcp_stack": "cesarops-forge-v2/scripts/mcp-stack-up.sh",
     "t440_lan": "10.0.0.61",
     "n8n_primary": "http://10.0.0.61:5678",
-    "n8n_local_bridge": "http://127.0.0.1:5678"
+    "n8n_local_bridge": "http://127.0.0.1:5678",
+    "llm": {
+      "gemma": "http://10.0.0.61:5001",
+      "qwen": "http://10.0.0.61:5010",
+      "qwen14_coder": "http://10.0.0.61:5002",
+      "polisher": "http://10.0.0.61:5010",
+      "thinker_rtx": "http://10.0.0.201:5200",
+      "thinker_cpu": "http://10.0.0.201:5211",
+      "mixtral": "http://10.0.0.201:5200"
+    },
+    "models_dir": "/mnt/t440/models",
+    "data_candidates": [
+      "/mnt/raid0/wreckhunter2000-1-data/data",
+      "/mnt/t440/data/cesarops",
+      "/data/cesarops"
+    ]
   },
   "hosts": {
     "cesarops2": {
       "lan": "10.0.0.201",
-      "roles": ["forge_primary", "llm_compute", "fleet_jobs", "unified_operator"],
-      "forge_url": "http://127.0.0.1:9100",
+      "roles": ["llm_compute", "fleet_jobs", "unified_operator"],
+      "forge_url": "http://10.0.0.61:9100",
+      "forge_url_local_legacy": "http://127.0.0.1:9100",
       "n8n_url": "http://10.0.0.61:5678",
       "n8n_url_fallback": "http://127.0.0.1:5678",
       "llm_layout": "scripts/cesarops2_unified_layout.sh",
@@ -45,8 +62,9 @@
     },
     "t440": {
       "lan": "10.0.0.61",
-      "roles": ["n8n_primary", "p100_llm", "nfs_catalog"],
-      "forge_url_recovery_only": "http://10.0.0.61:9100",
+      "roles": ["forge_primary", "n8n_primary", "p100_llm", "nfs_catalog"],
+      "forge_url": "http://127.0.0.1:9100",
+      "forge_url_lan": "http://10.0.0.61:9100",
       "n8n_url": "http://127.0.0.1:5678",
       "llm_layout": "scripts/p100_gemma_r1_dual.sh",
       "systemd_timers": [
@@ -60,7 +78,8 @@
       "port": 9100,
       "health": "/forge/status",
       "start": "start_forge.sh",
-      "host": "cesarops2",
+      "host": "t440",
+      "host_lan_from_c2": "10.0.0.61",
       "config": "cesarops-forge-v2/cluster_config.toml"
     },
     "n8n": {
@@ -103,14 +122,16 @@
   },
   "llm_slots": {
     "cesarops2": [
-      {"port": 5200, "gpu": "RTX", "role": "draft", "model_hint": "Qwen3.6-MoE-or-Gemma-E4B"},
-      {"port": 5203, "gpu": "1070", "role": "thinker", "model_hint": "ZAYA1-8B"},
+      {"port": 5200, "gpu": "RTX", "role": "thinker", "model_hint": "Mixtral-8x7B-hybrid-ngl"},
+      {"port": 5211, "gpu": "cpu", "role": "thinker_cpu_bench", "model_hint": "Mixtral-8x7B-CPU", "optional": true},
+      {"port": 5203, "gpu": "1070", "role": "reserved_pamp", "model_hint": "idle", "optional": true},
+      {"port": 5201, "gpu": "P106", "role": "corrector_7b", "optional": true},
       {"port": 5201, "gpu": "P106", "role": "pamp_optional", "optional": true}
     ],
     "t440": [
-      {"port": 5001, "gpu": "P100-0", "role": "gemma_coder"},
-      {"port": 5002, "gpu": "P100-1", "role": "r1_thinker"},
-      {"port": 5010, "gpu": "cpu", "role": "polisher"}
+      {"port": 5001, "gpu": "P100-0", "role": "lane_a_coder_gemma"},
+      {"port": 5002, "gpu": "P100-1", "role": "lane_b_coder_qwen14"},
+      {"port": 5010, "gpu": "cpu", "role": "lane_b_thinker_polish_qwen36"}
     ]
   },
   "n8n": {

@@ -21,8 +21,15 @@ export CESAROPS2_LAN_HOST="${CESAROPS2_LAN_HOST:-10.0.0.201}"
 LOG="${GPU_SLOT_WATCHDOG_LOG:-/data/cesarops/logs/gpu-slot-watchdog.log}"
 LOCK="${GPU_SLOT_WATCHDOG_LOCK:-/tmp/gpu-slot-watchdog.lock}"
 ISOLATION_MARK="${CESAROPS2_ISOLATION_MARK:-$HOME/.cache/cesarops/cesarops2-isolated}"
+SCAN_GUARD="${CESAROPS_SCAN_NO_WATCHDOG_GUARD:-/tmp/cesarops-scan-no-watchdog}"
+LLM_GUARD="${FORGE_LLM_WATCHDOG_GUARD:-/tmp/cesarops-llm-watchdog-off}"
 
 mkdir -p "$(dirname "$LOG")" "$(dirname "$GPU_SLOT_HEARTBEAT_PATH")"
+
+if [[ -f "$SCAN_GUARD" || -f "$LLM_GUARD" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] watchdog guard present; skipping gpu_slot_watchdog" | tee -a "$LOG"
+  exit 0
+fi
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"

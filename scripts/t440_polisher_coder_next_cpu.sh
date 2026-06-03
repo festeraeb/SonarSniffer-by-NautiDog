@@ -20,8 +20,8 @@ LOG="${LOG:-/data/cesarops/logs/t440-polisher-coder-next.log}"
 MODEL="${MODEL:-}"
 resolve_model() {
   for cand in \
-    /data/cesarops/models/Qwen_Qwen3-Coder-Next-IQ3_M.gguf \
-    /mnt/t440/data/cesarops/models/Qwen_Qwen3-Coder-Next-IQ3_M.gguf \
+    /mnt/t440/models/Qwen_Qwen3-Coder-Next-IQ3_M.gguf \
+    /mnt/t440/models/Qwen_Qwen3-Coder-Next-IQ3_M.gguf \
     /codebase/models/Qwen_Qwen3-Coder-Next-IQ3_M.gguf; do
     [[ -f "$cand" ]] && { echo "$cand"; return 0; }
   done

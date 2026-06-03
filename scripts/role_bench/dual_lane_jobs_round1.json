@@ -1,0 +1,17 @@
+[
+  {
+    "id": "01_sat_knob_tune",
+    "route": "1",
+    "task": "Review cesarops-satellite POC blue_green_clarity scoring (uncapped z-scores). Propose concrete Knobs changes in types.rs / mission spec for clear-water Straits seasons. List 3 test commands only — no full implementations."
+  },
+  {
+    "id": "02_temporal_persist",
+    "route": "2",
+    "task": "Review temporal.rs run_temporal_stack_local persistence map (max ~0.08). Propose leave-one-out z-score and threshold tweaks. Output spec bullets for 1070 coder — files: cesarops-satellite/src/temporal.rs, mission.rs."
+  },
+  {
+    "id": "03_forge_mag_tool",
+    "route": "1",
+    "task": "Outline Forge tool wiring for mag_mission in cesarops-forge-v2/src/tools.rs mirroring sat_mission. Gemma delivers API sketch + acceptance test commands only."
+  }
+]

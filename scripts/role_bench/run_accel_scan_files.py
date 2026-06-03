@@ -138,8 +138,9 @@ def scene_groups(tifs: list[Path]) -> dict[str, list[Path]]:
     return groups
 
 
-def pick_glint_band(bands: list[Path]) -> Path:
-    for suffix in ("red", "nir", "green", "blue"):
+def pick_glint_band(bands: list[Path], prefer: str | None = None) -> Path:
+    order = ("green", "blue", "red", "nir") if prefer in ("green", "blue") else ("red", "nir", "green", "blue")
+    for suffix in order:
         for p in bands:
             if p.name.lower().endswith(f".{suffix}.tif") or p.name.lower().endswith(
                 f".{suffix}.tiff"
@@ -281,6 +282,12 @@ def main() -> int:
     ap.add_argument("--chip-px", type=int, default=2048, help="GeoTIFF srcwin size")
     ap.add_argument("--out-px", type=int, default=512, help="chip PNG edge for TPU")
     ap.add_argument("--limit-scenes", type=int, default=0, help="0 = all scenes")
+    ap.add_argument(
+        "--prefer-band",
+        choices=("red", "nir", "green", "blue"),
+        default=None,
+        help="Chip band for TPU infer (straits B02/B03: use green)",
+    )
     args = ap.parse_args()
 
     pngs, tifs = collect_paths(args.paths, geotiff=True)
@@ -323,7 +330,7 @@ def main() -> int:
                 work = work[: args.limit_scenes]
 
         for scene_id, bands in work:
-            glint = pick_glint_band(bands)
+            glint = pick_glint_band(bands, args.prefer_band)
             thermal = band_labels(bands) if args.thermal is None else list(args.thermal)
             lat, lon = geotiff_center_wgs84(glint)
             print(

@@ -22,7 +22,9 @@ import requests
 
 OUT = Path(os.environ.get("OUT", "."))
 FORGE_URL = os.environ.get("FORGE_URL", "http://127.0.0.1:9100").rstrip("/")
-THINKER = os.environ.get("THINKER_URL", "http://127.0.0.1:5200").rstrip("/")
+THINKER = os.environ.get(
+    "THINKER_URL", os.environ.get("MIXTRAL_URL", "http://127.0.0.1:5200")
+).rstrip("/")
 GEMMA = os.environ.get("GEMMA_URL", "http://10.0.0.61:5001").rstrip("/")
 QWEN = os.environ.get("QWEN_URL", "http://10.0.0.61:5002").rstrip("/")
 CODER_1070 = os.environ.get("CODER_1070_URL", "http://127.0.0.1:5202").rstrip("/")

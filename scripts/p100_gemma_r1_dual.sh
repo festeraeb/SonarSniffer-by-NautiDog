@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Dual P100 for Forge integrate: Gemma-4 coder + Qwen3.6 reasoning specialist.
-#
-#   P100#1 :5001 — Gemma-4-26B-MoE-IQ4_XS (worker / UX coder)
-#   P100#0 :5002 — Qwen3.6-35B-A3B-Q4_K_M or MXFP4 (worker / reviewer)
-#   Qwen3-Coder-Next IQ3 → CPU polisher only (scripts/t440_polisher_coder_next_cpu.sh :5010)
+# Dual P100 for dual-lane Forge:
+#   :5001 P100 — Gemma-4 MoE (Lane A coder)
+#   :5002 P100 — Qwen2.5-Coder-14B (Lane B coder)
+#   :5010 CPU — Qwen3.6 MoE think/polish (scripts/start_qwen36_moe_cpu_laneb.sh)
+#   Full T440 bring-up: scripts/t440_dual_lane_layout.sh
 #
 # Usage:
 #   bash scripts/p100_gemma_r1_dual.sh          # start both
@@ -100,8 +100,8 @@ start_dual() {
   free_ports
   : >"$LOG"
 
-  local coder_model reviewer_model
-  coder_model="$(resolve_model "$MODEL_CODER" \
+  local gemma_model
+  gemma_model="$(resolve_model "$MODEL_CODER" \
     /codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf \
     /mnt/t440/codebase/models/Gemma-4-26B-MoE-IQ4_XS.gguf \
     /mnt/t440/models/Gemma-4-26B-MoE-IQ4_XS.gguf)" || {
@@ -109,27 +109,13 @@ start_dual() {
       return 1
     }
 
-  reviewer_model="$(resolve_model "$MODEL_REVIEWER" \
-    /codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf \
-    /codebase/models/Qwen3.6-35B-A3B-MXFP4_MOE.gguf \
-    /mnt/t440/codebase/models/Qwen3.6-35B-A3B-Q4_K_M.gguf \
-    /mnt/t440/codebase/models/Qwen3.6-35B-A3B-MXFP4_MOE.gguf \
-    /mnt/t440/models/Qwen3.6-35B-A3B-Q4_K_M.gguf \
-    /mnt/t440/models/Qwen3.6-35B-A3B-MXFP4_MOE.gguf \
-    /mnt/t440/data/cesarops/local_models/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf \
-    /mnt/data-external/cesarops/local_models/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf \
-    /home/cesarops/models/unsloth-Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-Q3_K_M.gguf)" || {
-      log "SKIP p100#0 slot — no Qwen3.6-35B model found"
-      return 1
-    }
-
-  # Reviewer/science specialist on GPU0 first (slower load)
-  start_llama "$reviewer_model" 5002 0 "qwen36-35b-worker" "$CTX_REVIEWER" "on"
-  sleep 5
-  start_llama "$coder_model" 5001 1 "gemma4-coder" "$CTX_CODER" "off"
-  wait_ready 5002 "P100#0-llm" || true
+  start_llama "$gemma_model" 5001 1 "gemma4-coder" "$CTX_CODER" "off"
   wait_ready 5001 "Gemma-4-26B" || true
-  log "Forge: coder=http://127.0.0.1:5001 reviewer/corrector=http://127.0.0.1:5002"
+
+  log "Lane B coder: Qwen14 on :5002 (P100 GPU0)"
+  bash "${REPO}/scripts/start_qwen14_coder_p100.sh" || log "WARN Qwen14 :5002 failed"
+  log "Lane B think/polish: start CPU MoE — bash scripts/start_qwen36_moe_cpu_laneb.sh"
+  log "Forge Lane A: http://127.0.0.1:5001  Lane B coder: http://127.0.0.1:5002"
 }
 
 case "$ACTION" in
