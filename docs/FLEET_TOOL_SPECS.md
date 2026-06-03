@@ -84,15 +84,28 @@ water column above it. The thermal disturbance rises to the surface, creating a
 persistent cold spot ~0.1-0.5°C below surrounding water temperature. At 100m
 Landsat resolution that's detectable as a multi-pixel cold anomaly.
 
-**Wood wrecks (Burns)**: weaker thermal signature, but a large intact hull (32ft
+**HEAT SINK (shallow wrecks in the photic zone)**: A wreck above ~20m (within
+sunlight penetration) HEATS during the day — the dark hull absorbs solar energy
+and warms the water column above it. This shows as a WARM spot in daytime
+thermal passes. At night it cools faster than surrounding sediment → COLD spot.
+So the thermal detector needs BOTH polarities:
+- **Cold anomaly** (z < -2): deep wreck (>20m) OR nighttime shallow wreck
+- **Hot anomaly** (z > +2): daytime shallow wreck in photic zone
+
+The SIGN of the anomaly + acquisition time + depth context discriminates:
+- Deep wreck (below photic) = ALWAYS cold (day or night)
+- Shallow wreck (in photic) = HOT during day, COLD at night
+- Both are valid detections — flag the polarity in the candidate output.
+
+**Wood wrecks (Burns at 34m)**: weaker thermal signature, but a large intact hull (32ft
 relief) may still produce measurable cooling via current disruption (forced
 upwelling of deep cold water). Worth running — "some wood wrecks produce a
 signature" per user.
 
-### Add: `concept_thermal_cold_sink` in a new file or in `poc.rs`
+### Add: `concept_thermal_anomaly` in a new file or in `poc.rs`
 
 ```rust
-pub fn concept_thermal_cold_sink(
+pub fn concept_thermal_anomaly(
     thermal_band: &Array2<f32>,  // ST_B10, already in Kelvin/10
     bbox: &BBox,
     scene_date: &str,
@@ -104,9 +117,13 @@ Logic:
 1. Apply Landsat thermal scale: `ST_B10 * 0.00341802 + 149.0` → Kelvin.
    Convert to °C: `K - 273.15`.
 2. Compute local mean water temp in ~500m windows (at 100m/px = 5px windows).
-3. Z-score each pixel against local mean. NEGATIVE z = colder than surroundings.
-4. Threshold at z < -2.0 (cold anomaly).
-5. NMS / peak extraction → candidates with `concept = "thermal_cold_sink"`.
+3. Z-score each pixel against local mean.
+4. Threshold BOTH directions:
+   - z < -2.0 = cold anomaly (deep wreck, or nighttime shallow)
+   - z > +2.0 = hot anomaly (daytime shallow wreck)
+5. NMS / peak extraction → candidates with `concept = "thermal_cold_sink"` or
+   `concept = "thermal_heat_sink"` depending on polarity.
+6. Tag each candidate with its polarity sign for the fusion stage.
 
 ### Prerequisite: Untar Landsat bundles
 
