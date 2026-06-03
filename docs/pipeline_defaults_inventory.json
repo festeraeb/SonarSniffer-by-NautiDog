@@ -3,15 +3,24 @@
   "crate": "cesarops-satellite",
   "note": "Wired DEFAULTS. Z-scores signed unless noted; fitness/priority terms 0-1; concept composite 0-10. knob = mission-spec knobs key.",
   "sensors": [
-    {"id": "sentinel2", "role": "optical relief/clarity/glint", "bands": ["B02","B03","B04","B08","B11"], "archive_start": 2017, "pass": "day", "res_m": 10},
-    {"id": "landsat", "role": "thermal TIRS + optical, reaches record lows", "bands": ["B10","optical"], "archive_start": 1984, "pass": "day+night"},
-    {"id": "icesat2", "role": "laser altimetry depth assist", "archive_start": 2018},
-    {"id": "swot", "role": "surface water elevation / seiche-current", "archive_start": 2023},
-    {"id": "sentinel1_sar", "role": "steel-mass backscatter persistence", "bands": ["C-band sigma0"], "archive_start": 2014, "pass": "day+night", "caveat": "needs RTC GeoTIFF not raw SLC"},
-    {"id": "ndbc_glos_buoy", "role": "wave/wind calm-gate + turbidity", "fields": ["WVHT","WSPD"], "stations": 20},
-    {"id": "aeromag", "role": "magnetic ferrous anomaly", "weather_independent": true},
-    {"id": "bag_bathymetry", "role": "sounding/redaction unmask; mask = own candidate"}
+    {"id": "sentinel2", "role": "optical relief/clarity/glint", "bands": ["B02","B03","B04","B08","B11"], "archive_start": 2017, "pass": "day", "res_m": 10, "status": "wired_detection"},
+    {"id": "landsat", "role": "thermal TIRS + optical, reaches record lows", "bands": ["B10","optical"], "archive_start": 1984, "pass": "day+night", "status": "wired_download; thermal_not_in_local_path"},
+    {"id": "icesat2_atl13", "role": "along-track inland-water surface; depth assist", "cmr_concept_id": "C2144800918-NSIDC_ECS", "archive_start": 2018, "status": "wired_download_only; NOT in detection/fusion"},
+    {"id": "icesat2_atl03", "role": "raw geolocated photon cloud; can penetrate deeper than ATL13", "archive_start": 2018, "status": "NOT_PRESENT; recognized target to add"},
+    {"id": "swot", "role": "surface water elevation / seiche-current", "archive_start": 2023, "status": "STUB; fetch_swot_score returns neutral 0.5; no PO.DAAC client; feeds nasa_fusion avg only"},
+    {"id": "sentinel1_sar", "role": "steel-mass backscatter persistence", "bands": ["C-band sigma0"], "archive_start": 2014, "pass": "day+night", "status": "wired_detection; CAVEAT current input is raw SLC not RTC -> 0 hits"},
+    {"id": "ecostress", "role": "thermal score (NASA fusion)", "status": "STUB; neutral 0.5; no AppEEARS client"},
+    {"id": "opera_dswx", "role": "surface water extent (NASA fusion)", "status": "WIRED to real granule search in stac.rs"},
+    {"id": "ndbc_glos_buoy", "role": "wave/wind calm-gate + turbidity", "fields": ["WVHT","WSPD"], "stations": 20, "status": "wired_scene_selection"},
+    {"id": "aeromag", "role": "magnetic ferrous anomaly", "weather_independent": true, "status": "separate_pipeline"},
+    {"id": "bag_bathymetry", "role": "sounding/redaction unmask; mask = own candidate", "status": "wired_separate_bag_crate"}
   ],
+  "nasa_fusion": {
+    "formula": "(swot_score + ecostress_score + opera_score) / 3",
+    "neutral_sensor_score": 0.5,
+    "swot_score": "STUB 0.5", "ecostress_score": "STUB 0.5", "opera_score": "REAL granule search",
+    "note": "applied to SAR clusters; SWOT+ECOSTRESS contribute neutral until clients wired"
+  },
   "concept_geometry": {
     "chip_signal_m": 150.0, "chip_bg_inner_m": 350.0, "chip_bg_outer_m": 1200.0,
     "chip_scene_radius_m": 1500.0, "hit_zscore_min": 1.5
@@ -106,6 +115,8 @@
     "SAR input is raw SLC, won't open -> 0 SAR hits -> triple-lock can't reach 3 families on optical alone",
     "thermal not wired into local offline path (only STAC anchored path)",
     "local POC runs only blue_green_clarity + glint_roughness (plume/thermal not in local loop)",
+    "SWOT + ECOSTRESS are neutral stubs (0.5) in nasa_fusion; no real clients yet",
+    "ICESat-2 ATL13 download-only, not feeding detection/fusion; ATL03 (deeper photon penetration) absent entirely",
     "ML: LightGBM wreck_classifier.pkl (50 feats AUC 0.868) + 426-sample dataset recoverable; geology hard-negative staged not folded in"
   ]
 }

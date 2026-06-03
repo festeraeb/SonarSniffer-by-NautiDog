@@ -12,16 +12,31 @@ All values are the wired DEFAULTS; nearly all are overridable via mission-spec
 
 ## 1. SENSORS / DATA SOURCES
 
-| Sensor | Role | Bands used | Archive start | Pass | Notes |
-|--------|------|-----------|---------------|------|-------|
-| Sentinel-2 (L2A) | optical relief/clarity/glint | B02 blue, B03 green, B04 red, B08 NIR, B11 SWIR16 | 2017 | day only (sun-sync ~10:30) | primary; 10 m |
-| Landsat 5/7/8/9 | thermal (TIRS) + optical, reaches record lows | B10 thermal, +optical | 1984 | day + night thermal | only sensor for 2012–13 lows |
-| ICESat-2 (ATL13) | laser altimetry, limited deep penetration | — | 2018 | — | depth assist beyond SDB |
-| SWOT | surface water elevation | — | 2023 | — | seiche/current context |
-| Sentinel-1 (SAR/RTC) | steel-mass backscatter persistence | C-band σ0 | 2014 | day+night (active) | needs RTC GeoTIFF, NOT raw SLC |
-| NDBC / GLOS buoys | wave/wind calm-gate + turbidity | WVHT, WSPD | per-station | — | 20 GL stations, 5 lakes |
-| Aeromag | magnetic anomaly correlation | — | survey-dependent | weather-independent | ferrous mass |
-| BAG (NOAA bathymetry) | sounding/redaction unmask | depth grid + uncertainty | survey-dependent | — | mask = its own candidate |
+Status legend: **wired** = active in detection/selection; **download-only** =
+fetched but not feeding detection; **stub** = placeholder neutral score;
+**absent** = recognized target, not present.
+
+| Sensor | Role | Bands | Archive | Pass | Status |
+|--------|------|-------|---------|------|--------|
+| Sentinel-2 (L2A) | optical relief/clarity/glint | B02,B03,B04,B08,B11 | 2017 | day | **wired** (detection) |
+| Landsat 5/7/8/9 | thermal TIRS + optical; reaches record lows | B10 +optical | 1984 | day+night | wired download; thermal NOT in local path |
+| ICESat-2 **ATL13** | along-track inland-water surface; depth assist | — | 2018 | — | **download-only** (CMR C2144800918); NOT in detection/fusion |
+| ICESat-2 **ATL03** | raw geolocated photon cloud; deeper penetration than ATL13 | — | 2018 | — | **absent** — recognized target to add |
+| SWOT | surface water elevation / seiche-current | — | 2023 | — | **stub** (neutral 0.5; no PO.DAAC client; feeds NASA-fusion avg only) |
+| Sentinel-1 SAR (RTC) | steel-mass backscatter persistence | C-band σ0 | 2014 | day+night | wired detection; **caveat** current input raw SLC → 0 hits |
+| ECOSTRESS | thermal score (NASA fusion) | — | — | — | **stub** (neutral 0.5; no AppEEARS client) |
+| OPERA DSWx | surface water extent (NASA fusion) | — | — | — | **wired** to real granule search (stac.rs) |
+| NDBC / GLOS buoys | wave/wind calm-gate + turbidity | WVHT, WSPD | per-station | — | **wired** (scene selection) |
+| Aeromag | magnetic ferrous anomaly | — | survey | weather-indep | separate pipeline |
+| BAG (NOAA bathymetry) | sounding/redaction unmask; mask = own candidate | depth+uncertainty | survey | — | separate BAG crate |
+
+### NASA fusion (nasa_fusion.rs) — applied to SAR clusters
+```
+fusion_score = (swot_score + ecostress_score + opera_score) / 3
+```
+- NEUTRAL_SENSOR_SCORE = 0.5
+- swot_score = STUB 0.5, ecostress_score = STUB 0.5, opera_score = REAL granule search
+- SWOT + ECOSTRESS contribute neutral until real clients are wired.
 
 ---
 
@@ -237,5 +252,9 @@ low_water_wreck | recent_sinking | zebra_clarity | event_response | generic
 - Thermal: not wired into the LOCAL offline path yet (only STAC anchored path).
 - Local POC currently runs only blue_green_clarity + glint_roughness; plume +
   thermal not yet in the local loop.
+- SWOT + ECOSTRESS are neutral stubs (0.5) in nasa_fusion — no real clients yet;
+  only OPERA DSWx is a real fetch.
+- ICESat-2 ATL13 is download-only (not feeding detection/fusion); ATL03 (raw
+  photon cloud, deeper penetration) is absent entirely — recognized target to add.
 - ML: LightGBM wreck_classifier.pkl (50 feats, AUC 0.868) + 426-sample dataset
   recoverable; geology hard-negative (E-of-Elva) staged but not yet folded in.
