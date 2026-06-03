@@ -134,3 +134,16 @@ crash took).
 - Recent sinkings use BEFORE/AFTER bracketing, not low-water buckets.
 - Temporal Isolation Gate: keep ~100 DISTINCT environmental states, not 5000
   near-duplicates (saves storage + P100 time).
+
+## Deferred tasks (don't forget)
+
+- **Re-embed nautivecs** (`cesarops-mcp-steered/data/nautivecs_store.json`, last
+  built 2026-05-08, 538 records, 768-dim). It does NOT yet include FIELD_NOTES,
+  GROUND_TRUTH_LOG, PROJECT_ORIGIN. nautivecs is a *recall index* derived from
+  the docs — source of truth is the .md files; the store is regenerable. Needs
+  the real 768-dim embedder (was on the killed llama-servers; :5001 currently
+  serves Gemma chat, not an embedder; ollama empty). Rebuild when an embedding
+  model is back up: `nautivecs-cli index <repo> --endpoint <embedder>/v1`.
+  Durability chain: .md docs (must survive) -> nautivecs (regenerable) ->
+  agent/LLM/n8n consumer. Open data (Sentinel/Landsat/ICESat/NOAA/NDBC) is the
+  same principle for INPUTS: a crash can't take a public archive; re-pullable.
