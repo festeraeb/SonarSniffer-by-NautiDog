@@ -1126,5 +1126,62 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
     let report_path = paths.output_dir.join("mission_report.json");
     std::fs::write(&report_path, serde_json::to_string_pretty(&report)?)?;
     info!("Wrote {}", report_path.display());
+
+    // Emit processed-stage events for the data ledger (crash-resilient JSONL).
+    // data_ledger.py `ingest` folds these into the master ledger so we never
+    // re-process a scene + can see coverage. Best-effort; never fails the run.
+    write_ledger_events(&spec, &paths, &report);
+
     Ok(report)
+}
+
+/// Append one `{kind:"processed", ...}` event per (scene, stage) to a
+/// `ledger_events.jsonl` in the run's output dir. Scenes are discovered from
+/// the download_dir tiles; stages from those that ran with rc==0.
+fn write_ledger_events(spec: &MissionSpec, paths: &MissionPaths, report: &MissionReport) {
+    use std::io::Write;
+    // Which detection stages ran OK this mission?
+    let sr = &report.stage_results;
+    let stage_ok = |v: &Option<Value>| -> bool {
+        v.as_ref().and_then(|x| x.get("rc")).and_then(|r| r.as_i64()).map_or(false, |rc| rc == 0)
+    };
+    let mut stages: Vec<&str> = Vec::new();
+    if stage_ok(&sr.poc_aoi) { stages.push("poc"); }
+    if stage_ok(&sr.temporal_stack) { stages.push("temporal"); }
+    if stage_ok(&sr.bathy_map) { stages.push("bathy"); }
+    if stage_ok(&sr.sar_local) { stages.push("sar"); }
+    if stages.is_empty() {
+        return;
+    }
+    // Discover scene IDs from the download dir (*.blue.tif).
+    let mut scene_ids: Vec<String> = Vec::new();
+    if let Ok(rd) = std::fs::read_dir(&paths.download_dir) {
+        for e in rd.flatten() {
+            let n = e.file_name().to_string_lossy().to_string();
+            if let Some(id) = n.strip_suffix(".blue.tif") {
+                scene_ids.push(id.to_string());
+            }
+        }
+    }
+    if scene_ids.is_empty() {
+        return;
+    }
+    let ts = Local::now().to_rfc3339();
+    let path = paths.output_dir.join("ledger_events.jsonl");
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        for sid in &scene_ids {
+            for st in &stages {
+                let _ = writeln!(
+                    f,
+                    "{}",
+                    serde_json::json!({
+                        "kind": "processed", "scene_id": sid, "stage": st,
+                        "status": "ok", "ts": ts, "mission": spec.mission_id,
+                    })
+                );
+            }
+        }
+        info!("Ledger: wrote {} events ({} scenes x {} stages) -> {}",
+            scene_ids.len() * stages.len(), scene_ids.len(), stages.len(), path.display());
+    }
 }

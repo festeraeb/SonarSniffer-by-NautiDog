@@ -112,6 +112,32 @@ def cmd_pending(args):
     for sid in pending:
         print("  ", sid)
 
+def cmd_ingest(args):
+    """Fold Rust-emitted ledger_events.jsonl files into the master ledger,
+    de-duplicating on (scene_id, stage, status)."""
+    rows = load_ledger()
+    have = {(r.get("scene_id"), r.get("stage"), r.get("status"))
+            for r in rows if r.get("kind") == "processed"}
+    added = 0
+    for events_path in args.events:
+        for path in glob.glob(events_path):
+            if not os.path.exists(path):
+                continue
+            for line in open(path):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                key = (ev.get("scene_id"), ev.get("stage"), ev.get("status"))
+                if ev.get("kind") == "processed" and key not in have:
+                    append(ev)
+                    have.add(key)
+                    added += 1
+    print(f"ingest: {added} new processed events folded into ledger")
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -122,6 +148,9 @@ def main():
     p.set_defaults(fn=cmd_mark)
     p = sub.add_parser("status"); p.set_defaults(fn=cmd_status)
     p = sub.add_parser("pending"); p.add_argument("--stage", required=True); p.set_defaults(fn=cmd_pending)
+    p = sub.add_parser("ingest"); p.add_argument("events", nargs="+",
+        help="ledger_events.jsonl path(s) or glob (e.g. .../detection_runs/*/ledger_events.jsonl)")
+    p.set_defaults(fn=cmd_ingest)
     args = ap.parse_args()
     args.fn(args)
 

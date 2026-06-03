@@ -150,13 +150,38 @@ pub async fn search_scenes(client: &Client, q: &StacQuery<'_>) -> Result<Vec<Sce
 /// POST-based search (used by temporal_stack_engine — avoids query-string length limits).
 pub async fn search_scenes_post(client: &Client, q: &StacQuery<'_>) -> Result<Vec<Scene>> {
     let url = format!("{STAC_URL}/search");
+
+    // If a month filter is set, tighten the datetime range to the span of those
+    // months so STAC's own paging/limit doesn't fill up with out-of-season
+    // scenes (the year is returned most-recent-first; a whole-year query with
+    // limit=40 returns Oct-Dec and the spring [4,5,6] filter then drops all 40).
+    let (eff_start, eff_end) = if q.month_filter.is_empty() {
+        (q.date_start, q.date_end)
+    } else {
+        let lo = *q.month_filter.iter().min().unwrap();
+        let hi = *q.month_filter.iter().max().unwrap();
+        let y0 = q.date_start.year();
+        let y1 = q.date_end.year();
+        let start = chrono::NaiveDate::from_ymd_opt(y0, lo, 1).unwrap_or(q.date_start);
+        // last day of the high month in the end year
+        let end = {
+            let (ny, nm) = if hi == 12 { (y1 + 1, 1) } else { (y1, hi + 1) };
+            chrono::NaiveDate::from_ymd_opt(ny, nm, 1)
+                .and_then(|d| d.pred_opt())
+                .unwrap_or(q.date_end)
+        };
+        // clamp within the originally requested window
+        (start.max(q.date_start), end.min(q.date_end))
+    };
+
     let body = serde_json::json!({
         "collections": [S2_COLLECTION],
         "bbox": q.bbox,
         "datetime": format!(
             "{}T00:00:00Z/{}T23:59:59Z",
-            q.date_start, q.date_end
+            eff_start, eff_end
         ),
+        "query": { "eo:cloud_cover": { "lte": q.max_cloud } },
         "limit": q.limit,
     });
 

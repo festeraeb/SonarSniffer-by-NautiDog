@@ -163,3 +163,24 @@ crash took).
   IS. SWOT is genuinely sparse (2023+, narrow swath, thin Great Lakes coverage).
 - 2026-06-03 baseline: 21 S2 scenes, 19.1 GB. fall 2024=10 (heavy), 2022=7,
   2023=2 + summer 2023=2. Need spread (2019-2021 fall + spring) for 20-distinct floor.
+
+## 2026-06-03  STAC seasonal query silently capped every pull
+  Finding: spring (Apr-Jun) pulls returned 0 scenes though STAC had 15+ (May 17
+    2023 at 0.0% cloud). Direct STAC query worked; pipeline returned empty.
+  Cause:  search_scenes_post queried the WHOLE year with limit=40, STAC returns
+    most-recent-first (Oct-Dec), THEN the client-side month_filter [4,5,6]
+    dropped all 40. Affected every season filter, not just spring.
+  Fix:    tighten the STAC datetime range to the month_filter span before
+    querying (+ push eo:cloud_cover into the query body, not just client-side).
+  Evidence: spring pull 0 -> 40 scenes (12 perfect-day) after fix.
+  Lesson: when a provider returns a paged/limited set, push ALL filters into the
+    query; never rely on a post-hoc client filter over a truncated page.
+
+## Data ledger loop is wired end-to-end (2026-06-03)
+  run_mission emits ledger_events.jsonl (scene x stage, rc==0 only) into the run
+  output dir. `data_ledger.py ingest '<runs>/*/ledger_events.jsonl'` folds them
+  (deduped) into the master. Verified: fall detect run -> 30 events (10 scenes x
+  poc/bathy/temporal) -> status shows processed tallies, `pending --stage poc`
+  shows the 21 unprocessed (spring/summer/older). Coverage now 31 scenes 24.7GB
+  across spring/summer/fall 2022-2024 (still 2024-fall heavy; below 20-distinct
+  floor for a single season but broadening).
