@@ -298,3 +298,194 @@ mod tests {
             > condition_suitability(DayCondition::SpringRunoff, ScanIntent::ZebraClarity));
     }
 }
+
+// ── Scan-intent condition matrix ─────────────────────────────────────────────
+//
+// Each detection target has an IDEAL acquisition condition. This encodes the
+// operator's full matrix (wind/cloud/days-since-storm/turbidity/season) so
+// scene selection can SCORE a candidate scene's fitness for a given intent,
+// using buoy wave/wind (see `buoy.rs`) + weather + turbidity.
+
+/// What the operator is trying to detect on this pass. Drives which scenes
+/// (calm vs storm, clear vs turbid, which season) score highest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScanIntent {
+    /// Shallow-water depth from blue/green. Wants glassy calm, clear, low turbidity.
+    Bathymetry,
+    /// Zebra/quagga clarity anomaly. Calm clear days, summer.
+    ZebraClarity,
+    /// Sediment plume. 0–2 days AFTER a 15–30 mph wind/storm; clear during pass.
+    SedimentPlume,
+    /// Thermal fronts / cold upwelling. Clear pass 1–3 days after offshore wind.
+    ThermalFront,
+    /// Heat pattern (warm shallow). Clear sunny days after several warm days.
+    HeatPattern,
+    /// Hydrocarbon film (NIR/SWIR). Calm, light wind 2–8 mph, dry, clear.
+    Hydrocarbon,
+    /// Sun glint / surface roughness / current. Cloud-free, predictable sun.
+    SunGlint,
+    /// Generic deep-wreck cold-sink / plume column (the Burns/Andaste case).
+    DeepWreck,
+}
+
+impl ScanIntent {
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s.to_ascii_lowercase().as_str() {
+            "bathymetry" | "bathy" => Self::Bathymetry,
+            "zebra_clarity" | "clarity" => Self::ZebraClarity,
+            "sediment_plume" | "plume" => Self::SedimentPlume,
+            "thermal_front" | "upwelling" => Self::ThermalFront,
+            "heat_pattern" | "heat" => Self::HeatPattern,
+            "hydrocarbon" | "oil" | "fuel" => Self::Hydrocarbon,
+            "sun_glint" | "glint" => Self::SunGlint,
+            "deep_wreck" | "cold_sink" => Self::DeepWreck,
+            _ => return None,
+        })
+    }
+}
+
+/// Conditions observed for a scene's acquisition date, assembled from buoy +
+/// weather + (optionally) turbidity. Any field may be missing.
+#[derive(Debug, Clone, Default)]
+pub struct SceneConditions {
+    pub wind_speed_ms: Option<f64>,
+    pub wave_height_m: Option<f64>,
+    pub cloud_pct: Option<f64>,
+    pub days_since_storm: Option<i32>,
+    /// Turbidity proxy (e.g. NTU or a relative index). Lower = clearer.
+    pub turbidity: Option<f64>,
+    pub month: u32,
+}
+
+/// Score 0–1 how well a scene's conditions fit the intent. 1 = ideal.
+/// Missing fields are treated neutrally (don't penalize what we can't measure).
+pub fn intent_fitness(intent: ScanIntent, c: &SceneConditions) -> f64 {
+    let wind = c.wind_speed_ms;
+    let wave = c.wave_height_m;
+    let cloud = c.cloud_pct.unwrap_or(0.0);
+    let dss = c.days_since_storm;
+    let turb = c.turbidity;
+    let mph = |ms: f64| ms * 2.23694; // m/s → mph
+
+    // Cloud penalty is near-universal (radar/altimetry intents excepted, but
+    // these are all optical/thermal).
+    let cloud_ok = if cloud <= 10.0 { 1.0 } else { (1.0 - (cloud - 10.0) / 90.0).max(0.0) };
+
+    // Calm score: low wind + low wave.
+    let calm = {
+        let w = wind.map(|x| {
+            let m = mph(x);
+            if m <= 8.0 { 1.0 } else { (1.0 - (m - 8.0) / 22.0).max(0.0) }
+        }).unwrap_or(0.7);
+        let h = wave.map(|x| if x <= 0.3 { 1.0 } else { (1.0 - (x - 0.3) / 1.2).max(0.0) }).unwrap_or(0.7);
+        0.5 * w + 0.5 * h
+    };
+
+    // Clarity score: low turbidity.
+    let clear_water = turb.map(|t| (1.0 - (t / 10.0)).clamp(0.0, 1.0)).unwrap_or(0.7);
+
+    // Storm-recency helpers.
+    let after_storm_window = |lo: i32, hi: i32| -> f64 {
+        match dss {
+            Some(d) if d >= lo && d <= hi => 1.0,
+            Some(d) if d < lo => 0.3, // too soon (still rough)
+            Some(d) => (1.0 - (d - hi) as f64 / 7.0).max(0.2), // settling/faded
+            None => 0.6,
+        }
+    };
+
+    let s = match intent {
+        ScanIntent::Bathymetry => {
+            // glassy calm + clear + low turbidity + 3–7 days post-storm
+            0.30 * calm + 0.25 * clear_water + 0.20 * cloud_ok + 0.25 * after_storm_window(3, 7)
+        }
+        ScanIntent::ZebraClarity => {
+            0.30 * calm + 0.30 * clear_water + 0.20 * cloud_ok + 0.20 * after_storm_window(3, 7)
+        }
+        ScanIntent::SedimentPlume => {
+            // 0–2 days AFTER storm, clear during pass; calm during pass NOT required
+            let recency = match dss {
+                Some(d) if d <= 2 => 1.0,
+                Some(d) => (1.0 - (d - 2) as f64 / 5.0).max(0.0),
+                None => 0.4,
+            };
+            0.55 * recency + 0.45 * cloud_ok
+        }
+        ScanIntent::ThermalFront => {
+            // clear pass 1–3 days after offshore wind
+            0.35 * cloud_ok + 0.40 * after_storm_window(1, 3) + 0.25 * calm
+        }
+        ScanIntent::HeatPattern => {
+            // clear sunny days after several warm days; calm-ish
+            0.45 * cloud_ok + 0.30 * calm + 0.25 * after_storm_window(3, 10)
+        }
+        ScanIntent::Hydrocarbon => {
+            0.40 * calm + 0.35 * cloud_ok + 0.25 * clear_water
+        }
+        ScanIntent::SunGlint => {
+            // cloud-free; some surface roughness is fine (don't over-reward calm)
+            0.65 * cloud_ok + 0.35 * wave.map(|x| if x < 0.6 { 1.0 } else { 0.5 }).unwrap_or(0.7)
+        }
+        ScanIntent::DeepWreck => {
+            // the cold-sink/plume column: calm + clear + clear water, stable
+            0.35 * calm + 0.25 * clear_water + 0.25 * cloud_ok + 0.15 * after_storm_window(2, 7)
+        }
+    };
+    s.clamp(0.0, 1.0)
+}
+
+/// Ideal month window per intent (Great Lakes), used to pre-filter the archive.
+pub fn intent_season_months(intent: ScanIntent) -> &'static [u32] {
+    match intent {
+        ScanIntent::Bathymetry => &[5, 6, 9, 10],
+        ScanIntent::ZebraClarity => &[7, 8, 9],
+        ScanIntent::SedimentPlume => &[3, 4, 5],
+        ScanIntent::ThermalFront => &[6, 7, 8, 9],
+        ScanIntent::HeatPattern => &[6, 7, 8],
+        ScanIntent::Hydrocarbon => &[4, 5, 6, 7, 8, 9, 10],
+        ScanIntent::SunGlint => &[4, 5, 6, 7, 8, 9, 10],
+        ScanIntent::DeepWreck => &[6, 7, 8, 9],
+    }
+}
+
+#[cfg(test)]
+mod intent_tests {
+    use super::*;
+
+    #[test]
+    fn bathymetry_prefers_calm_clear() {
+        let calm = SceneConditions {
+            wind_speed_ms: Some(2.0), wave_height_m: Some(0.1), cloud_pct: Some(2.0),
+            days_since_storm: Some(5), turbidity: Some(1.0), month: 6,
+        };
+        let rough = SceneConditions {
+            wind_speed_ms: Some(10.0), wave_height_m: Some(1.2), cloud_pct: Some(60.0),
+            days_since_storm: Some(0), turbidity: Some(8.0), month: 6,
+        };
+        let fc = intent_fitness(ScanIntent::Bathymetry, &calm);
+        let fr = intent_fitness(ScanIntent::Bathymetry, &rough);
+        assert!(fc > 0.85, "calm clear should score high, got {fc}");
+        assert!(fr < 0.4, "rough turbid should score low, got {fr}");
+        assert!(fc > fr);
+    }
+
+    #[test]
+    fn sediment_plume_wants_recent_storm() {
+        let post_storm = SceneConditions {
+            cloud_pct: Some(5.0), days_since_storm: Some(1), month: 4, ..Default::default()
+        };
+        let long_calm = SceneConditions {
+            cloud_pct: Some(5.0), days_since_storm: Some(14), month: 4, ..Default::default()
+        };
+        assert!(intent_fitness(ScanIntent::SedimentPlume, &post_storm)
+            > intent_fitness(ScanIntent::SedimentPlume, &long_calm));
+    }
+
+    #[test]
+    fn intent_parse_roundtrip() {
+        assert_eq!(ScanIntent::parse("bathy"), Some(ScanIntent::Bathymetry));
+        assert_eq!(ScanIntent::parse("plume"), Some(ScanIntent::SedimentPlume));
+        assert_eq!(ScanIntent::parse("cold_sink"), Some(ScanIntent::DeepWreck));
+        assert_eq!(ScanIntent::parse("nonsense"), None);
+    }
+}

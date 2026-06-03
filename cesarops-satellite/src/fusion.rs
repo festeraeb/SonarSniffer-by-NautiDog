@@ -19,6 +19,9 @@ pub const MIN_EMIT_SCORE: f64 = 3.0;
 pub const W_CONCEPT: f64 = 0.6; // optical concept score (0–10)
 pub const W_TEMPORAL: f64 = 0.3; // temporal persistence z-score contribution
 pub const W_DRIFT: f64 = 0.1; // drift envelope proximity bonus
+pub const W_KNOWN: f64 = 4.0; // bonus (points) when co-located with a known wreck
+/// Radius (m) within which a candidate is considered co-located with a known wreck.
+pub const KNOWN_PROXIMITY_RADIUS_M: f64 = 300.0;
 
 // ── Per-location signal aggregator ───────────────────────────────────────────
 
@@ -28,6 +31,7 @@ struct SignalBundle {
     concept_scores: Vec<(String, f64)>,
     temporal_z: Option<f64>,
     drift_proximity: Option<f64>, // 0–1 (1 = inside envelope centroid)
+    known_proximity: f64,         // 0–1 boost when near a known wreck (0 = none)
     lat: f64,
     lon: f64,
     depth_m: f64,
@@ -52,7 +56,11 @@ impl SignalBundle {
 
         let drift_bonus = self.drift_proximity.unwrap_or(0.0) * 10.0; // 0–10
 
-        W_CONCEPT * best_concept + W_TEMPORAL * temporal_contrib + W_DRIFT * drift_bonus
+        // Known-wreck proximity bonus: a candidate co-located with a documented
+        // wreck is more likely real (corroboration), so boost its rank.
+        let known_bonus = self.known_proximity * W_KNOWN;
+
+        W_CONCEPT * best_concept + W_TEMPORAL * temporal_contrib + W_DRIFT * drift_bonus + known_bonus
     }
 
     fn best_concept(&self) -> Option<String> {
@@ -76,6 +84,18 @@ pub fn fuse_candidates(
     concept_results: &[ConceptResult],
     temporal_zscores: Option<&HashMap<String, f64>>,
     drift_proximity: Option<&HashMap<String, f64>>,
+    min_score: f64,
+) -> Vec<Candidate> {
+    fuse_candidates_with_known(concept_results, temporal_zscores, drift_proximity, &[], min_score)
+}
+
+/// As [`fuse_candidates`], but boosts candidates co-located (within
+/// [`KNOWN_PROXIMITY_RADIUS_M`]) with any of `known_wrecks` (lat, lon).
+pub fn fuse_candidates_with_known(
+    concept_results: &[ConceptResult],
+    temporal_zscores: Option<&HashMap<String, f64>>,
+    drift_proximity: Option<&HashMap<String, f64>>,
+    known_wrecks: &[(f64, f64)],
     min_score: f64,
 ) -> Vec<Candidate> {
     // Accumulate per-wreck signal bundles

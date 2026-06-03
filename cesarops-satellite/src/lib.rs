@@ -18,6 +18,7 @@
 //! | (new)                                | fusion           |
 
 pub mod bathymetry_map;
+pub mod buoy;
 pub mod chip;
 pub mod concept;
 pub mod engine_error;
