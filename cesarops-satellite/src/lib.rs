@@ -28,6 +28,7 @@ pub mod env_conditions;
 pub mod fusion;
 pub mod lake_levels;
 pub mod magnetic;
+pub mod scan_plan;
 pub mod mission;
 pub mod nasa_fusion;
 pub mod overlay_grid;
