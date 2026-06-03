@@ -111,6 +111,54 @@ pub fn basin_for(lat: f64, lon: f64) -> LakeBasin {
     LakeBasin::Unknown
 }
 
+/// Months that fall in the requested season profile for an AOI's basin.
+///
+/// Ice-out timing is basin-aware: the northern/colder basins (Superior,
+/// Michigan-Huron incl. the Straits) clear ice later than Erie/Ontario, so the
+/// "post_ice_out" early-spring window starts a month later up north.
+///
+/// Profiles:
+///   "post_ice_out" — early spring just after ice-out, before algae/mussel
+///                     bloom: cleanest water, wreck nearest its true relief.
+///   "open_water"   — full ice-free season.
+///   "summer"       — peak clarity / heat-pattern months.
+///   "all"/""       — empty (no constraint).
+/// An explicit "4,5,6" month list is also accepted.
+pub fn season_months(basin: LakeBasin, profile: &str) -> Vec<u32> {
+    let p = profile.trim().to_ascii_lowercase();
+    // Explicit month list, e.g. "4,5,6".
+    if p.contains(',') || p.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        return p
+            .split(',')
+            .filter_map(|s| s.trim().parse::<u32>().ok())
+            .filter(|m| (1..=12).contains(m))
+            .collect();
+    }
+    // Northern/colder basins ice out later.
+    let northern = matches!(basin, LakeBasin::Superior | LakeBasin::MichiganHuron);
+    match p.as_str() {
+        "all" | "" | "none" | "year" => vec![],
+        "summer" => vec![7, 8, 9],
+        "open_water" => {
+            if northern {
+                vec![5, 6, 7, 8, 9, 10, 11]
+            } else {
+                vec![4, 5, 6, 7, 8, 9, 10, 11]
+            }
+        }
+        // default: post ice-out early spring
+        _ => {
+            if northern {
+                // Straits/Superior: ice typically clears late Apr; image May-Jun.
+                vec![4, 5, 6]
+            } else {
+                // Erie/Ontario clear earlier.
+                vec![3, 4, 5]
+            }
+        }
+    }
+}
+
 /// Historic low-water years for a basin, lowest-first (NOAA/USACE monthly means).
 fn ranked_low_years(basin: LakeBasin) -> &'static [i32] {
     match basin {
@@ -193,6 +241,22 @@ mod tests {
     #[test]
     fn straits_routes_to_michigan_huron() {
         assert_eq!(basin_for(45.82, -84.75), LakeBasin::MichiganHuron);
+    }
+
+    #[test]
+    fn season_post_ice_out_is_later_up_north() {
+        // Straits (northern, Michigan-Huron) ice out later: May-Jun start.
+        let straits = season_months(LakeBasin::MichiganHuron, "post_ice_out");
+        assert_eq!(straits, vec![4, 5, 6]);
+        // Erie clears earlier in spring.
+        let erie = season_months(LakeBasin::Erie, "post_ice_out");
+        assert_eq!(erie, vec![3, 4, 5]);
+        // "all" → no constraint.
+        assert!(season_months(LakeBasin::Superior, "all").is_empty());
+        // explicit list parses.
+        assert_eq!(season_months(LakeBasin::Erie, "4,5,6"), vec![4, 5, 6]);
+        // summer fixed.
+        assert_eq!(season_months(LakeBasin::Superior, "summer"), vec![7, 8, 9]);
     }
 
     #[test]

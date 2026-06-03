@@ -257,6 +257,20 @@ async fn stage_download(
             matches!(s.as_str(), "sentinel2" | "optical" | "stac")
         });
 
+    // Pass-time intent: Sentinel-2 is sun-synchronous DAYTIME only. Night
+    // thermal (cold-sink pre-dawn / heat-sink) requires a thermal sensor
+    // (Landsat TIRS or ECOSTRESS). Warn if night passes are requested but only
+    // S2 is configured, so the operator knows to add sensors=landsat,ecostress.
+    let pass_time = knobs.pass_time.trim().to_ascii_lowercase();
+    if (pass_time == "night" || pass_time == "both") && native_s2_only {
+        warn!(
+            "pass_time='{}' wants night thermal, but sensors are Sentinel-2 only \
+             (daytime). Night cold-sink/heat-sink needs sensors=landsat or ecostress; \
+             pulling DAY optical only for this run.",
+            knobs.pass_time
+        );
+    }
+
     if native_s2_only {
         if let Err(e) = std::fs::create_dir_all(&paths.download_dir) {
             return serde_json::json!({
@@ -317,6 +331,15 @@ async fn stage_download(
             if strategy == "date_window_cloud" {
                 strategy = "water_year_priority_then_cloud".to_string();
             }
+            // Season window (e.g. post-ice-out early spring) constrains months.
+            let season_basin = crate::lake_levels::basin_for(bbox.center().0, bbox.center().1);
+            let season_months = crate::lake_levels::season_months(season_basin, &knobs.season_window);
+            if !season_months.is_empty() {
+                info!(
+                    "Season window '{}' → months {:?} (basin {:?})",
+                    knobs.season_window, season_months, season_basin
+                );
+            }
             let mut remaining = knobs.max_download_results;
             // Contiguous low-cloud window per year (the operator's "20-day
             // no-cloud stack"): when stack_window_days > 0 we still query the
@@ -339,7 +362,7 @@ async fn stage_download(
                     date_start: y_start,
                     date_end: y_end,
                     max_cloud: knobs.max_cloud,
-                    month_filter: &[],
+                    month_filter: &season_months,
                     limit: remaining,
                 };
                 match search_scenes_post(&http, &q).await {
@@ -467,6 +490,8 @@ async fn stage_download(
                     "mode": "rust_native_stac_manifest",
                     "selection_strategy": strategy,
                     "water_year_priority": water_years,
+                    "season_window": knobs.season_window,
+                    "pass_time": knobs.pass_time,
                     "download_dir": paths.download_dir,
                     "manifest": manifest_path,
                     "n_scenes": scenes.len(),

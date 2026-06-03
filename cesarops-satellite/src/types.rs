@@ -92,6 +92,19 @@ pub struct Knobs {
     /// Length (days) of the contiguous low-cloud window pulled per priority
     /// year — the operator's "20-day no-cloud stack" workflow. 0 = whole year.
     pub stack_window_days: u32,
+    /// Season/month window for scene selection. Constrains the per-year pull to
+    /// a set of months. Named profiles:
+    ///   "post_ice_out" → early spring after ice-out (Apr-Jun; cleanest water,
+    ///                     wrecks pre-algae/pre-mussel-bloom).
+    ///   "open_water"   → full ice-free season (Apr-Nov).
+    ///   "summer"       → Jul-Sep (peak clarity / heat patterns).
+    ///   "all" / ""     → no month constraint.
+    /// Or an explicit comma list of month numbers, e.g. "4,5,6".
+    pub season_window: String,
+    /// Preferred satellite pass time: "day" (default optical), "night" (thermal
+    /// cold-sink / pre-dawn extreme), or "both" (day for optical + night for
+    /// thermal). Drives which Landsat/thermal acquisitions are requested.
+    pub pass_time: String,
     // concept chip geometry (annular signal / background radii, metres)
     pub chip_signal_m: f64,
     pub chip_bg_inner_m: f64,
@@ -158,6 +171,8 @@ impl Default for Knobs {
             auto_low_water_years: 4,
             scan_intent: "low_water_wreck".into(),
             stack_window_days: 20,
+            season_window: "post_ice_out".into(),
+            pass_time: "both".into(),
             chip_signal_m: 150.0,
             chip_bg_inner_m: 350.0,
             chip_bg_outer_m: 1200.0,
