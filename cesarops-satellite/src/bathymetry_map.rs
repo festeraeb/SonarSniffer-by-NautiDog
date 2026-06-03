@@ -20,7 +20,11 @@ pub const STUMPF_M1_M: f32 = 8.5;
 
 /// Max depth (m) we trust for a single pass given Secchi (m).
 pub fn depth_limit_m(secchi_m: f32) -> f32 {
-    (2.5 * secchi_m).clamp(8.0, 35.0)
+    // SDB (blue/green bottom reflectance) is reliable to ~2.5x Secchi but caps
+    // at ~24m (80ft) in Great Lakes water — beyond that the bottom contributes
+    // no measurable reflected light and more pixels don't help. Deeper targets
+    // need temporal persistence of surface/column signals, not SDB.
+    (2.5 * secchi_m).clamp(8.0, 24.0)
 }
 
 /// Secchi proxy from B02/B04 (matches poc.rs zebra_clarity).

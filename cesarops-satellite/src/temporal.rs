@@ -714,6 +714,10 @@ pub fn run_temporal_stack_local(
     use rayon::prelude::*;
 
     const MIN_FINITE_DATES: usize = 5;
+    // Operator's gold-standard floor: a persistence run is only trustworthy
+    // with at least 20 "perfect day" scenes (calm/clear, gate-passed). Below
+    // this the deep-wreck column signal can't be separated from weather noise.
+    const MIN_PERFECT_DAY_STACK: usize = 20;
     const ANOMALY_Z: f32 = -1.5;
     const PERSISTENCE_MIN_DEFAULT: f64 = 0.3;
     const PERSISTENCE_MIN_NEAR_GT: f64 = 0.08;
@@ -763,6 +767,13 @@ pub fn run_temporal_stack_local(
     if n_loaded < MIN_FINITE_DATES {
         anyhow::bail!(
             "need at least {MIN_FINITE_DATES} scenes with valid B02/B03, got {n_loaded}"
+        );
+    }
+    if n_loaded < MIN_PERFECT_DAY_STACK {
+        warn!(
+            "temporal stack has {n_loaded} scenes — below the {MIN_PERFECT_DAY_STACK}-scene \
+             perfect-day floor; persistence results are LOW CONFIDENCE for deep targets. \
+             Download more calm/clear scenes for a trustworthy run."
         );
     }
 
