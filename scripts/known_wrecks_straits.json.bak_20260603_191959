@@ -338,16 +338,10 @@
     "lon_min": -84.5871,
     "lon_max": -84.5858,
     "depth_ft": 113,
-    "type": "geology_ridges",
-    "confidence": "side_scan_ruled_out",
+    "type": "barquentine?",
+    "confidence": "bag_unmask_candidate",
     "source": "cesarops BAG uncertainty-unmask (H13255), NOAA-masked zone E of Elva",
-    "notes": "[RULED OUT by Deep View side-scan 2026-06-03 \u2014 geology, not wreckage] Intact upright wreck, 32ft relief in 113ft. Measured 110-130ft x 30-40ft beam. Candidates by size+location: Robert Burns (126ft, E of Bois Blanc - PRIMARY, matches recall), Flight (114ft, Bois Blanc), Commodore Foote (112ft, E Straits). Ruled out: Handy/Young/St.Andrews (located elsewhere).",
-    "ml_label": 0,
-    "gt_status": "ruled_out",
-    "gt_method": "side_scan_sonar (Deep View mosaic)",
-    "gt_date": "2026-06-03",
-    "gt_finding": "geology: parallel ridges, no wreckage in mosaic",
-    "gt_note": "Covered ~0.4 nm SE of the Elva. BAG-unmask cap was glacial channel geology aligned with the thalweg, not a hull. Retained as a HARD NEGATIVE for ML (interior relief + channel-aligned ridges fooled shape tests; azimuth-alignment-with-channel was the true tell)."
+    "notes": "Intact upright wreck, 32ft relief in 113ft. Measured 110-130ft x 30-40ft beam. Candidates by size+location: Robert Burns (126ft, E of Bois Blanc - PRIMARY, matches recall), Flight (114ft, Bois Blanc), Commodore Foote (112ft, E Straits). Ruled out: Handy/Young/St.Andrews (located elsewhere)."
   },
   "robert_burns": {
     "name": "Robert Burns",
@@ -440,16 +434,16 @@
     "lat_min": 46.034,
     "lat_max": 46.036,
     "lon_min": -85.472,
-    "lon_max": -85.47,
+    "lon_max": -85.470,
     "depth_ft": null,
     "type": "non_metallic_anomaly",
     "confidence": "side_scan_1992",
     "source": "govinfo CZIC-gc87-m5-g3-1992; gemini_ack_round2",
-    "notes": "450.12 \u2014 structural debris lane; coords per collab 46.0350,-85.4710"
+    "notes": "450.12 — structural debris lane; coords per collab 46.0350,-85.4710"
   },
   "czic_1992_450_44_south_channel": {
     "name": "1992 side-scan target 450.44 (South Channel)",
-    "lat_min": 45.82,
+    "lat_min": 45.820,
     "lat_max": 45.822,
     "lon_min": -84.616,
     "lon_max": -84.614,
@@ -457,7 +451,7 @@
     "type": "non_metallic_anomaly",
     "confidence": "side_scan_1992",
     "source": "govinfo CZIC-gc87-m5-g3-1992; gemini_ack_round2",
-    "notes": "450.44 \u2014 South Channel boundary anomaly; coords per collab 45.8210,-84.6150"
+    "notes": "450.44 — South Channel boundary anomaly; coords per collab 45.8210,-84.6150"
   },
   "burns_wood_wreck_gt": {
     "name": "Robert Burns (wood wreck / masked target)",
@@ -466,15 +460,9 @@
     "lon_min": -84.5871,
     "lon_max": -84.5858,
     "depth_ft": 113,
-    "type": "geology_ridges",
-    "confidence": "side_scan_ruled_out",
+    "type": "barquentine",
+    "confidence": "bag_unmask_candidate",
     "source": "H13257 South Channel; gemini BAG pairing",
-    "notes": "[RULED OUT by Deep View side-scan 2026-06-03 \u2014 geology, not wreckage] Primary wood/glint calibration; overlaps masked_target_e_of_elva",
-    "ml_label": 0,
-    "gt_status": "ruled_out",
-    "gt_method": "side_scan_sonar (Deep View mosaic)",
-    "gt_date": "2026-06-03",
-    "gt_finding": "geology: parallel ridges, no wreckage in mosaic",
-    "gt_note": "Covered ~0.4 nm SE of the Elva. BAG-unmask cap was glacial channel geology aligned with the thalweg, not a hull. Retained as a HARD NEGATIVE for ML (interior relief + channel-aligned ridges fooled shape tests; azimuth-alignment-with-channel was the true tell)."
+    "notes": "Primary wood/glint calibration; overlaps masked_target_e_of_elva"
   }
 }
