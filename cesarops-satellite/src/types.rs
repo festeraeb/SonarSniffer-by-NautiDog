@@ -69,6 +69,11 @@ pub struct Knobs {
     /// Post-storm scene window for the sediment_plume concept (YYYY-MM-DD).
     pub storm_date_start: String,
     pub storm_date_end: String,
+    // local-scene offline mode
+    /// Use on-disk tiles instead of STAC queries (for offline runs).
+    pub use_local_scenes: Option<bool>,
+    /// Target chip size for local band decode (pixels per side).
+    pub downsample_max_dim: Option<usize>,
     // ground-truth / download selection
     /// Minimum WreckTarget confidence to keep when loading known wrecks.
     pub gt_min_confidence: f64,
@@ -130,6 +135,8 @@ impl Default for Knobs {
             xref_nearby_radius_m: 2000.0,
             storm_date_start: "2024-01-13".into(),
             storm_date_end: "2024-01-20".into(),
+            use_local_scenes: None,
+            downsample_max_dim: None,
             gt_min_confidence: 0.0,
             water_year_priority: vec![],
             auto_low_water_years: 4,

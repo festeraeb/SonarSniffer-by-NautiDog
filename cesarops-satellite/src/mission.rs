@@ -523,16 +523,27 @@ async fn stage_poc_aoi(
     // Known wrecks → (lat, lon) for `_cross_reference`.
     let known: Vec<(f64, f64)> = wrecks.iter().map(|w| (w.lat, w.lon)).collect();
 
-    let outcome = crate::poc::run_poc_aoi(
-        client,
-        &bbox,
-        start,
-        end,
-        knobs,
-        &paths.chip_cache_dir,
-        &known,
-    )
-    .await;
+    let outcome = if knobs.use_local_scenes.unwrap_or(false) {
+        // Offline path: read local tiles, no STAC query.
+        crate::poc::run_poc_aoi_local(
+            &paths.download_dir,
+            &bbox,
+            knobs,
+            &known,
+            knobs.downsample_max_dim.unwrap_or(2048),
+        )
+    } else {
+        crate::poc::run_poc_aoi(
+            client,
+            &bbox,
+            start,
+            end,
+            knobs,
+            &paths.chip_cache_dir,
+            &known,
+        )
+        .await
+    };
 
     match outcome {
         Ok(o) => {

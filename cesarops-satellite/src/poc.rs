@@ -876,3 +876,172 @@ mod tests {
         assert!((lon_g[[0, 2]] - (-82.0)).abs() < 1e-9);
     }
 }
+
+
+// ── Offline local-tile POC (no STAC, reads on-disk Sentinel-2) ────────────────
+
+use rayon::prelude::*;
+
+/// A scene's loaded bands for local processing.
+struct LocalScene {
+    date: String,
+    b02: Array2<f32>, // blue
+    b03: Array2<f32>, // green
+}
+
+/// Blue-green clarity concept (B02/B03) — replacement for zebra_clarity(B02/B04)
+/// when red band doesn't penetrate to target depth.
+/// Secchi-like: clarity = log(B02) / log(B03). Areas with column disturbance
+/// (plume, turbidity from wreck-driven current) show lower clarity ratio.
+pub fn concept_blue_green_clarity(
+    b02: &Array2<f32>,
+    b03: &Array2<f32>,
+    bbox: &BBox,
+    scene_date: &str,
+    cfg: &PocConfig,
+) -> Vec<OpticalCandidate> {
+    if b02.is_empty() || b03.is_empty() {
+        return vec![];
+    }
+    let factor = downsample_factor(b02.dim(), cfg.downsample_max_dim);
+    let (b02, b03) = if factor > 1 {
+        (downsample(b02, factor), downsample(b03, factor))
+    } else {
+        (b02.clone(), b03.clone())
+    };
+    if b02.dim() != b03.dim() {
+        return vec![];
+    }
+    let (rows, cols) = b02.dim();
+
+    // Clarity index: log(B02)/log(B03) — ratio of blue to green log-reflectance
+    // High clarity water → high ratio; wreck-disturbed column → lower ratio (anomaly)
+    let mut clarity = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            let blue = b02[[r, c]];
+            let green = b03[[r, c]];
+            if blue > 0.001 && green > 0.001 && blue.is_finite() && green.is_finite() {
+                clarity[[r, c]] = blue.ln() / green.ln();
+            }
+        }
+    }
+
+    // Z-score: negative z = lower clarity than surroundings = anomaly
+    let z = masked_zscore(&clarity);
+    // Invert: we want LOW clarity (disturbance) as high score
+    let neg_z = z.mapv(|v| -v);
+
+    let min_sep = cfg.min_sep(15);
+    let (lat_grid, lon_grid) = pixel_coords(rows, cols, bbox);
+    let peaks = find_peak_clusters(&neg_z, &lat_grid, &lon_grid, 2.0, min_sep, 50);
+
+    peaks
+        .iter()
+        .map(|&(lat, lon, score, metric)| {
+            OpticalCandidate {
+                concept: "blue_green_clarity".into(),
+                lat,
+                lon,
+                score,
+                wreck_score: score as i64,
+                scene_date: scene_date.into(),
+                metric,
+                metric_zscore: score,
+                known_wreck_nearby: false,
+                nearest_known_m: default_nearest_known_m(),
+                note: String::new(),
+            }
+        })
+        .collect()
+}
+
+/// Run the optical POC on LOCAL (already-downloaded) Sentinel-2 tiles.
+/// Uses rayon for scene-level parallelism. No network access.
+///
+/// `scene_dir`: directory containing `<scene_id>.<band>.tif` files.
+/// Returns candidates from all scenes, fused and ranked.
+pub fn run_poc_aoi_local(
+    scene_dir: &std::path::Path,
+    bbox: &BBox,
+    knobs: &crate::types::Knobs,
+    known_wrecks: &[(f64, f64)],
+    target_px: usize,
+) -> anyhow::Result<PocOutcome> {
+    use std::collections::HashMap;
+
+    let cfg = PocConfig::from_knobs(knobs);
+
+    // Discover scenes by globbing for *.blue.tif
+    let mut scene_ids: Vec<String> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    if let Ok(entries) = std::fs::read_dir(scene_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.ends_with(".blue.tif") {
+                let id = name.trim_end_matches(".blue.tif").to_string();
+                if seen.insert(id.clone()) {
+                    scene_ids.push(id);
+                }
+            }
+        }
+    }
+    scene_ids.sort();
+    let n_scenes = scene_ids.len();
+    tracing::info!("Local POC: found {n_scenes} scenes in {}", scene_dir.display());
+
+    if n_scenes == 0 {
+        return Ok(PocOutcome {
+            n_scenes: 0,
+            clear_date: "none".into(),
+            storm_date: "none".into(),
+            candidates: vec![],
+        });
+    }
+
+    // Load scenes in parallel with rayon (each opens its own GDAL dataset)
+    #[cfg(feature = "gdal")]
+    let scenes: Vec<Option<LocalScene>> = scene_ids
+        .par_iter()
+        .map(|id| {
+            let blue_path = scene_dir.join(format!("{id}.blue.tif"));
+            let green_path = scene_dir.join(format!("{id}.green.tif"));
+            let b02 = crate::chip::decode_local_band(&blue_path, bbox, target_px).ok()?;
+            let b03 = crate::chip::decode_local_band(&green_path, bbox, target_px).ok()?;
+            // Extract date from scene ID (e.g. S2B_16TFR_20240913_0_L2A → 20240913)
+            let date = id.split('_').nth(2).unwrap_or("unknown").to_string();
+            Some(LocalScene { date, b02, b03 })
+        })
+        .collect();
+
+    #[cfg(not(feature = "gdal"))]
+    let scenes: Vec<Option<LocalScene>> = vec![];
+
+    let loaded: Vec<LocalScene> = scenes.into_iter().flatten().collect();
+    tracing::info!("Local POC: loaded {} of {} scenes", loaded.len(), n_scenes);
+
+    // Run blue-green clarity concept on each scene (also parallel)
+    let mut all_candidates: Vec<OpticalCandidate> = loaded
+        .par_iter()
+        .flat_map(|scene| {
+            concept_blue_green_clarity(&scene.b02, &scene.b03, bbox, &scene.date, &cfg)
+        })
+        .collect();
+
+    // Cross-reference against known wrecks
+    if !known_wrecks.is_empty() {
+        cross_reference(&mut all_candidates, known_wrecks, cfg.xref_nearby_radius_m);
+    }
+
+    all_candidates.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+
+    let clear_date = loaded.first().map(|s| s.date.clone()).unwrap_or_default();
+    let storm_date = loaded.last().map(|s| s.date.clone()).unwrap_or_default();
+
+    Ok(PocOutcome {
+        n_scenes: loaded.len(),
+        clear_date,
+        storm_date,
+        candidates: all_candidates,
+    })
+}
