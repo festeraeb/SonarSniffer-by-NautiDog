@@ -375,14 +375,78 @@ async fn stage_download(
         }
 
         if !scenes.is_empty() {
+            // Calm-day gate: qualify each scene by its acquisition date against
+            // the nearest Great Lakes buoy (wave/wind) + cloud cover. Calm,
+            // clear days are the operator's "perfect day" stack for thermal /
+            // plume / clarity work; rough days get deprioritised (not deleted,
+            // so historical/event-response intents can still use them).
+            let aoi_lat = (bbox.lat_min + bbox.lat_max) / 2.0;
+            let aoi_lon = (bbox.lon_min + bbox.lon_max) / 2.0;
+            let mut conditions: Vec<crate::buoy::BuoyCondition> = Vec::with_capacity(scenes.len());
+            for s in &scenes {
+                let date = s.datetime;
+                let cond = crate::buoy::condition_for(&http, aoi_lat, aoi_lon, date).await;
+                conditions.push(cond);
+            }
+            // Order scenes: calm-first, then unknown (no buoy data), then rough;
+            // ties broken by cloud cover. Unknown scenes are NOT penalised as
+            // rough — recent dates often lack archived buoy data.
+            let rank = |c: &crate::buoy::BuoyCondition| -> u8 {
+                if !c.data_available { 1 } // unknown sits between calm(0) and rough(2)
+                else if c.is_calm { 0 }
+                else { 2 }
+            };
+            let mut order: Vec<usize> = (0..scenes.len()).collect();
+            order.sort_by(|&a, &b| {
+                rank(&conditions[a])
+                    .cmp(&rank(&conditions[b]))
+                    .then(
+                        scenes[a].cloud_cover
+                            .partial_cmp(&scenes[b].cloud_cover)
+                            .unwrap_or(std::cmp::Ordering::Equal),
+                    )
+            });
+            let scenes: Vec<crate::stac::Scene> = order.iter().map(|&i| scenes[i].clone()).collect();
+            let conditions: Vec<crate::buoy::BuoyCondition> =
+                order.iter().map(|&i| conditions[i].clone()).collect();
+
+            let n_calm = conditions.iter().filter(|c| c.is_calm).count();
+            let n_unknown = conditions.iter().filter(|c| !c.data_available).count();
+            let n_clear = scenes.iter().filter(|s| s.cloud_cover <= knobs.max_cloud).count();
+            let n_perfect = scenes
+                .iter()
+                .zip(&conditions)
+                .filter(|(s, c)| c.is_calm && s.cloud_cover <= knobs.max_cloud)
+                .count();
+            info!(
+                "Calm-gate: {} scenes, {} calm / {} unknown-buoy / {} rough (buoy {}), {} clear, {} perfect-day; floor {} / target {}",
+                scenes.len(),
+                n_calm,
+                n_unknown,
+                scenes.len() - n_calm - n_unknown,
+                conditions.first().map(|c| c.station_id.as_str()).unwrap_or("?"),
+                n_clear,
+                n_perfect,
+                crate::scan_plan::MIN_SCENES,
+                crate::scan_plan::TARGET_SCENES,
+            );
+
             let manifest = scenes
                 .iter()
-                .map(|s| {
+                .zip(&conditions)
+                .map(|(s, cond)| {
+                    let perfect_day = cond.is_calm && s.cloud_cover <= knobs.max_cloud;
                     serde_json::json!({
                         "id": s.id,
                         "datetime": s.datetime,
                         "cloud_cover": s.cloud_cover,
                         "assets": s.assets,
+                        "buoy_station": cond.station_id,
+                        "wave_height_m": cond.wave_height_m,
+                        "wind_speed_ms": cond.wind_speed_ms,
+                        "buoy_data": cond.data_available,
+                        "is_calm": cond.is_calm,
+                        "perfect_day": perfect_day,
                     })
                 })
                 .collect::<Vec<_>>();
@@ -406,6 +470,12 @@ async fn stage_download(
                     "download_dir": paths.download_dir,
                     "manifest": manifest_path,
                     "n_scenes": scenes.len(),
+                    "n_calm": n_calm,
+                    "n_unknown_buoy": n_unknown,
+                    "n_clear": n_clear,
+                    "n_perfect_day": n_perfect,
+                    "min_scenes_floor": crate::scan_plan::MIN_SCENES,
+                    "target_scenes": crate::scan_plan::TARGET_SCENES,
                     "date_range": [start.to_string(), end.to_string()],
                     "preflight": preflight,
                 });

@@ -73,6 +73,10 @@ pub struct BuoyCondition {
     pub wind_speed_ms: Option<f64>,
     /// True if conditions pass the calm gate (low wave + low wind).
     pub is_calm: bool,
+    /// True when the buoy actually returned usable wave/wind data for the date.
+    /// When false, `is_calm` is meaningless (no data) — callers should treat the
+    /// scene as "unknown", not "rough".
+    pub data_available: bool,
 }
 
 /// Calm thresholds. A scene is "calm enough" for the thermal/plume stack when
@@ -112,17 +116,32 @@ pub async fn fetch_day_condition(
     date: NaiveDate,
 ) -> (Option<f64>, Option<f64>) {
     let year = date.format("%Y").to_string();
-    let url = format!(
+    // Primary: completed-year historical stdmet archive.
+    let hist_url = format!(
         "https://www.ndbc.noaa.gov/view_text_file.php?filename={station_id}h{year}.txt.gz&dir=data/historical/stdmet/"
     );
-    let body = match client.get(&url).send().await {
-        Ok(r) if r.status().is_success() => match r.text().await {
-            Ok(t) => t,
-            Err(_) => return (None, None),
-        },
-        _ => return (None, None),
-    };
-    parse_day_wvht_wspd(&body, date)
+    if let Some(body) = fetch_text(client, &hist_url).await {
+        let (wvht, wspd) = parse_day_wvht_wspd(&body, date);
+        if wvht.is_some() || wspd.is_some() {
+            return (wvht, wspd);
+        }
+    }
+    // Fallback: current-year / recent data isn't in the historical archive yet.
+    // NDBC serves the trailing ~45 days at realtime2/<id>.txt (same column
+    // layout, no .gz). Use it for scenes in the current season.
+    let rt_url = format!("https://www.ndbc.noaa.gov/data/realtime2/{station_id}.txt");
+    if let Some(body) = fetch_text(client, &rt_url).await {
+        return parse_day_wvht_wspd(&body, date);
+    }
+    (None, None)
+}
+
+/// GET a URL, returning the body text on 2xx, else None.
+async fn fetch_text(client: &reqwest::Client, url: &str) -> Option<String> {
+    match client.get(url).send().await {
+        Ok(r) if r.status().is_success() => r.text().await.ok(),
+        _ => None,
+    }
 }
 
 /// Parse the NDBC stdmet text, averaging WVHT (col 8) and WSPD (col 6) over all
@@ -175,6 +194,7 @@ pub async fn condition_for(
 ) -> BuoyCondition {
     let (station, dist) = nearest_station(lat, lon);
     let (wvht, wspd) = fetch_day_condition(client, station.id, date).await;
+    let data_available = wvht.is_some() || wspd.is_some();
     let is_calm = wvht.map_or(false, |w| w <= CALM_WAVE_HEIGHT_M)
         && wspd.map_or(true, |s| s <= CALM_WIND_SPEED_MS);
     BuoyCondition {
@@ -185,6 +205,7 @@ pub async fn condition_for(
         wave_height_m: wvht,
         wind_speed_ms: wspd,
         is_calm,
+        data_available,
     }
 }
 
