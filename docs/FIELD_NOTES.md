@@ -1,5 +1,8 @@
 # Field Notes — wreck-logic / why the code does what it does
 
+> Mission/origin context lives in `docs/PROJECT_ORIGIN_AND_MISSION.md` — read
+> that for the *why of the project*; this file is the *why of the code*.
+
 Version-controlled TRIBAL KNOWLEDGE. Code can be rewritten after a crash; the
 *reasoning* is what vanishes. This file exists because we lost the original
 system (drive crash) and then lost discoveries again (AI-assisted rebuild that
