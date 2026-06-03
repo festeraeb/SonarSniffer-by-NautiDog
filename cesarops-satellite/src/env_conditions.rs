@@ -448,6 +448,171 @@ pub fn intent_season_months(intent: ScanIntent) -> &'static [u32] {
     }
 }
 
+// ── Composite download-priority formula (operator's chat-paste spec) ──────────
+//
+//   download_priority = thermal + clarity + stratification + calm_water
+//                       + post_storm + seasonal
+//
+// Each term is 0–1; the sum (0–6) is normalised to 0–1. A scene is archived
+// only if it clears a threshold. Terms map to the operator's signal-type table:
+//   thermal        — cold-night→sunny-day contrast + stable column (cold-sink)
+//   clarity        — low turbidity / clear water (mussel-filtered, bloom-free)
+//   stratification — stable summer/early-fall column (no turnover mixing)
+//   calm_water     — low wind + low wave
+//   post_storm     — 12–72 h after storm (delayed window scores highest)
+//   seasonal       — early-spring (post ice-out) and FALL score highest
+
+/// Great Lakes seasonal priority (operator: spring AND fall are the windows;
+/// fall often the single highest-priority download window).
+pub fn seasonal_score(month: u32) -> f64 {
+    match month {
+        // Fall: peak mussel clarity + storm plumes + cold-night thermal contrast.
+        9 | 10 => 1.0,
+        11 => 0.8,
+        // Early spring after ice-out: clarity, low bio noise, baseline roughness.
+        4 | 5 => 0.9,
+        6 => 0.7,
+        // Mid-summer: stratification good but biological productivity rises.
+        7 | 8 => 0.6,
+        // Winter / ice / turnover: low priority.
+        _ => 0.2,
+    }
+}
+
+/// Stratification stability score: stable column (no turnover) helps thermal /
+/// thermocline signatures. Summer–early-fall are most stable; spring/fall
+/// turnover periods are penalised. `days_since_storm` (wind mixing) refines it.
+pub fn stratification_score(c: &SceneConditions) -> f64 {
+    let season = match c.month {
+        7 | 8 => 1.0,       // peak summer stratification
+        6 | 9 => 0.8,
+        5 | 10 => 0.5,      // shoulder; turnover risk
+        11 | 4 => 0.3,      // turnover periods
+        _ => 0.2,
+    };
+    // Recent wind mixing degrades stratification.
+    let mixing = match c.days_since_storm {
+        Some(d) if d >= 3 => 1.0,
+        Some(d) if d >= 1 => 0.6,
+        Some(_) => 0.3,
+        None => 0.8,
+    };
+    0.6 * season + 0.4 * mixing
+}
+
+/// The composite download-priority score (0–1) for a scene, per the operator's
+/// formula. `cold_night_contrast` is an optional 0–1 thermal-gate input (clear
+/// nights + light winds + strong air-water ΔT); when absent it's inferred from
+/// calm + clear + season.
+pub fn download_priority(c: &SceneConditions, cold_night_contrast: Option<f64>) -> f64 {
+    let mph = |ms: f64| ms * 2.23694;
+    let cloud = c.cloud_pct.unwrap_or(0.0);
+    let cloud_ok = if cloud <= 10.0 { 1.0 } else { (1.0 - (cloud - 10.0) / 90.0).max(0.0) };
+
+    let calm_water = {
+        let w = c.wind_speed_ms.map(|x| {
+            let m = mph(x);
+            if m <= 8.0 { 1.0 } else { (1.0 - (m - 8.0) / 22.0).max(0.0) }
+        }).unwrap_or(0.7);
+        let h = c.wave_height_m.map(|x| if x <= 0.3 { 1.0 } else { (1.0 - (x - 0.3) / 1.2).max(0.0) }).unwrap_or(0.7);
+        0.5 * w + 0.5 * h
+    };
+
+    let clarity = c.turbidity.map(|t| (1.0 - t / 10.0).clamp(0.0, 1.0)).unwrap_or(0.7) * cloud_ok;
+
+    // Post-storm: delayed 24–72 h window scores highest (organised signal),
+    // immediate 0–24 h still useful, long-calm fades.
+    let post_storm = match c.days_since_storm {
+        Some(d) if (1..=3).contains(&d) => 1.0,  // 24–72 h: best
+        Some(0) => 0.7,                          // immediate
+        Some(d) if d <= 7 => (1.0 - (d - 3) as f64 / 8.0).max(0.3),
+        Some(_) => 0.2,
+        None => 0.5,
+    };
+
+    let stratification = stratification_score(c);
+    let seasonal = seasonal_score(c.month);
+
+    // Thermal: cold-night→sunny-day contrast + stable column. If a measured
+    // contrast is supplied use it; else infer from calm + clear + cold season.
+    let thermal = cold_night_contrast.unwrap_or_else(|| {
+        let cold_season = matches!(c.month, 4 | 5 | 9 | 10 | 11);
+        0.5 * calm_water + 0.3 * cloud_ok + if cold_season { 0.2 } else { 0.0 }
+    });
+
+    let sum = thermal + clarity + stratification + calm_water + post_storm + seasonal;
+    (sum / 6.0).clamp(0.0, 1.0)
+}
+
+// ── Temporal Isolation Gate (operator's chat-paste spec) ─────────────────────
+//
+// "Was the scene different from the previous N good scenes?" — we want ~100
+// scenes from DISTINCT environmental states, not thousands of near-duplicates
+// (which waste storage and burn the P100s on redundant data). A candidate is
+// accepted only if its environmental state vector is far enough from every
+// recently-accepted scene.
+
+/// Normalised environmental-state vector for a scene (each ~0–1) used to judge
+/// whether two scenes are environmentally redundant.
+pub fn state_vector(c: &SceneConditions) -> [f64; 5] {
+    let wind = c.wind_speed_ms.map(|x| (x / 15.0).min(1.0)).unwrap_or(0.5);
+    let wave = c.wave_height_m.map(|x| (x / 2.0).min(1.0)).unwrap_or(0.5);
+    let cloud = (c.cloud_pct.unwrap_or(0.0) / 100.0).clamp(0.0, 1.0);
+    let turb = c.turbidity.map(|t| (t / 10.0).clamp(0.0, 1.0)).unwrap_or(0.5);
+    // Day-of-year phase captures season; use a 0–1 ramp across the year.
+    let season = (c.month.clamp(1, 12) as f64 - 1.0) / 11.0;
+    [wind, wave, cloud, turb, season]
+}
+
+/// Euclidean distance between two scene state vectors.
+pub fn state_distance(a: &SceneConditions, b: &SceneConditions) -> f64 {
+    let va = state_vector(a);
+    let vb = state_vector(b);
+    va.iter().zip(vb.iter()).map(|(x, y)| (x - y).powi(2)).sum::<f64>().sqrt()
+}
+
+/// Decide whether `candidate` is environmentally DISTINCT from all
+/// `accepted` scenes. `min_distance` is the isolation radius (state-vector
+/// units; ~0.15–0.25 is a reasonable "meaningfully different" threshold).
+pub fn is_temporally_isolated(
+    candidate: &SceneConditions,
+    accepted: &[SceneConditions],
+    min_distance: f64,
+) -> bool {
+    accepted.iter().all(|a| state_distance(candidate, a) >= min_distance)
+}
+
+/// Greedily select up to `target` environmentally-distinct scenes from
+/// `scored` (each `(scene_conditions, priority_score)`), highest-priority
+/// first, keeping a new scene only if it is at least `min_distance` from every
+/// already-kept scene. Returns the kept indices into `scored`.
+///
+/// This is the "100 excellent scenes from distinct states, not 5000 near-dupes"
+/// selector. Pair it with `download_priority` for the score.
+pub fn select_distinct_scenes(
+    scored: &[(SceneConditions, f64)],
+    target: usize,
+    min_distance: f64,
+) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..scored.len()).collect();
+    order.sort_by(|&a, &b| {
+        scored[b].1.partial_cmp(&scored[a].1).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let mut kept: Vec<usize> = Vec::new();
+    let mut kept_cond: Vec<SceneConditions> = Vec::new();
+    for i in order {
+        if kept.len() >= target {
+            break;
+        }
+        let (ref cond, _score) = scored[i];
+        if is_temporally_isolated(cond, &kept_cond, min_distance) {
+            kept.push(i);
+            kept_cond.push(cond.clone());
+        }
+    }
+    kept
+}
+
 #[cfg(test)]
 mod intent_tests {
     use super::*;
