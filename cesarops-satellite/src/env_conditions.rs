@@ -544,6 +544,78 @@ pub fn download_priority(c: &SceneConditions, cold_night_contrast: Option<f64>) 
     (sum / 6.0).clamp(0.0, 1.0)
 }
 
+/// Per-signal breakdown of a scene's suitability — the granular form of
+/// `download_priority`. Instead of collapsing to one scalar, expose each
+/// sub-score so (a) the operator/engine can weight them per intent and (b) the
+/// values become ML features later. `confidence` reflects how much real data
+/// (vs neutral defaults) backed the scores.
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub struct SceneScore {
+    pub clarity: f64,
+    pub thermal: f64,
+    pub plume: f64,
+    pub glint: f64,
+    pub roughness: f64,
+    pub calm: f64,
+    pub seasonal: f64,
+    /// Composite (same value as `download_priority`) for convenience.
+    pub priority: f64,
+    /// 0–1: fraction of inputs that were actually measured (not neutral).
+    pub confidence: f64,
+}
+
+/// Compute the per-signal `SceneScore` for a scene's conditions.
+pub fn scene_score(c: &SceneConditions, cold_night_contrast: Option<f64>) -> SceneScore {
+    let mph = |ms: f64| ms * 2.23694;
+    let cloud = c.cloud_pct.unwrap_or(0.0);
+    let cloud_ok = if cloud <= 10.0 { 1.0 } else { (1.0 - (cloud - 10.0) / 90.0).max(0.0) };
+
+    let calm = {
+        let w = c.wind_speed_ms.map(|x| {
+            let m = mph(x);
+            if m <= 8.0 { 1.0 } else { (1.0 - (m - 8.0) / 22.0).max(0.0) }
+        }).unwrap_or(0.7);
+        let h = c.wave_height_m.map(|x| if x <= 0.3 { 1.0 } else { (1.0 - (x - 0.3) / 1.2).max(0.0) }).unwrap_or(0.7);
+        0.5 * w + 0.5 * h
+    };
+
+    let clarity = c.turbidity.map(|t| (1.0 - t / 10.0).clamp(0.0, 1.0)).unwrap_or(0.7) * cloud_ok;
+
+    // Plume favours recent storm/runoff; glint favours clear + some roughness;
+    // roughness is the current-modulation surface signal (moderate wind helps).
+    let plume = match c.days_since_storm {
+        Some(d) if (1..=3).contains(&d) => 1.0,
+        Some(0) => 0.7,
+        Some(d) if d <= 7 => (1.0 - (d - 3) as f64 / 8.0).max(0.2),
+        Some(_) => 0.2,
+        None => 0.4,
+    };
+    let glint = 0.7 * cloud_ok + 0.3 * c.wave_height_m.map(|x| if x < 0.6 { 1.0 } else { 0.5 }).unwrap_or(0.7);
+    let roughness = c.wind_speed_ms.map(|x| {
+        let m = mph(x);
+        // moderate wind (6-15 mph) best for current-roughness expression
+        if (6.0..=15.0).contains(&m) { 1.0 } else if m < 6.0 { 0.5 } else { (1.0 - (m - 15.0) / 20.0).max(0.2) }
+    }).unwrap_or(0.6);
+    let seasonal = seasonal_score(c.month);
+    let thermal = cold_night_contrast.unwrap_or_else(|| {
+        let cold_season = matches!(c.month, 4 | 5 | 9 | 10 | 11);
+        0.5 * calm + 0.3 * cloud_ok + if cold_season { 0.2 } else { 0.0 }
+    });
+
+    let confidence = {
+        let n = [c.wind_speed_ms.is_some(), c.wave_height_m.is_some(),
+                 c.cloud_pct.is_some(), c.days_since_storm.is_some(),
+                 c.turbidity.is_some()].iter().filter(|&&b| b).count();
+        n as f64 / 5.0
+    };
+
+    SceneScore {
+        clarity, thermal, plume, glint, roughness, calm, seasonal,
+        priority: download_priority(c, cold_night_contrast),
+        confidence,
+    }
+}
+
 // ── Temporal Isolation Gate (operator's chat-paste spec) ─────────────────────
 //
 // "Was the scene different from the previous N good scenes?" — we want ~100
@@ -644,6 +716,23 @@ mod intent_tests {
         };
         assert!(intent_fitness(ScanIntent::SedimentPlume, &post_storm)
             > intent_fitness(ScanIntent::SedimentPlume, &long_calm));
+    }
+
+    #[test]
+    fn scene_score_breaks_out_signals_and_confidence() {
+        // Full data → confidence 1.0; fall + calm + clear scores high priority.
+        let full = SceneConditions {
+            wind_speed_ms: Some(3.0), wave_height_m: Some(0.1), cloud_pct: Some(3.0),
+            days_since_storm: Some(2), turbidity: Some(1.0), month: 10,
+        };
+        let s = super::scene_score(&full, None);
+        assert!((s.confidence - 1.0).abs() < 1e-9);
+        assert!(s.plume > 0.9, "d2 storm = peak plume, got {}", s.plume);
+        assert!(s.seasonal > 0.9, "October = peak season, got {}", s.seasonal);
+        assert!(s.priority > 0.6);
+        // Sparse data → lower confidence.
+        let sparse = SceneConditions { month: 10, ..Default::default() };
+        assert!(super::scene_score(&sparse, None).confidence < 0.2);
     }
 
     #[test]
