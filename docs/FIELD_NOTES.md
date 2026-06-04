@@ -250,3 +250,46 @@ crash took).
   State: 3 families now flow (optical clarity/glint + thermal + temporal).
     Triple-lock still 0 (need spatial co-location + more thermal scenes), but
     thermal is REAL signal now, not a stub. SAR/SWOT/ECOSTRESS/ATL03 still TODO.
+
+## WHY GDAL-FREE BY DEFAULT (recovered reasoning, 2026-06-04)
+The HP host is IVY BRIDGE (AVX, but NO AVX2/FMA3 — those arrived with Haswell).
+Two reasons, both load-bearing:
+
+1. HARDWARE / SIGILL. Pre-compiled libgdal (C++) from package managers is often
+   cross-compiled with AVX2-optimized codec paths for modern cloud CPUs. On Ivy
+   Bridge those paths trigger SIGILL (illegal instruction) crashes. Recompiling
+   C++ GDAL from source on an old box to strip the flags is dependency hell.
+   Pure-Rust crates (tiff/georaster) defer vectorization to rustc, which
+   auto-vectorizes to the EXACT instruction set the chip has — no SIGILL, no
+   speed loss. This is why the whole fleet (recycled OptiPlex/HP) runs clean.
+
+2. RAW SENSOR PHYSICS. GDAL is an abstraction engine: it turns raw planetary
+   data into a uniform geo grid, and in doing so it:
+     - silently strips PRIVATE sub-IFD TIFF tags (proprietary calibration LUTs,
+       radar look-up tables, telemetry vectors) that aren't in the GeoTIFF spec;
+     - auto-applies orientation/nodata-mask/geometric sensor corrections behind
+       your back — destroys raw SLANT-RANGE arrays needed for SAR interferometry
+       / custom calibration;
+     - can drop precision on complex Real/Imag float bit-depths.
+   The pure-Rust `tiff` crate gives byte-level IFD access (iterate every raw tag
+   id) and the file exactly as it sits on disk — unrectified pixel stream, true
+   sensor values, you control the cast (f32::from_le_bytes). Essential for the
+   raw SAR/thermal column-physics this project depends on.
+
+ONE intentional exception: the DRIFT engine uses OpenDrift (Python) for its rich
+architecture — not pure Rust. Everything else: pure-Rust, GDAL-free by default.
+GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
+
+## 2026-06-04  RUSTFLAGS target-cpu — the OTHER half of GDAL-free (fleet caveat)
+  Old compile note (recovered): RUSTFLAGS="-C target-cpu=native" cargo build --release
+  WHY it works: rustc compiles to the BUILD host's full ISA, max auto-vectorization,
+    no prebuilt-binary SIGILL. This is what makes pure-Rust as fast as GDAL's C++.
+  CRITICAL FLEET CAVEAT: native bakes in the BUILD host's instructions.
+    - T440 build host = Xeon Silver 4110 (Skylake-SP, has AVX-512).
+    - A native binary built here SIGILLs on the Ivy Bridge HP (AVX only, no AVX2).
+  RULE:
+    - Build ON the box you run on  -> native is perfect.
+    - Build once, distribute to the mixed fleet -> target the OLDEST host:
+      -C target-cpu=ivybridge (AVX, no AVX2) is the fleet floor (the HP).
+  Helper: scripts/build_satellite.sh {native|ivybridge|haswell|portable};
+    default = ivybridge (fleet-safe). GDAL-free is always the default build.

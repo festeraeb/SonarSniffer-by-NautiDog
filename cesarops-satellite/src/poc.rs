@@ -1290,8 +1290,9 @@ pub fn run_poc_aoi_local(
         });
     }
 
-    // Load scenes in parallel with rayon (each opens its own GDAL dataset)
-    #[cfg(feature = "gdal")]
+    // Load scenes in parallel with rayon. GDAL-free by default: the pure-Rust
+    // geo-aware reader (crate::geotiff via decode_local_band) handles tiled COGs
+    // with no system libgdal; GDAL is only an optional acceleration feature.
     let scenes: Vec<Option<LocalScene>> = scene_ids
         .par_iter()
         .map(|id| {
@@ -1304,9 +1305,6 @@ pub fn run_poc_aoi_local(
             Some(LocalScene { date, b02, b03 })
         })
         .collect();
-
-    #[cfg(not(feature = "gdal"))]
-    let scenes: Vec<Option<LocalScene>> = vec![];
 
     let loaded: Vec<LocalScene> = scenes.into_iter().flatten().collect();
     tracing::info!("Local POC: loaded {} of {} scenes", loaded.len(), n_scenes);
@@ -1331,7 +1329,6 @@ pub fn run_poc_aoi_local(
     // also scan every *.lwir11.tif in the dir independently (its own date), not
     // just S2-co-located ones. This is how the thermal/material family gets real
     // candidates into the triple-lock without needing a same-day S2 scene.
-    #[cfg(feature = "gdal")]
     {
         let mut thermal_ids: Vec<String> = Vec::new();
         if let Ok(entries) = std::fs::read_dir(scene_dir) {

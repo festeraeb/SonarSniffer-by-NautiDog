@@ -189,7 +189,7 @@ pub struct BathyStackReport {
 }
 
 /// Multi-pass SDB over local Sentinel-2 scene folders (same layout as `run_poc_local`).
-#[cfg(feature = "gdal")]
+/// GDAL-free (pure-Rust geo reader via chip::decode_local_band).
 pub fn run_bathymetry_stack_local(
     scene_dirs: &[impl AsRef<Path>],
     bbox: &BBox,
@@ -306,16 +306,6 @@ pub fn run_bathymetry_stack_local(
     std::fs::write(&path, serde_json::to_string_pretty(&report)?)?;
     info!("bathy_map: wrote {}", path.display());
     Ok(report)
-}
-
-#[cfg(not(feature = "gdal"))]
-pub fn run_bathymetry_stack_local(
-    _scene_dirs: &[impl AsRef<Path>],
-    _bbox: &BBox,
-    _target_px: usize,
-    _out_dir: &Path,
-) -> anyhow::Result<BathyStackReport> {
-    anyhow::bail!("bathymetry_map requires --features gdal")
 }
 
 #[cfg(test)]

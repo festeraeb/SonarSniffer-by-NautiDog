@@ -771,16 +771,9 @@ async fn stage_sar_local(
     }
     let out = paths.output_dir.join("sar_local");
     let known: Vec<(f64, f64)> = wrecks.iter().map(|w| (w.lat, w.lon)).collect();
-    #[cfg(feature = "gdal")]
-    {
-        match crate::sar::run_sar_local(&sar_dir, &bbox, knobs, &known, &out, crate::sar::DEFAULT_SAR_SIGMA) {
-            Ok(v) => return v,
-            Err(e) => return serde_json::json!({ "error": e.to_string() }),
-        }
-    }
-    #[cfg(not(feature = "gdal"))]
-    {
-        serde_json::json!({ "error": "sar_local requires --features gdal" })
+    match crate::sar::run_sar_local(&sar_dir, &bbox, knobs, &known, &out, crate::sar::DEFAULT_SAR_SIGMA) {
+        Ok(v) => v,
+        Err(e) => serde_json::json!({ "error": e.to_string() }),
     }
 }
 
@@ -861,26 +854,19 @@ async fn stage_bathy_map(spec: &MissionSpec, paths: &MissionPaths, knobs: &Knobs
             }
         }
     }
-    #[cfg(feature = "gdal")]
-    {
-        match crate::bathymetry_map::run_bathymetry_stack_local(&scene_dirs, &bbox, target_px, &out) {
-            Ok(r) => {
-                return serde_json::json!({
-                    "rc": 0,
-                    "mode": "satellite_sdb_multi_pass",
-                    "output_dir": out,
-                    "n_passes": r.n_passes_used,
-                    "max_relief": r.max_relief,
-                    "fused_depth_stats": r.fused_depth_stats,
-                    "note": r.note,
-                });
-            }
-            Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    match crate::bathymetry_map::run_bathymetry_stack_local(&scene_dirs, &bbox, target_px, &out) {
+        Ok(r) => {
+            serde_json::json!({
+                "rc": 0,
+                "mode": "satellite_sdb_multi_pass",
+                "output_dir": out,
+                "n_passes": r.n_passes_used,
+                "max_relief": r.max_relief,
+                "fused_depth_stats": r.fused_depth_stats,
+                "note": r.note,
+            })
         }
-    }
-    #[cfg(not(feature = "gdal"))]
-    {
-        serde_json::json!({ "error": "bathy_map requires --features gdal" })
+        Err(e) => serde_json::json!({ "error": e.to_string() }),
     }
 }
 

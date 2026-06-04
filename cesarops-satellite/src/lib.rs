@@ -26,6 +26,7 @@ pub mod downloads;
 pub mod drift;
 pub mod env_conditions;
 pub mod fusion;
+pub mod geotiff;
 pub mod lake_levels;
 pub mod magnetic;
 pub mod scan_plan;

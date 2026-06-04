@@ -699,7 +699,7 @@ fn downsample_persistence_grid(grid: &Array2<f32>, max_dim: usize) -> (usize, us
 }
 
 /// Offline temporal persistence: multi-year B02/B03 clarity, count dates with z &lt; -1.5.
-#[cfg(feature = "gdal")]
+/// GDAL-free: uses the pure-Rust geo-aware reader (crate::geotiff via chip).
 pub fn run_temporal_stack_local(
     scene_dirs: &[impl AsRef<Path>],
     bbox: &BBox,
@@ -962,18 +962,6 @@ pub fn run_temporal_stack_local(
         n_dates_used: n_loaded,
         candidates,
     })
-}
-
-#[cfg(not(feature = "gdal"))]
-pub fn run_temporal_stack_local(
-    _scene_dirs: &[impl AsRef<Path>],
-    _bbox: &BBox,
-    _knobs: &Knobs,
-    _known_wrecks: &[(f64, f64)],
-    _target_px: usize,
-    _output_dir: &Path,
-) -> Result<TemporalLocalOutcome> {
-    anyhow::bail!("run_temporal_stack_local requires --features gdal")
 }
 
 #[cfg(test)]

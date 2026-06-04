@@ -385,59 +385,27 @@ fn connected_centroids(mask: &Array2<bool>, min_pixels: usize) -> Vec<(f64, f64,
     out
 }
 
-#[cfg(feature = "gdal")]
 struct SarWindowGeo {
-    gt: [f64; 6],
+    geo: crate::geotiff::GeoRef,
     win_x: usize,
     win_y: usize,
-    ds_srs_wkt: String,
 }
 
-#[cfg(feature = "gdal")]
 fn pixel_to_wgs84(geo: &SarWindowGeo, row: f64, col: f64) -> anyhow::Result<(f64, f64)> {
-    use gdal::spatial_ref::{AxisMappingStrategy, CoordTransform, SpatialRef};
-    let x = geo.gt[0] + col * geo.gt[1] + row * geo.gt[2];
-    let y = geo.gt[3] + col * geo.gt[4] + row * geo.gt[5];
-    let src = SpatialRef::from_wkt(&geo.ds_srs_wkt)?;
-    let mut dst = SpatialRef::from_epsg(4326)?;
-    dst.set_axis_mapping_strategy(AxisMappingStrategy::TraditionalGisOrder);
-    let ct = CoordTransform::new(&src, &dst)?;
-    let mut xs = [x];
-    let mut ys = [y];
-    let mut zs: [f64; 0] = [];
-    ct.transform_coords(&mut xs, &mut ys, &mut zs)?;
-    Ok((ys[0], xs[0])) // lat, lon
+    crate::geotiff::pixel_to_wgs84(&geo.geo, row, col)
+        .ok_or_else(|| anyhow::anyhow!("SAR tile CRS is not UTM/WGS84; cannot map pixel→WGS84"))
 }
 
-#[cfg(feature = "gdal")]
 fn read_sar_window(
     path: &std::path::Path,
     bbox: &crate::types::BBox,
 ) -> anyhow::Result<(Array2<f32>, SarWindowGeo)> {
-    use gdal::Dataset;
-    let ds = Dataset::open(path)?;
-    let (full_w, full_h) = ds.raster_size();
-    let gt = ds.geo_transform()?;
-    let win = crate::chip::bbox_to_pixel_window(&ds, &gt, full_w, full_h, bbox)
-        .ok_or_else(|| anyhow::anyhow!("bbox outside SAR tile {}", path.display()))?;
-    let (wx, wy, ww, wh) = win;
-    let band = ds.rasterband(1)?;
-    let buf = band.read_as::<f32>((wx as isize, wy as isize), (ww, wh), (ww, wh), None)?;
-    let data = buf.data().to_vec();
-    let arr = Array2::from_shape_vec((wh, ww), data)?;
-    let srs = ds.spatial_ref()?.to_wkt()?;
-    Ok((
-        arr,
-        SarWindowGeo {
-            gt,
-            win_x: wx,
-            win_y: wy,
-            ds_srs_wkt: srs,
-        },
-    ))
+    // Pure-Rust geo-aware window read (GDAL-free). Keeps the raw sensor values
+    // (no nodata mask / orientation warp) — important for raw SAR backscatter.
+    let (arr, geo, wx, wy) = crate::geotiff::read_window_raw(path, bbox)?;
+    Ok((arr, SarWindowGeo { geo, win_x: wx, win_y: wy }))
 }
 
-#[cfg(feature = "gdal")]
 pub fn extract_sar_anomalies_local(
     sar_tif_path: &std::path::Path,
     bbox: &crate::types::BBox,
@@ -497,7 +465,9 @@ pub fn extract_sar_anomalies_local(
 }
 
 /// Full local SAR pass: extract → DBSCAN clusters → JSON report.
-#[cfg(feature = "gdal")]
+/// GDAL-free (pure-Rust geo reader). Finds the VV backscatter GeoTIFF in a dir,
+/// preferring a polarization tif (*_VV.tif / *vv*.tif) and skipping the
+/// ancillary layover/mask tifs (ls_map, shape) and any zip-wrapped container.
 pub fn run_sar_local(
     sar_dir: &std::path::Path,
     bbox: &crate::types::BBox,
@@ -507,16 +477,8 @@ pub fn run_sar_local(
     threshold_sigma: f64,
 ) -> anyhow::Result<serde_json::Value> {
     use crate::chip::haversine_m;
-    let tif = std::fs::read_dir(sar_dir)?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .find(|p| {
-            p.extension()
-                .and_then(|x| x.to_str())
-                .map(|x| x.eq_ignore_ascii_case("tif"))
-                .unwrap_or(false)
-        })
-        .ok_or_else(|| anyhow::anyhow!("no .tif in {}", sar_dir.display()))?;
+    let tif = find_sar_backscatter_tif(sar_dir)
+        .ok_or_else(|| anyhow::anyhow!("no usable SAR backscatter .tif in {}", sar_dir.display()))?;
     let points = match extract_sar_anomalies_local(&tif, bbox, threshold_sigma) {
         Ok(p) => p,
         Err(e) => {
@@ -571,16 +533,45 @@ pub fn run_sar_local(
     }))
 }
 
-#[cfg(not(feature = "gdal"))]
-pub fn extract_sar_anomalies_local(
-    _sar_tif_path: &std::path::Path,
-    _bbox: &crate::types::BBox,
-    _threshold_sigma: f64,
-) -> anyhow::Result<Vec<SarPoint>> {
-    anyhow::bail!("extract_sar_anomalies_local requires --features gdal")
+/// Find the SAR backscatter GeoTIFF in a directory tree. Prefers a polarization
+/// raster (VV best, then VH/HH/HV), recurses into subdirs (extracted RTC SAFE),
+/// and skips ancillary layers (ls_map / layover-shadow, incidence, shape masks)
+/// and zip-wrapped containers (a *.tif that is actually a zip won't open here —
+/// extract it first).
+fn find_sar_backscatter_tif(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    fn collect(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    collect(&p, out);
+                } else if p.extension().and_then(|x| x.to_str())
+                    .map(|x| x.eq_ignore_ascii_case("tif")).unwrap_or(false)
+                {
+                    out.push(p);
+                }
+            }
+        }
+    }
+    let mut tifs = Vec::new();
+    collect(dir, &mut tifs);
+    let name = |p: &std::path::Path| p.file_name().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+    let is_ancillary = |n: &str| {
+        n.contains("ls_map") || n.contains("layover") || n.contains("_inc")
+            || n.contains("mask") || n.contains("shape") || n.contains("_rgb")
+    };
+    // Prefer VV, then VH/HH/HV, skipping ancillary.
+    for pol in ["_vv", "_vh", "_hh", "_hv", "vv", "vh"] {
+        if let Some(p) = tifs.iter().find(|p| {
+            let n = name(p);
+            n.contains(pol) && !is_ancillary(&n)
+        }) {
+            return Some(p.clone());
+        }
+    }
+    // Else first non-ancillary tif.
+    tifs.into_iter().find(|p| !is_ancillary(&name(p)))
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {

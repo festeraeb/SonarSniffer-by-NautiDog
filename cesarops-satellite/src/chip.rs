@@ -240,6 +240,10 @@ fn decode_tiff_band(
 
 /// Bilinear resample of a flat `sw×sh` f32 grid to `tw×th`.
 /// Used to fit a decoded COG tile onto the fixed chip grid.
+pub fn resample_bilinear_pub(src: &[f32], sw: usize, sh: usize, tw: usize, th: usize) -> Vec<f32> {
+    resample_bilinear(src, sw, sh, tw, th)
+}
+
 fn resample_bilinear(
     src: &[f32],
     sw: usize,
@@ -438,6 +442,26 @@ fn decode_local_band_opts(
     target_size_px: usize,
     reflectance_scale: bool,
 ) -> anyhow::Result<ndarray::Array2<f32>> {
+    // GDAL-free by default (operator's intent): pure-Rust geo-aware reader.
+    // GDAL is opt-in via the `gdal` feature for the rare tiled-COG layout the
+    // `tiff` crate can't handle.
+    #[cfg(not(feature = "gdal"))]
+    {
+        return crate::geotiff::decode_local_band_pure(path, bbox, target_size_px, reflectance_scale);
+    }
+    #[cfg(feature = "gdal")]
+    {
+        decode_local_band_gdal(path, bbox, target_size_px, reflectance_scale)
+    }
+}
+
+#[cfg(feature = "gdal")]
+fn decode_local_band_gdal(
+    path: &std::path::Path,
+    bbox: &BBox,
+    target_size_px: usize,
+    reflectance_scale: bool,
+) -> anyhow::Result<ndarray::Array2<f32>> {
     use gdal::Dataset;
     let ds = Dataset::open(path)?;
     let (full_w, full_h) = ds.raster_size();
@@ -478,6 +502,7 @@ fn decode_local_band_opts(
 
 /// Compute a pixel window (x, y, w, h) in the dataset for a WGS84 bbox,
 /// reprojecting the bbox corners into the dataset CRS via OSR.
+#[cfg(feature = "gdal")]
 pub fn bbox_to_pixel_window(
     ds: &gdal::Dataset,
     gt: &[f64; 6],
