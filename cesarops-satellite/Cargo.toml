@@ -63,9 +63,17 @@ optional = true
 gdal = ["dep:gdal"]
 # Use jemalloc as the global allocator (recommended for the dual-socket fleet).
 jemalloc = ["dep:tikv-jemallocator"]
+# Enable HDF5-backed readers (ATL03/ATL13/SWOT) — requires system libhdf5-dev.
+# NOT required for the optical/thermal/SAR pipeline (those use pure-Rust GeoTIFF).
+# Use on capable hosts (T440, ML350e) that have libhdf5 installed.
+hdf5 = ["dep:hdf5"]
 
 [dependencies.gdal]
 version   = "0.17"
+optional  = true
+
+[dependencies.hdf5]
+version   = "0.8"
 optional  = true
 
 [dev-dependencies]
