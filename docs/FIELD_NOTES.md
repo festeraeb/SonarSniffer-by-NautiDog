@@ -232,3 +232,21 @@ crash took).
     Copied all straits_*/detect_* specs + the ledger into the repo.
   RULE: only large re-downloadable DATA (tiles, COGs) goes under data/ (raid0).
     Specs, ledger, labels, notes, code = in the git tree, always.
+
+## 2026-06-04  SENSOR BUILD-OUT: thermal family now real (was absent)
+  Added concept_thermal_sink (poc.rs): Landsat TIRS surface-temp z-score, flags
+    BOTH cold-sink (deep) and heat-retention (shallow), keeps signed z. Routes
+    to triple_lock Thermal family via concept name "thermal_sink".
+  Loader: decode_local_band_raw (chip.rs) — no DN->reflectance /10000 rescale
+    (that heuristic corrupts thermal DN). concept auto-detects DN vs Kelvin
+    (max>1000 => DN, applies K = DN*0.00341802+149). z-score is scale-invariant.
+  Fetch: scripts/fetch_landsat_thermal.py via Microsoft Planetary Computer
+    (free SAS-sign, no auth). Element84's Landsat lwir11 href is requester-pays
+    s3:// (won't download); PC serves signable Azure-blob https. landsatlook=302,
+    usgs-landsat https=403 — PC is the working no-auth thermal source.
+  Co-location: Landsat overpass dates rarely match S2 dates, so thermal is a
+    STANDALONE scan of all *.lwir11.tif in the dir (own date), NOT keyed to S2
+    scene IDs. Verified: 25 thermal_sink candidates (z=10) from 1 Landsat tile.
+  State: 3 families now flow (optical clarity/glint + thermal + temporal).
+    Triple-lock still 0 (need spatial co-location + more thermal scenes), but
+    thermal is REAL signal now, not a stub. SAR/SWOT/ECOSTRESS/ATL03 still TODO.

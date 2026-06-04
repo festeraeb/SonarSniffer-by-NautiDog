@@ -417,6 +417,27 @@ pub fn decode_local_band(
     bbox: &BBox,
     target_size_px: usize,
 ) -> anyhow::Result<ndarray::Array2<f32>> {
+    decode_local_band_opts(path, bbox, target_size_px, true)
+}
+
+/// As [`decode_local_band`] but WITHOUT the DN→reflectance /10000 rescale.
+/// Use for non-reflectance bands (e.g. Landsat thermal ST_B10 DN) where the
+/// reflectance heuristic would corrupt the field. The caller applies any
+/// band-specific scaling (z-score detection is scale-invariant regardless).
+pub fn decode_local_band_raw(
+    path: &std::path::Path,
+    bbox: &BBox,
+    target_size_px: usize,
+) -> anyhow::Result<ndarray::Array2<f32>> {
+    decode_local_band_opts(path, bbox, target_size_px, false)
+}
+
+fn decode_local_band_opts(
+    path: &std::path::Path,
+    bbox: &BBox,
+    target_size_px: usize,
+    reflectance_scale: bool,
+) -> anyhow::Result<ndarray::Array2<f32>> {
     use gdal::Dataset;
     let ds = Dataset::open(path)?;
     let (full_w, full_h) = ds.raster_size();
@@ -437,11 +458,14 @@ pub fn decode_local_band(
     // Resample window → target chip.
     let mut resampled = resample_bilinear(&samples, ww, wh, target_size_px, target_size_px);
 
-    // DN→reflectance scaling (mirror decode_tiff_band).
-    let nanmax = resampled.iter().copied().filter(|v| v.is_finite()).fold(f32::NEG_INFINITY, f32::max);
-    if nanmax > 1e4 {
-        for v in resampled.iter_mut() {
-            *v /= 10_000.0;
+    // DN→reflectance scaling (mirror decode_tiff_band). Skipped for raw bands
+    // (e.g. thermal DN) where this heuristic would corrupt the field.
+    if reflectance_scale {
+        let nanmax = resampled.iter().copied().filter(|v| v.is_finite()).fold(f32::NEG_INFINITY, f32::max);
+        if nanmax > 1e4 {
+            for v in resampled.iter_mut() {
+                *v /= 10_000.0;
+            }
         }
     }
     for v in resampled.iter_mut() {

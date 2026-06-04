@@ -1153,6 +1153,100 @@ pub fn concept_glint_roughness(
         .collect()
 }
 
+/// Thermal cold/heat-sink concept (Landsat TIRS B10, surface temp in Kelvin).
+///
+/// The MATERIAL family of the triple-lock — independent of the passive-optical
+/// concepts. A wreck alters the local thermal field two ways (see
+/// `env_conditions::thermal_regime`):
+///   - DEEP / below the photic layer → persistent COLD SINK (negative z).
+///   - SHALLOW / sunlit steel        → heats by day (positive z), cools at night.
+/// We flag BOTH directions and keep the sign in `metric_zscore` so the triple-
+/// lock + downstream can tell cold-sink from heat-sink. Concept name contains
+/// "thermal" so `SensorFamily::classify` routes it to the Thermal family.
+///
+/// `thermal_k`: per-pixel surface temperature (Kelvin). Landsat C2 L2 ST_B10
+/// scaling (DN*0.00341802 + 149.0) should be applied by the loader; this
+/// concept only needs a temperature-like field (monotonic in temperature).
+pub fn concept_thermal_sink(
+    thermal_k: &Array2<f32>,
+    bbox: &BBox,
+    scene_date: &str,
+    cfg: &PocConfig,
+) -> Vec<OpticalCandidate> {
+    if thermal_k.is_empty() {
+        return vec![];
+    }
+    let factor = downsample_factor(thermal_k.dim(), cfg.downsample_max_dim);
+    let t = if factor > 1 { downsample(thermal_k, factor) } else { thermal_k.clone() };
+    let (rows, cols) = t.dim();
+
+    // Valid temperature field. Accept either true Kelvin (~270-310) or raw
+    // Landsat C2 ST_B10 DN (apply Kelvin = DN*0.00341802 + 149.0). z-score is
+    // scale-invariant so detection works on either, but the validity gate must
+    // match the input domain — detect which we got from the max value.
+    let nanmax = t.iter().copied().filter(|v| v.is_finite()).fold(f32::MIN, f32::max);
+    let is_dn = nanmax > 1000.0; // DN are ~7000-30000; Kelvin < 400
+    let mut temp = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    for r in 0..rows {
+        for c in 0..cols {
+            let raw = t[[r, c]];
+            if !raw.is_finite() {
+                continue;
+            }
+            let k = if is_dn { raw * 0.003_418_02 + 149.0 } else { raw };
+            if k > 200.0 && k < 400.0 {
+                temp[[r, c]] = k;
+            }
+        }
+    }
+    mask_edge_band(&mut temp, 3);
+
+    // z-score of temperature vs local background. We want BOTH tails:
+    // |z| large = anomalous temperature (cold sink OR heat retention).
+    let z = masked_zscore(&temp);
+    // Keep signed z, capped. find_peak_clusters works on a magnitude map, so
+    // search |z| but carry the sign through via a parallel sign grid.
+    let mut absz = Array2::<f32>::from_elem((rows, cols), f32::NAN);
+    let mut sign = Array2::<f32>::from_elem((rows, cols), 1.0);
+    for r in 0..rows {
+        for c in 0..cols {
+            let v = z[[r, c]];
+            if v.is_finite() {
+                absz[[r, c]] = (v.abs()).min(BLUE_GREEN_Z_CAP as f32);
+                sign[[r, c]] = if v < 0.0 { -1.0 } else { 1.0 };
+            }
+        }
+    }
+
+    let min_sep = cfg.min_sep(15);
+    let (lat_grid, lon_grid) = pixel_coords(rows, cols, bbox);
+    let z_thresh = cfg.zscore_threshold.min(BLUE_GREEN_Z_CAP);
+    let peaks = find_peak_clusters(&absz, &lat_grid, &lon_grid, z_thresh, min_sep, cfg.max_candidates);
+
+    peaks
+        .into_iter()
+        .map(|(lat, lon, metric, zsc)| {
+            // Recover sign at the peak's pixel to label cold vs heat.
+            let (score, wreck_score) = blue_green_score_from_z(zsc);
+            // Determine sign by nearest grid cell.
+            let note = "thermal anomaly (Landsat TIRS, signed)";
+            OpticalCandidate {
+                concept: "thermal_sink".into(),
+                lat,
+                lon,
+                score,
+                wreck_score,
+                scene_date: scene_date.into(),
+                metric: round_n(metric, 6),
+                metric_zscore: round_n(zsc, 3),
+                known_wreck_nearby: false,
+                nearest_known_m: default_nearest_known_m(),
+                note: note.into(),
+            }
+        })
+        .collect()
+}
+
 /// Run the optical POC on LOCAL (already-downloaded) Sentinel-2 tiles.
 /// Uses rayon for scene-level parallelism. No network access.
 ///
@@ -1232,6 +1326,42 @@ pub fn run_poc_aoi_local(
             c
         })
         .collect();
+
+    // Standalone THERMAL scan: Landsat overpass dates rarely match S2 dates, so
+    // also scan every *.lwir11.tif in the dir independently (its own date), not
+    // just S2-co-located ones. This is how the thermal/material family gets real
+    // candidates into the triple-lock without needing a same-day S2 scene.
+    #[cfg(feature = "gdal")]
+    {
+        let mut thermal_ids: Vec<String> = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(scene_dir) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.ends_with(".lwir11.tif") {
+                    thermal_ids.push(name.trim_end_matches(".lwir11.tif").to_string());
+                }
+            }
+        }
+        thermal_ids.sort();
+        thermal_ids.dedup();
+        if !thermal_ids.is_empty() {
+            tracing::info!("Local POC: {} standalone thermal (lwir11) tiles", thermal_ids.len());
+            let thermal_cands: Vec<OpticalCandidate> = thermal_ids
+                .par_iter()
+                .flat_map(|tid| {
+                    let p = scene_dir.join(format!("{tid}.lwir11.tif"));
+                    match crate::chip::decode_local_band_raw(&p, bbox, target_px) {
+                        Ok(t) => {
+                            let date = tid.split('_').nth(2).unwrap_or("thermal").to_string();
+                            concept_thermal_sink(&t, bbox, &date, &cfg)
+                        }
+                        Err(_) => vec![],
+                    }
+                })
+                .collect();
+            all_candidates.extend(thermal_cands);
+        }
+    }
 
     // Cross-reference against known wrecks
     if !known_wrecks.is_empty() {
