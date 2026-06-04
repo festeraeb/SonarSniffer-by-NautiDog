@@ -352,3 +352,37 @@ GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
   SAR cluster doesn't co-locate a known wreck (7km) — expected; SAR persistence
   needs multiple orbits. sar-probe bin added for quick reader validation.
   TODO: pull more S1 RTC dates (multi-orbit) for real SAR temporal persistence.
+
+## 2026-06-04  SWOT/ECOSTRESS/ATL03 engine output — partial adoption (Level 2)
+  ADOPTED from the engine:
+  - compute_matrix_annular_z: center-vs-ring z-score on a raster window. Same
+    physics as our chip_zscore, reusable for any small downloaded tile. Clean.
+  - Collection IDs confirmed correct (SWOT C2758130541, ECO C2076090826, ATL03
+    C2592541243).
+  - Day/night tagger from ISO timestamp (hour < 6 || > 18 = night). Simple, correct.
+  - ATL03 HDF5 domain knowledge (for FIELD_NOTES, not code yet):
+    Path: /gt1l/heights/h_ph (f32 ellipsoidal height)
+    Confidence: /gt1l/heights/signal_conf_ph (u8, 5 columns: Land/Ocean/Sea Ice/
+      Land Ice/Inland Water). For Great Lakes: column 4, keep 2+3 (med/high),
+      reject 254 (TEP), 255 (noise), 0-1 (low/noise). Fill sentinel = 3.4e38.
+    BBox window: stride geolocation (/gt1l/geolocation/reference_photon_lat,lon)
+      at every ~1000th element to find index range, then seek + stream only that
+      f32 slice. Avoids loading millions of global photons.
+  REJECTED:
+  - "Pure-Rust HDF5 parser" — the B-tree/header traversal is FAKE. parse_object_
+    header_for_child returns addr + 0x1A40 (hardcoded offset). extract_layout_
+    message_at_address reads at addr+48 (guess). These do not parse HDF5; they
+    would produce garbage on real ATL03 files. A real HDF5 B-tree navigator is
+    thousands of lines (use hdf5-rust or hdf5-metno when ready; or process ATL03
+    as pre-extracted CSVs / cloud-native Zarr mirrors).
+  - #[repr(C, packed)] superblock struct: unsound (packed ref = UB in Rust),
+    wrong (assumes fixed 8-byte offsets but HDF5 superblock varies by version).
+  - SIMD ceremony on tiny window ops (redundant; compiler auto-vectorizes fine at
+    <10k pixels; our simd_dispatch handles the real hot paths).
+  - References to granule.assets / granule.properties.datetime — our CMR search
+    returns Vec<serde_json::Value>, not a typed struct.
+  TAKEAWAY: the engine is good at INTERFACE design + domain knowledge (correct
+  collection IDs, confidence semantics, degradation patterns). It is BAD at
+  low-level binary format parsing (fakes it with hardcoded offsets + UB). For
+  HDF5/ATL03: wait for a real pure-Rust crate, use pre-extracted data, or shell
+  out to h5dump as a batch preprocessor. Do NOT paste fake parsers.

@@ -304,3 +304,49 @@ mod tests {
         assert_eq!(gj["features"].as_array().unwrap().len(), 1);
     }
 }
+
+// ── Annular z-score for small raster windows (Level 2 hook) ───────────────────
+//
+// Shared utility for SWOT WSE and ECOSTRESS LST scoring: compare the center
+// pixel(s) against an annular background ring, exactly as our optical concepts
+// do. Produces a signed z-score; |z| maps to the 0.6..0.95 score range.
+// This is the math that upgrades coverage-only (0.6) to anomaly-scoring when
+// a COG raster window is available.
+
+/// Local annular z-score: center 3×3 vs surrounding ring, NaN/NoData-aware.
+/// Returns 0.0 when insufficient data or flat field (no anomaly).
+pub fn annular_z_score(view: ndarray::ArrayView2<f32>) -> f64 {
+    let (rows, cols) = view.dim();
+    if rows < 5 || cols < 5 {
+        return 0.0;
+    }
+    let cr = rows / 2;
+    let cc = cols / 2;
+    let center = view[[cr, cc]];
+    if !center.is_finite() || center == 0.0 || center == -9999.0 {
+        return 0.0;
+    }
+    let mut bg = Vec::with_capacity(rows * cols);
+    for r in 0..rows {
+        for c in 0..cols {
+            let in_core = r >= cr.saturating_sub(1) && r <= cr + 1
+                && c >= cc.saturating_sub(1) && c <= cc + 1;
+            if !in_core {
+                let v = view[[r, c]];
+                if v.is_finite() && v != 0.0 && v != -9999.0 {
+                    bg.push(v as f64);
+                }
+            }
+        }
+    }
+    if bg.len() < 4 {
+        return 0.0;
+    }
+    let n = bg.len() as f64;
+    let mean = bg.iter().sum::<f64>() / n;
+    let std = (bg.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt();
+    if std < 1e-4 {
+        return 0.0;
+    }
+    (center as f64 - mean) / std
+}
