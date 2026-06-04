@@ -1,0 +1,21 @@
+{
+  "mission_id": "straits_all_sensor_baseline",
+  "target_name": "Straits all-sensor baseline (optical + thermal + SAR + temporal)",
+  "bbox": [45.7, -84.95, 45.92, -84.55],
+  "stages": ["poc_aoi", "sar_local", "bathy_map", "temporal_stack", "validate_gt", "report"],
+  "knobs": {
+    "max_cloud": 30.0,
+    "min_score": 0.2,
+    "use_local_scenes": true,
+    "downsample_max_dim": 2048,
+    "triple_lock_min_locks": 2
+  },
+  "paths": {
+    "download_dir": "/mnt/raid0/wreckhunter2000-1-data/data/straits_fall_clarity/sentinel2_aws",
+    "sar_dir": "/data/repos/wreckhunter2000-1/data/straits_sar/sar/extracted",
+    "chip_cache_dir": "/data/cesarops/satellite_data/chip_cache",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/all_sensor_baseline",
+    "known_wrecks_json": "/data/repos/wreckhunter2000-1/scripts/known_wrecks_straits.json"
+  },
+  "gt_wreck_names": []
+}

@@ -633,7 +633,8 @@ class PODAACDownloader:
     COLLECTIONS = {
         # CMR short names as of 2024+ (version field omitted — see search())
         'swot': {
-            'short_name': 'SWOT_L2_LR_SSH_EXPERT_2.0',
+            'short_name': 'SWOT_L2_HR_Raster_2.0',
+            'concept_id': 'C2758130541-POCLOUD',
         },
         'icesat2': {
             'short_name': 'ATL13',
@@ -1771,8 +1772,8 @@ class ECOSTRESSDownloader:
         for entry in resp.json().get('feed', {}).get('entry', []):
             for link in entry.get('links', []):
                 href = link.get('href', '')
-                # Prefer the COG GeoTIFF rendition (.tif); fall back to .h5
-                if href.endswith('.tif') or href.endswith('.h5'):
+                # Prefer the LST science band COG; skip QC/water/cloud mask tiles.
+                if href.endswith('.tif') and '_water' not in href and '_cloud' not in href and '_QC' not in href:
                     granules.append({
                         'title': entry.get('title', ''),
                         'href': href,
@@ -1780,6 +1781,18 @@ class ECOSTRESSDownloader:
                         'product': 'ecostress_lst',
                     })
                     break
+            else:
+                # Fallback: any .tif or .h5 if no LST-specific link found
+                for link in entry.get('links', []):
+                    href = link.get('href', '')
+                    if href.endswith('.tif') or href.endswith('.h5'):
+                        granules.append({
+                            'title': entry.get('title', ''),
+                            'href': href,
+                            'time_start': entry.get('time_start', ''),
+                            'product': 'ecostress_lst',
+                        })
+                        break
         return granules
 
     def run(self, bbox: List[float], start: str, end: str,
