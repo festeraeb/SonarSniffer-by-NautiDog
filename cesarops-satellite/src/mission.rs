@@ -893,13 +893,13 @@ async fn stage_temporal_stack(
     knobs: &Knobs,
     paths: &MissionPaths,
     dry_run: bool,
-) -> (Value, HashMap<String, f64>) {
+) -> (Value, HashMap<String, f64>, Vec<crate::triple_lock::SensorHit>) {
     if dry_run {
-        return (serde_json::json!({ "skipped": true }), HashMap::new());
+        return (serde_json::json!({ "skipped": true }), HashMap::new(), vec![]);
     }
     let bbox = match spec.bbox() {
         Ok(b) => b,
-        Err(e) => return (serde_json::json!({ "error": e.to_string() }), HashMap::new()),
+        Err(e) => return (serde_json::json!({ "error": e.to_string() }), HashMap::new(), vec![]),
     };
     let stack_out = paths.output_dir.join("temporal_stack");
     std::fs::create_dir_all(&stack_out).ok();
@@ -932,6 +932,22 @@ async fn stage_temporal_stack(
                     .iter()
                     .filter(|c| c.metric >= 0.3 && c.nearest_known_m <= 300.0)
                     .count();
+                // Temporal-FAMILY hits for the triple-lock: a persistence
+                // candidate is independent evidence from the per-scene optical
+                // concepts (it's the multi-date z, not a single image).
+                let thr = knobs.triple_lock_temporal_z;
+                let tl_hits: Vec<crate::triple_lock::SensorHit> = r
+                    .candidates
+                    .iter()
+                    .filter(|c| c.metric_zscore.abs() >= thr)
+                    .map(|c| crate::triple_lock::SensorHit {
+                        lat: c.lat,
+                        lon: c.lon,
+                        family: crate::triple_lock::SensorFamily::Temporal,
+                        zscore: c.metric_zscore,
+                        source: "temporal_persistence".into(),
+                    })
+                    .collect();
                 (
                     serde_json::json!({
                         "rc": 0,
@@ -940,11 +956,13 @@ async fn stage_temporal_stack(
                         "n_scenes": r.n_scenes,
                         "n_candidates": r.candidates.len(),
                         "n_candidates_persist_03_within_300m_known": n_near,
+                        "n_temporal_lock_hits": tl_hits.len(),
                     }),
                     tz_map,
+                    tl_hits,
                 )
             }
-            Err(e) => (serde_json::json!({ "error": e.to_string() }), HashMap::new()),
+            Err(e) => (serde_json::json!({ "error": e.to_string() }), HashMap::new(), vec![]),
         };
     }
 
@@ -985,9 +1003,33 @@ async fn stage_temporal_stack(
                 "n_scenes": r.n_scenes_catalog,
                 "n_anomalies": r.wrecks.iter().filter(|w| w.anomaly).count()
             });
-            (val, tz_map)
+            // Temporal-family hits from anchored wreck persistence z-scores.
+            let thr = knobs.triple_lock_temporal_z;
+            let tl_hits: Vec<crate::triple_lock::SensorHit> = r
+                .wrecks
+                .iter()
+                .filter_map(|w| {
+                    let z = [w.ndwi_persistence_z, w.ndvi_persistence_z]
+                        .iter()
+                        .filter_map(|&z| z)
+                        .map(|z| z.abs())
+                        .fold(0.0_f64, f64::max);
+                    if z >= thr {
+                        Some(crate::triple_lock::SensorHit {
+                            lat: w.lat,
+                            lon: w.lon,
+                            family: crate::triple_lock::SensorFamily::Temporal,
+                            zscore: z,
+                            source: "temporal_persistence".into(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            (val, tz_map, tl_hits)
         }
-        Err(e) => (serde_json::json!({ "error": e.to_string() }), HashMap::new()),
+        Err(e) => (serde_json::json!({ "error": e.to_string() }), HashMap::new(), vec![]),
     }
 }
 
@@ -1044,6 +1086,7 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
     let mut stage_results = StageResults::default();
     let mut all_concept_results: Vec<crate::types::ConceptResult> = Vec::new();
     let mut temporal_zscores: HashMap<String, f64> = HashMap::new();
+    let mut temporal_lock_hits: Vec<crate::triple_lock::SensorHit> = Vec::new();
 
     for stage in &stages {
         info!("━━━ stage: {stage:?} ━━━");
@@ -1077,11 +1120,12 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
                 stage_results.bathy_map = Some(r);
             }
             Stage::TemporalStack => {
-                let (r, tz) = stage_temporal_stack(
+                let (r, tz, tl_hits) = stage_temporal_stack(
                     &client, &spec, &wrecks, &knobs, &paths, dry_run,
                 )
                 .await;
                 temporal_zscores.extend(tz);
+                temporal_lock_hits.extend(tl_hits);
                 stage_results.temporal_stack = Some(r);
             }
             Stage::ValidateGt => {
@@ -1117,6 +1161,7 @@ pub async fn run_mission(spec: MissionSpec, opts: RunOptions) -> Result<MissionR
     // (knobs.triple_lock_*); defaults match the operator's frozen Python values.
     let mut tl_hits = crate::triple_lock::hits_from_concept_results(&all_concept_results, &knobs);
     tl_hits.extend(crate::triple_lock::hits_from_candidates(&candidates, &knobs));
+    tl_hits.extend(temporal_lock_hits);
     let triple_locks = crate::triple_lock::fuse_triple_lock(
         &tl_hits,
         knobs.triple_lock_tolerance_m,

@@ -200,3 +200,20 @@ crash took).
   Module: src/weather.rs (Open-Meteo archive client, free/no-auth, 10-day
     lookback) -> full SceneConditions -> scene_score in the download calm-gate.
     Manifest now carries days_since_storm/day_condition/scene_score per scene.
+
+## 2026-06-04  TASK 3: temporal family wired into triple-lock (gate now complete, still can't fire)
+  Done: stage_temporal_stack now emits temporal-FAMILY SensorHits (persistence
+    z >= triple_lock_temporal_z) that feed fuse_triple_lock as an independent
+    family (was: temporal only flowed as a name->z fusion map, never a spatial
+    lock candidate). Both local + anchored branches.
+  Honest state: triple-lock still emits 0 even at min_locks=2 because:
+    (1) only 2 of 4 families AVAILABLE — SAR on raw SLC (won't open), thermal
+        absent (no Landsat B10 on disk; concept not in concept.rs);
+    (2) the 2 available families DISAGREE spatially — strongest temporal hit
+        (z=8.09 @ 45.721,-84.559) is 1638 m from the nearest optical candidate.
+  This is correct behavior, not a bug: with 2 families that don't co-locate, no
+    lock should form. The gate is structurally ready; it needs real SAR (RTC)
+    and/or thermal (Landsat B10) to reach genuine 3-family agreement.
+  Next for a real lock: (a) re-pull SAR as RTC GeoTIFF not SLC, OR (b) pull
+    Landsat 8/9 B10 thermal + add a thermal concept to the local path. Either
+    adds a 3rd independent family.
