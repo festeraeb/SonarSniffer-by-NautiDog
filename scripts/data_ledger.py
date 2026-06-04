@@ -21,7 +21,7 @@ Commands:
 import argparse, json, os, re, sys, time, glob
 from collections import defaultdict, Counter
 
-LEDGER_DIR = "data/ledger"
+LEDGER_DIR = os.environ.get("CESAROPS_LEDGER_DIR", "ledger")
 LEDGER = os.path.join(LEDGER_DIR, "data_ledger.jsonl")
 
 # Sentinel-2 band-tile naming: S2A_16TFR_20240928_0_L2A.blue.tif

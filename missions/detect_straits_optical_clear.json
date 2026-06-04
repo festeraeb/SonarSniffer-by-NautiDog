@@ -1,0 +1,29 @@
+{
+  "mission_id": "detect_straits_optical_clear",
+  "target_name": "detect clear",
+  "bbox": [
+    45.7,
+    -84.95,
+    45.92,
+    -84.55
+  ],
+  "stages": [
+    "poc_aoi",
+    "bathy_map",
+    "temporal_stack",
+    "report"
+  ],
+  "knobs": {
+    "max_cloud": 40.0,
+    "min_score": 0.2,
+    "use_local_scenes": true,
+    "downsample_max_dim": 2048
+  },
+  "paths": {
+    "download_dir": "/mnt/raid0/wreckhunter2000-1-data/data/straits_optical_clear/sentinel2_aws",
+    "chip_cache_dir": "/data/cesarops/satellite_data/chip_cache",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/detect_straits_optical_clear",
+    "known_wrecks_json": "/data/repos/wreckhunter2000-1/scripts/known_wrecks_straits.json"
+  },
+  "gt_wreck_names": []
+}

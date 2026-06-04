@@ -217,3 +217,18 @@ crash took).
   Next for a real lock: (a) re-pull SAR as RTC GeoTIFF not SLC, OR (b) pull
     Landsat 8/9 B10 thermal + add a thermal concept to the local path. Either
     adds a 3rd independent family.
+
+## 2026-06-04  CRITICAL: data/ is a raid0 symlink — specs/ledger were OUTSIDE git
+  Finding: mission specs written to data/missions/ and the ledger in data/ledger/
+    were NOT version-controlled — `data/` is a symlink to /mnt/raid0/...-data/data
+    (raid0 = NOT redundant). git can't cross the symlink ("beyond a symbolic
+    link"). Every spec I wrote for days lived only on raid0.
+  Risk: this is the EXACT durability gap the project keeps getting bitten by —
+    irreplaceable small files (specs, ledger, labels) on non-redundant storage,
+    outside version control. A raid0 failure takes them.
+  Fix: git-tracked mission specs live in `missions/` (repo root, REAL dir), NOT
+    `data/missions/`. Ledger now lives in-repo at `ledger/data_ledger.jsonl`
+    (data_ledger.py LEDGER_DIR default = "ledger", override CESAROPS_LEDGER_DIR).
+    Copied all straits_*/detect_* specs + the ledger into the repo.
+  RULE: only large re-downloadable DATA (tiles, COGs) goes under data/ (raid0).
+    Specs, ledger, labels, notes, code = in the git tree, always.

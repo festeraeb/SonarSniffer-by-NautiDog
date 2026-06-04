@@ -1,0 +1,18 @@
+{
+  "mission_id": "straits_download_calmgate",
+  "target_name": "Straits download calm-gate test",
+  "bbox": [45.7, -84.95, 45.92, -84.55],
+  "days_back": 365,
+  "stages": ["download", "report"],
+  "knobs": {
+    "sensors": "sentinel2",
+    "max_cloud": 20.0,
+    "max_download_results": 12,
+    "use_local_scenes": false
+  },
+  "paths": {
+    "download_dir": "/data/cesarops/satellite_data/downloads/straits_calmgate_test",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/straits_calmgate_test"
+  },
+  "gt_wreck_names": []
+}

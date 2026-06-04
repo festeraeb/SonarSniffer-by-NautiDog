@@ -1,0 +1,21 @@
+{
+  "mission_id": "straits_spring_postice_pull",
+  "target_name": "Straits spring post-ice 6-year pull (seasonal spread)",
+  "bbox": [45.7, -84.95, 45.92, -84.55],
+  "stages": ["download", "report"],
+  "knobs": {
+    "sensors": "sentinel2",
+    "max_cloud": 40.0,
+    "max_download_results": 40,
+    "scan_intent": "low_water_wreck",
+    "season_window": "post_ice_out",
+    "pass_time": "day",
+    "water_year_priority": [2024, 2023, 2022, 2021, 2020, 2019],
+    "use_local_scenes": false
+  },
+  "paths": {
+    "download_dir": "/mnt/raid0/wreckhunter2000-1-data/data/straits_spring_postice/sentinel2_aws",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/straits_spring_postice_pull"
+  },
+  "gt_wreck_names": []
+}

@@ -1,0 +1,37 @@
+{
+  "mission_id": "straits_local_2024",
+  "target_name": "Straits of Mackinac wreck search (local tiles)",
+  "bbox": [
+    45.7,
+    -84.95,
+    45.92,
+    -84.55
+  ],
+  "days_back": 365,
+  "stages": [
+    "target_known",
+    "poc_aoi",
+    "bathy_map",
+    "sar_local",
+    "temporal_stack",
+    "validate_gt",
+    "report"
+  ],
+  "knobs": {
+    "max_cloud": 20.0,
+    "min_score": 0.2,
+    "use_local_scenes": true,
+    "gt_min_confidence": 1.0,
+    "poc_min_separation_px": 10,
+    "poc_max_candidates": 150,
+    "downsample_max_dim": 2048
+  },
+  "paths": {
+    "download_dir": "/mnt/raid0/wreckhunter2000-1-data/data/straits_optical_clear/sentinel2_aws",
+    "chip_cache_dir": "/data/cesarops/satellite_data/chip_cache",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/straits_local_2024",
+    "known_wrecks_json": "/data/repos/wreckhunter2000-1/scripts/known_wrecks_straits.json",
+    "sar_dir": "/data/repos/wreckhunter2000-1/data/straits_sar/sar"
+  },
+  "gt_wreck_names": []
+}
