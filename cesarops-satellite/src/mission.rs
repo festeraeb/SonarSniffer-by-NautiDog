@@ -406,9 +406,25 @@ async fn stage_download(
             let aoi_lat = (bbox.lat_min + bbox.lat_max) / 2.0;
             let aoi_lon = (bbox.lon_min + bbox.lon_max) / 2.0;
             let mut conditions: Vec<crate::buoy::BuoyCondition> = Vec::with_capacity(scenes.len());
+            let mut weathers: Vec<crate::weather::WeatherContext> = Vec::with_capacity(scenes.len());
+            let mut scores: Vec<crate::env_conditions::SceneScore> = Vec::with_capacity(scenes.len());
             for s in &scenes {
                 let date = s.datetime;
                 let cond = crate::buoy::condition_for(&http, aoi_lat, aoi_lon, date).await;
+                // Open-Meteo weather context: cloud, days-since-storm, runoff/storm class.
+                let wx = crate::weather::weather_context(&http, aoi_lat, aoi_lon, date).await;
+                // Assemble the full SceneConditions from buoy + weather + scene cloud.
+                let sc = crate::env_conditions::SceneConditions {
+                    wind_speed_ms: cond.wind_speed_ms.or(wx.wind_speed_ms),
+                    wave_height_m: cond.wave_height_m,
+                    // Prefer the scene's own metadata cloud %, fall back to weather.
+                    cloud_pct: Some(s.cloud_cover).or(wx.cloud_pct),
+                    days_since_storm: wx.days_since_storm,
+                    turbidity: None,
+                    month: chrono::Datelike::month(&date),
+                };
+                scores.push(crate::env_conditions::scene_score(&sc, None));
+                weathers.push(wx);
                 conditions.push(cond);
             }
             // Order scenes: calm-first, then unknown (no buoy data), then rough;
@@ -432,6 +448,10 @@ async fn stage_download(
             let scenes: Vec<crate::stac::Scene> = order.iter().map(|&i| scenes[i].clone()).collect();
             let conditions: Vec<crate::buoy::BuoyCondition> =
                 order.iter().map(|&i| conditions[i].clone()).collect();
+            let scores: Vec<crate::env_conditions::SceneScore> =
+                order.iter().map(|&i| scores[i]).collect();
+            let weathers: Vec<crate::weather::WeatherContext> =
+                order.iter().map(|&i| weathers[i].clone()).collect();
 
             let n_calm = conditions.iter().filter(|c| c.is_calm).count();
             let n_unknown = conditions.iter().filter(|c| !c.data_available).count();
@@ -457,7 +477,9 @@ async fn stage_download(
             let manifest = scenes
                 .iter()
                 .zip(&conditions)
-                .map(|(s, cond)| {
+                .zip(&scores)
+                .zip(&weathers)
+                .map(|(((s, cond), sc), wx)| {
                     let perfect_day = cond.is_calm && s.cloud_cover <= knobs.max_cloud;
                     serde_json::json!({
                         "id": s.id,
@@ -470,6 +492,19 @@ async fn stage_download(
                         "buoy_data": cond.data_available,
                         "is_calm": cond.is_calm,
                         "perfect_day": perfect_day,
+                        "days_since_storm": wx.days_since_storm,
+                        "day_condition": format!("{:?}", wx.condition),
+                        "weather_data": wx.data_available,
+                        "scene_score": {
+                            "priority": sc.priority,
+                            "clarity": sc.clarity,
+                            "thermal": sc.thermal,
+                            "plume": sc.plume,
+                            "glint": sc.glint,
+                            "roughness": sc.roughness,
+                            "seasonal": sc.seasonal,
+                            "confidence": sc.confidence,
+                        },
                     })
                 })
                 .collect::<Vec<_>>();

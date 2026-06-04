@@ -111,7 +111,12 @@ pub struct WeatherThresholds {
 
 impl Default for WeatherThresholds {
     fn default() -> Self {
-        Self { max_calm_wind: 15.0, min_storm_wind: 28.0, min_storm_precip: 5.0, post_storm_days: 3 }
+        // Great Lakes realistic values (m/s). Typical lake winds run 3-8 m/s;
+        // a sediment-suspending "storm" is small-craft-advisory class upward.
+        // NWS: small-craft ~11 m/s (22 kt), gale ~17 m/s (34 kt).
+        //   calm     : <= 6 m/s (~12 mph) and dry
+        //   storm    : >= 11 m/s, OR >= 8 m/s with meaningful rain (>=5 mm)
+        Self { max_calm_wind: 6.0, min_storm_wind: 11.0, min_storm_precip: 5.0, post_storm_days: 3 }
     }
 }
 
@@ -133,15 +138,15 @@ pub struct WeatherDay {
 pub fn is_spring_runoff(day: &WeatherDay) -> bool {
     let m = day.date.month();
     let in_freshet = (3..=5).contains(&m);
-    // Calm-ish but with melt/rain feeding sediment — NOT a storm.
-    in_freshet && day.wind_speed < 28.0 && (day.snowmelt_mm > 1.0 || day.precip_mm >= 2.0)
+    // Calm-ish but with melt/rain feeding sediment — NOT a storm (< 11 m/s).
+    in_freshet && day.wind_speed < 11.0 && (day.snowmelt_mm > 1.0 || day.precip_mm >= 2.0)
 }
 
 /// Baseline classify a single day. Spring runoff takes precedence over the
 /// calm/transitional label because it is a distinct, desirable plume source.
 pub fn classify_day(day: &WeatherDay, t: &WeatherThresholds) -> DayCondition {
     if day.wind_speed >= t.min_storm_wind
-        || (day.wind_speed >= 20.0 && day.precip_mm >= t.min_storm_precip)
+        || (day.wind_speed >= (t.min_storm_wind * 0.7) && day.precip_mm >= t.min_storm_precip)
     {
         DayCondition::Storm
     } else if is_spring_runoff(day) {
@@ -266,7 +271,7 @@ mod tests {
 
     #[test]
     fn spring_runoff_detected_and_distinct_from_storm() {
-        let mut day = d(2023, 4, 15, 12.0, 3.0); // April, calm-ish, rain
+        let mut day = d(2023, 4, 15, 5.0, 3.0); // April, calm (5 m/s), rain
         day.snowmelt_mm = 4.0;
         assert!(is_spring_runoff(&day));
         assert_eq!(classify_day(&day, &WeatherThresholds::default()), DayCondition::SpringRunoff);

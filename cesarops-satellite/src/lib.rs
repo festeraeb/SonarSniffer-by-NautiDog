@@ -40,6 +40,7 @@ pub mod stac;
 pub mod temporal;
 pub mod triple_lock;
 pub mod types;
+pub mod weather;
 
 pub use types::{
     BBox, Candidate, Knobs, MissionReport, MissionSpec, SarCluster, Stage, WreckTarget,

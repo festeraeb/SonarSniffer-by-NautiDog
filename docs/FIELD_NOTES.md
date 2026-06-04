@@ -184,3 +184,19 @@ crash took).
   shows the 21 unprocessed (spring/summer/older). Coverage now 31 scenes 24.7GB
   across spring/summer/fall 2022-2024 (still 2024-fall heavy; below 20-distinct
   floor for a single season but broadening).
+
+## 2026-06-04  Weather gate wired + storm thresholds were hurricane-class
+  Finding: after wiring Open-Meteo weather into scene selection, every scene
+    showed days_since_storm=None despite weather_data=true.
+  Cause:  WeatherThresholds::default min_storm_wind = 28 m/s (63 mph, hurricane)
+    and a 20 m/s (45 mph) secondary — Great Lakes winds run 3-8 m/s, so NO day
+    ever classified as a storm. Thresholds were unit/context-wrong.
+  Fix:    realistic GL values: calm <=6 m/s, storm >=11 m/s (NWS small-craft)
+    OR >=7.7 m/s with >=5mm rain; spring-runoff cutoff 11 m/s. classify_day
+    secondary now derives from the threshold, not a hardcoded 20.
+  Evidence: days_since_storm populates 10/40; plume score tracks recency
+    (dss=3 -> plume 1.00 top priority; dss=10 -> 0.20). Matches spec "delayed
+    24-72h post-storm window is best".
+  Module: src/weather.rs (Open-Meteo archive client, free/no-auth, 10-day
+    lookback) -> full SceneConditions -> scene_score in the download calm-gate.
+    Manifest now carries days_since_storm/day_condition/scene_score per scene.
