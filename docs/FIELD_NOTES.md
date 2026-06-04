@@ -314,3 +314,24 @@ GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
     allocator=jemalloc"; detection unchanged (Minneapolis 115m, 285 cands).
   Build: `cargo build --release` (generic, fleet-portable) or add
     `--features jemalloc`. Do NOT use target-cpu=native for fleet binaries.
+
+## 2026-06-04  Haswell-engine 3-tier pass-along — REVIEWED, NOT ADOPTED (already built better)
+  An external (Haswell-tuned) model offered 3 "tiers". Verdict after checking
+  against the codebase — do NOT paste these in:
+  - Tier 1 BAG rebuilder: cesarops-bag-scan/src/unmask.rs already does it BETTER.
+    Engine used a fixed 3x3 uncertainty-weighted avg; ours uses IDW donor-ring +
+    apply_uncertainty_relief (reconstructs the HULL BUMP, not just a smooth fill)
+    AND a probe step (confirm object evidence before rebuilding). Adopting the
+    snippet would LOSE the relief reconstruction that produced our finds. Only
+    useful crumb: also treat -9999.0 sentinel as nodata alongside NaN.
+  - Tier 2 "curvelet": MISLABELED. The snippet just multiplies every freq element
+    by a constant (1 - 0.004721) — a uniform scalar damp, NOT a curvelet (no polar
+    wedge tiling, no scale/angle decomposition, no FFT/IFFT). Real curvelets live
+    in nauticuvs (native f64) + curvelet_bandpass.rs. Adopting = regression. Only
+    correct insight: aeromag curvelets want Complex64/f64 precision (already so).
+  - Tier 3 slice-and-stitch w/ overlap: ALREADY in cesarops-slicer-standalone
+    (vrt_slicer.rs: TileOverlap, detect_overlaps, boundary padding) — more
+    complete than the callback skeleton.
+  Takeaway: the SIMD-dispatch + jemalloc + complex-SAR architecture from the same
+  engine WAS worth adopting (done, commit e9ea1d4f); these three tiers were not.
+  Check existing crates before pasting external snippets.
