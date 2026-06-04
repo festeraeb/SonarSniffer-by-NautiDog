@@ -386,3 +386,33 @@ GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
   low-level binary format parsing (fakes it with hardcoded offsets + UB). For
   HDF5/ATL03: wait for a real pure-Rust crate, use pre-extracted data, or shell
   out to h5dump as a batch preprocessor. Do NOT paste fake parsers.
+
+## ATL03/HDF5 architecture decision (2026-06-04) — DEFERRED, logged for next phase
+  Two engines both rejected the first engine's fake parser. The correct scope is
+  a **NASA-product-subset HDF5 reader** ("hdf5-lite-rs"), NOT a full HDF5 impl:
+    Stage 1: Superblock + object headers + groups + datasets (read-only).
+    Stage 2: Chunked datasets + DEFLATE decompression (NASA uses these always).
+    Stage 3: Typed dataset streaming (struct Dataset { name, datatype, shape }).
+  Target products: ATL03/ATL08/ATL13/SWOT/MODIS/VIIRS (not a generic HDF5 crate).
+  90% of value for 10% of the complexity of full HDF5.
+
+  DEFERRED because:
+  - Multi-week project; zero ATL03 files on disk today.
+  - ECOSTRESS/SWOT Level 2 are COG/GeoTIFF (our reader handles those once
+    authenticated HTTP fetch is wired — NOT an HDF5 problem at all).
+  - Higher immediate value in: more SAR orbits, ML training, triple-lock tuning.
+
+  INTERIM ATL03 PATH (option 4): T440 runs h5py (already installed) to pre-
+  extract the Straits bbox photon slice from ATL03 HDF5 into a flat .bin +
+  metadata .json. Fleet reads the flat file natively (f32::from_le_bytes, bbox-
+  filtered). Same architecture as the SAR zip extraction (preprocess once,
+  distribute clean raster). Later, hdf5-lite-rs replaces the Python preprocessor.
+
+  WHY distrust the higher-level tools (the operator's actual grievance): NOT that
+  libhdf5 alters science data (it doesn't for reads). It's:
+  (a) hidden reprojection / auto-scaling / datatype conversion by GDAL reading
+      HDF5-EOS through its netCDF/HDF5 driver (which DOES transform behind the
+      curtain), and
+  (b) the system-lib dependency chain (libhdf5 → libz → ...) that SIGILLs on
+      Ivy Bridge when distro-compiled for Haswell+.
+  A pure-Rust subset reader solves BOTH: no C deps (no SIGILL), no hidden warp.
