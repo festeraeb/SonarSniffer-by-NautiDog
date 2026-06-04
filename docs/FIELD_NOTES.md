@@ -416,3 +416,24 @@ GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
   (b) the system-lib dependency chain (libhdf5 → libz → ...) that SIGILLs on
       Ivy Bridge when distro-compiled for Haswell+.
   A pure-Rust subset reader solves BOTH: no C deps (no SIGILL), no hidden warp.
+
+## 2026-06-04  HF radar surface currents — novel sensor family (deferred download)
+  CONCEPT: HF radar measures surface currents over large areas (GLOS Straits
+  deployment since May 2022, Michigan Tech). If a wreck perturbs the flow, the
+  surface current field carries a persistent deflection detectable statistically
+  over many observations. Completely independent physics from optical/thermal/SAR.
+  RESOLUTION: gridded products at 6km/2km/1km/500m. The 500m product is the
+  finest; a 40m wreck disturbs maybe 100-200m, sub-pixel at 500m but could show
+  as persistent velocity residual over hundreds of observations. The Straits flow
+  is fast (1-3kt) and constricted — stronger perturbation than open water.
+  ML FEATURE: at each candidate vs control points, compute temporal variance +
+  directional stability of surface current vector over the time series. Wreck =
+  persistent deflection (lower direction variance, velocity anomaly vs neighbors).
+  Accumulate, not single-frame.
+  DATA SOURCES (free, no auth for gridded):
+    - NOAA NDBC: hfradar.ndbc.noaa.gov (tabular CSV + NetCDF)
+    - UCSD HFRNet THREDDS: hfrnet-tds.ucsd.edu (500m/2km/6km hourly total vectors)
+    - GLOS/Michigan Tech: uglos.mtu.edu (raw radials + merged totals, May 2022+)
+  STATUS: all endpoints timed out this session (broader infrastructure issue, also
+  hit CMR). Retry when servers are responsive. Add HFR to the universal_downloader
+  and create a current-deflection concept once data is on disk.
