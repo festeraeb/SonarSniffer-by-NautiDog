@@ -335,3 +335,20 @@ GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
   Takeaway: the SIMD-dispatch + jemalloc + complex-SAR architecture from the same
   engine WAS worth adopting (done, commit e9ea1d4f); these three tiers were not.
   Check existing crates before pasting external snippets.
+
+## 2026-06-04  SAR family LIVE (was "broken SLC" — actually zip + tiff limit)
+  Two real issues, neither was GDAL or SLC:
+  1. The "rtc_..SLC..tif" file is a ZIP named .tif wrapping an ASF HyP3 RTC30
+     product. unzip -> extracted/<id>/<id>_VV.tif (+_VH). The data was always
+     real RTC (terrain-corrected, UTM 17N, float32 backscatter), not raw SLC.
+  2. tiff crate default Decoder limits rejected the large decompressed RTC raster
+     ("Decoder limits are exceeded"). Fix: Decoder::new(..).with_limits(
+     Limits::unlimited()) in geotiff.rs decode_full + read_georef.
+  Result: SAR stage extracts 31 backscatter points -> 1 cluster from the RTC VV
+  (was 0/total open failure). find_sar_backscatter_tif picks _VV, skips
+  ancillary (ls_map/mask/shape/rgb), recurses into the extracted dir. Pure-Rust
+  geotiff reader handles DEFLATE + tiled 256x256 COG + UTM-17N reproject.
+  ALL FOUR FAMILIES NOW REAL: optical + thermal + temporal + SAR. Single-date
+  SAR cluster doesn't co-locate a known wreck (7km) — expected; SAR persistence
+  needs multiple orbits. sar-probe bin added for quick reader validation.
+  TODO: pull more S1 RTC dates (multi-orbit) for real SAR temporal persistence.

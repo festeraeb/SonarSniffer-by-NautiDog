@@ -8,6 +8,10 @@ description = "Unified satellite pipeline – wreck hunting & search/rescue (wat
 name = "sat-run"
 path = "src/bin/sat_run.rs"
 
+[[bin]]
+name = "sar-probe"
+path = "src/bin/sar_probe.rs"
+
 [lib]
 name = "cesarops_satellite"
 path = "src/lib.rs"

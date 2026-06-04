@@ -1,0 +1,17 @@
+{
+  "mission_id": "straits_sar_detect",
+  "target_name": "Straits SAR steel-mass family (RTC VV)",
+  "bbox": [45.7, -84.95, 45.92, -84.55],
+  "stages": ["sar_local", "report"],
+  "knobs": {
+    "use_local_scenes": true,
+    "dbscan_eps": 0.5,
+    "dbscan_min_samples": 5
+  },
+  "paths": {
+    "sar_dir": "/data/repos/wreckhunter2000-1/data/straits_sar/sar/extracted",
+    "output_dir": "/data/cesarops/satellite_data/detection_runs/straits_sar_detect",
+    "known_wrecks_json": "/data/repos/wreckhunter2000-1/scripts/known_wrecks_straits.json"
+  },
+  "gt_wreck_names": []
+}

@@ -124,7 +124,8 @@ pub fn utm_to_wgs84(easting: f64, northing: f64, zone: u8, north: bool) -> (f64,
 pub fn read_georef(path: &Path) -> Result<GeoRef> {
     use tiff::decoder::Decoder;
     let file = std::fs::File::open(path)?;
-    let mut dec = Decoder::new(std::io::BufReader::new(file))?;
+    let mut dec = Decoder::new(std::io::BufReader::new(file))?
+        .with_limits(tiff::decoder::Limits::unlimited());
     let (width, height) = dec.dimensions()?;
 
     let pixel_scale = get_f64s(&mut dec, TAG_MODEL_PIXEL_SCALE)
@@ -223,7 +224,8 @@ pub fn bbox_pixel_window(geo: &GeoRef, bbox: &BBox) -> Option<(usize, usize, usi
 fn decode_full(path: &Path) -> Result<(Vec<f32>, usize, usize)> {
     use tiff::decoder::{Decoder, DecodingResult};
     let file = std::fs::File::open(path)?;
-    let mut dec = Decoder::new(std::io::BufReader::new(file))?;
+    let mut dec = Decoder::new(std::io::BufReader::new(file))?
+        .with_limits(tiff::decoder::Limits::unlimited());
     let (w, h) = dec.dimensions()?;
     let (w, h) = (w as usize, h as usize);
     let img = dec.read_image()?;
