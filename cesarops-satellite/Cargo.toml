@@ -21,11 +21,13 @@ reqwest        = { version = "0.12", features = ["json", "rustls-tls", "stream"]
 serde          = { version = "1",    features = ["derive"] }
 serde_json     = "1"
 # numeric / signal
-ndarray        = "0.16"
+ndarray        = { version = "0.16", features = ["rayon"] }
 rustfft        = "6.2"
 num-complex    = "0.4"
 # parallelism
 rayon          = "1"
+# physical/logical core detection across dual sockets (for the rayon pool)
+num_cpus       = "1.16"
 # date/time
 chrono         = { version = "0.4",  features = ["serde"] }
 # error handling
@@ -45,9 +47,18 @@ tiff           = "0.9"
 # Local full-precision curvelet scoring crate
 nauticuvs = { path = "../nauticuvs", package = "nauticuvs-full" }
 
+# Multi-threaded allocator — avoids cross-socket allocator contention on the
+# dual-socket Xeon boxes. Unix-only (jemalloc doesn't build on Windows; the
+# fleet is Linux). Opt-in via the `jemalloc` feature so dev/Windows still build.
+[target.'cfg(unix)'.dependencies.tikv-jemallocator]
+version  = "0.6"
+optional = true
+
 [features]
 # Enable GDAL-backed COG chip reading (requires system libgdal)
 gdal = ["dep:gdal"]
+# Use jemalloc as the global allocator (recommended for the dual-socket fleet).
+jemalloc = ["dep:tikv-jemallocator"]
 
 [dependencies.gdal]
 version   = "0.17"

@@ -36,6 +36,7 @@ pub mod overlay_grid;
 pub mod phase_corr;
 pub mod poc;
 pub mod sar;
+pub mod simd_dispatch;
 pub mod spectral;
 pub mod stac;
 pub mod temporal;

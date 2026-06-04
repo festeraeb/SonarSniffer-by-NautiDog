@@ -293,3 +293,24 @@ GDAL remains an OPTIONAL `gdal` feature for convenience on capable hosts only.
       -C target-cpu=ivybridge (AVX, no AVX2) is the fleet floor (the HP).
   Helper: scripts/build_satellite.sh {native|ivybridge|haswell|portable};
     default = ivybridge (fleet-safe). GDAL-free is always the default build.
+
+## 2026-06-04  ONE BINARY, EVERY HOST: runtime SIMD dispatch + jemalloc
+  Replaces per-host target-cpu builds. Compile with GENERIC flags (NO
+  target-cpu=native); at runtime is_x86_feature_detected! routes the hot loops
+  through a #[target_feature]-compiled fn for the widest ISA that host has:
+  AVX-512 (T440 Xeon 4110) / AVX (HP Ivy Bridge E5 v2) / scalar. The same
+  target/release binary copies freely across the mixed fleet — never SIGILLs,
+  because the wide instructions only execute on CPUs verified to have them.
+  Module: src/simd_dispatch.rs
+    - affine_inplace (f32 grid scale+offset, NoData-preserving)
+    - complex_scale_inplace + cross_corr_inplace (Array3<Complex32>, Axis0=band,
+      Axis1=row, Axis2=col) for raw SAR interferometry; a*conj(b) coherence
+      numerator; non-finite => NaN so nodata drops out of the coherence sum.
+    - init_thread_pool (rayon = num_cpus::get(), all sockets), active_pipeline().
+  Allocator: tikv-jemallocator behind `jemalloc` feature (unix-only), global
+    allocator in sat_run — cuts cross-socket allocator contention on dual-Xeon.
+  ndarray needs features=["rayon"] for axis_chunks_iter_mut().into_par_iter().
+  Verified live on T440: "compute: 32 rayon threads, avx512 vector pipeline,
+    allocator=jemalloc"; detection unchanged (Minneapolis 115m, 285 cands).
+  Build: `cargo build --release` (generic, fleet-portable) or add
+    `--features jemalloc`. Do NOT use target-cpu=native for fleet binaries.

@@ -14,6 +14,12 @@ use cesarops_satellite::types::MissionSpec;
 use std::{collections::HashMap, path::PathBuf};
 use tracing_subscriber::EnvFilter;
 
+// High-performance global allocator (opt-in via `jemalloc` feature). Avoids
+// cross-socket allocator contention on the dual-socket Xeon fleet. Unix-only.
+#[cfg(all(unix, feature = "jemalloc"))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "sat-run",
@@ -67,6 +73,16 @@ async fn main() -> Result<()> {
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .init();
+
+    // Size the rayon pool to all logical cores across sockets, and report which
+    // runtime SIMD pipeline this host resolved to (AVX-512 / AVX / scalar).
+    let n_threads = cesarops_satellite::simd_dispatch::init_thread_pool();
+    tracing::info!(
+        "compute: {} rayon threads, {} vector pipeline, allocator={}",
+        n_threads,
+        cesarops_satellite::simd_dispatch::active_pipeline(),
+        if cfg!(feature = "jemalloc") { "jemalloc" } else { "system" },
+    );
 
     let args = Args::parse();
 
