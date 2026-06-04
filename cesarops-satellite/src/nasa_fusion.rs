@@ -23,6 +23,73 @@ use tracing::debug;
 /// Neutral per-sensor score used when a live client is unavailable.
 pub const NEUTRAL_SENSOR_SCORE: f64 = 0.5;
 
+// NASA CMR Collection Concept IDs (PO.DAAC / LP DAAC).
+/// SWOT L2 High-Resolution Raster (inland water surface elevation).
+pub const SWOT_COLLECTION_ID: &str = "C2758130541-POCLOUD";
+/// ECOSTRESS L2T Land Surface Temperature & Emissivity (Cloud-Optimized GeoTIFF).
+pub const ECOSTRESS_COLLECTION_ID: &str = "C2076090826-LPCLOUD";
+/// ICESat-2 ATL03 Global Geolocated Photon Data V006.
+pub const ICESAT2_ATL03_COLLECTION_ID: &str = "C2592541243-NSIDC_ECS";
+
+/// SWOT score — coverage-aware, degrades to NEUTRAL on no data / sparse passes.
+///
+/// SWOT's narrow swath + 21-day repeat means MOST queries will return no
+/// coverage (expected; sparse ≠ negative). Granule presence → 0.6; when full
+/// COG analysis is wired it can rise to 0.9 on WSE local z-anomaly.
+pub async fn fetch_swot_score(client: &Client, bbox: [f64; 4], start: NaiveDate, end: NaiveDate) -> f64 {
+    match crate::stac::search_nasa_granules(client, SWOT_COLLECTION_ID, bbox, start, end, 5).await {
+        Ok(granules) if !granules.is_empty() => {
+            debug!("SWOT: {} granule(s) found → base coverage score 0.6", granules.len());
+            0.6 // Coverage confirmed; upgrade to z-anomaly scoring when COG fetch wired.
+        }
+        Ok(_) => NEUTRAL_SENSOR_SCORE,
+        Err(e) => {
+            debug!("SWOT CMR query failed ({e}); returning neutral");
+            NEUTRAL_SENSOR_SCORE
+        }
+    }
+}
+
+/// ECOSTRESS thermal score — coverage-aware, day/night tagged.
+///
+/// ECOSTRESS (ISS orbit, ~70 m, irregular revisit) provides an independent
+/// thermal radiometer for cross-sensor thermal confirmation with Landsat TIRS.
+/// Granule presence → 0.6; full COG + annular z-score can rise to 0.95.
+pub async fn fetch_ecostress_score(client: &Client, bbox: [f64; 4], start: NaiveDate, end: NaiveDate) -> f64 {
+    match crate::stac::search_nasa_granules(client, ECOSTRESS_COLLECTION_ID, bbox, start, end, 5).await {
+        Ok(granules) if !granules.is_empty() => {
+            debug!("ECOSTRESS: {} granule(s) found → base coverage score 0.6", granules.len());
+            // TODO: download COG tile → window → annular LST z-score → 0.6..0.95.
+            // Also extract overpass hour for day/night tag (thermal_regime hint).
+            0.6
+        }
+        Ok(_) => NEUTRAL_SENSOR_SCORE,
+        Err(e) => {
+            debug!("ECOSTRESS CMR query failed ({e}); returning neutral");
+            NEUTRAL_SENSOR_SCORE
+        }
+    }
+}
+
+/// ICESat-2 ATL03 photon-cloud score — coverage-aware.
+///
+/// ATL03 raw photon returns can penetrate deeper than ATL13 processed surface.
+/// Presence → 0.6; with token + h_ph download, surface roughness + density
+/// anomaly can raise to 0.95. This is the highest-value altimetry sensor.
+pub async fn fetch_icesat2_score(client: &Client, bbox: [f64; 4], start: NaiveDate, end: NaiveDate) -> f64 {
+    match crate::stac::search_nasa_granules(client, ICESAT2_ATL03_COLLECTION_ID, bbox, start, end, 5).await {
+        Ok(granules) if !granules.is_empty() => {
+            debug!("ICESat-2 ATL03: {} granule(s) found → base coverage score 0.6", granules.len());
+            0.6
+        }
+        Ok(_) => NEUTRAL_SENSOR_SCORE,
+        Err(e) => {
+            debug!("ICESat-2 CMR query failed ({e}); returning neutral");
+            NEUTRAL_SENSOR_SCORE
+        }
+    }
+}
+
 /// Per-cluster breakdown of the three sensor sub-scores plus the fused average.
 #[derive(Debug, Clone)]
 pub struct SensorScores {
@@ -35,23 +102,6 @@ pub struct SensorScores {
 /// TODO stub: SWOT (Surface Water and Ocean Topography) score.
 ///
 /// Mirrors `nasa_fusion_test.py::fetch_swot_data` (a placeholder returning
-/// `{"swot_score": 0.8}`).  No SWOT client exists in this crate yet — this
-/// returns a neutral score so the fusion average stays well-defined.  Wire a
-/// real PO.DAAC SWOT fetch here when available (see `fetch_swot_data.py`).
-pub fn fetch_swot_score(_bbox: [f64; 4]) -> f64 {
-    NEUTRAL_SENSOR_SCORE
-}
-
-/// TODO stub: ECOSTRESS thermal score.
-///
-/// Mirrors `nasa_fusion_test.py::fetch_ecostress_data` (placeholder returning
-/// `{"ecostress_score": 0.7}`).  No ECOSTRESS client exists in this crate yet —
-/// returns a neutral score.  Wire a real AppEEARS/ECOSTRESS fetch here when
-/// available (see `fetch_ecostress_data.py`).
-pub fn fetch_ecostress_score(_bbox: [f64; 4]) -> f64 {
-    NEUTRAL_SENSOR_SCORE
-}
-
 /// OPERA DSWx score wired to the real granule search in `stac.rs`.
 ///
 /// Mirrors `nasa_fusion_test.py::fetch_opera_data` but uses a live CMR search:
@@ -106,8 +156,8 @@ impl FusionScorer {
                 cluster.lon + 0.1,
                 cluster.lat + 0.1,
             ];
-            let swot = fetch_swot_score(bbox);
-            let ecostress = fetch_ecostress_score(bbox);
+            let swot = fetch_swot_score(client, bbox, start, end).await;
+            let ecostress = fetch_ecostress_score(client, bbox, start, end).await;
             let opera = fetch_opera_score(client, bbox, start, end).await;
             scores.push((swot + ecostress + opera) / 3.0);
         }
@@ -131,8 +181,8 @@ impl FusionScorer {
                 cluster.lon + 0.1,
                 cluster.lat + 0.1,
             ];
-            let swot = fetch_swot_score(bbox);
-            let ecostress = fetch_ecostress_score(bbox);
+            let swot = fetch_swot_score(client, bbox, start, end).await;
+            let ecostress = fetch_ecostress_score(client, bbox, start, end).await;
             let opera = fetch_opera_score(client, bbox, start, end).await;
             out.push(SensorScores {
                 swot_score: swot,
