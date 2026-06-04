@@ -1734,6 +1734,98 @@ class ICESat2Downloader:
         return all_downloaded
 
 
+# ── Source 9b: ECOSTRESS (ISS thermal — LP DAAC, Earthdata auth) ─────────────
+
+class ECOSTRESSDownloader:
+    """Download ECOSTRESS L2T Land Surface Temperature (cloud-optimized GeoTIFF).
+
+    ECOSTRESS flies on the ISS (~70 m, irregular revisit, day+night thermal).
+    The L2T tiled product (ECO_L2T_LSTE.002) is served as COG GeoTIFFs —
+    readable through our pure-Rust geotiff reader (no HDF5 needed).
+
+    Uses the same CMR + Earthdata auth pattern as ICESat2Downloader.
+    Collection concept-id: C2076090826-LPCLOUD (LP DAAC).
+    """
+
+    CMR_URL = 'https://cmr.earthdata.nasa.gov/search/granules.json'
+    COLLECTION_ID = 'C2076090826-LPCLOUD'
+
+    def __init__(self, dry_run: bool = False, output_dir: Optional[Path] = None):
+        self.dry_run = dry_run
+        self.output_dir = output_dir or (REPO / 'downloads' / 'ecostress')
+        self.session = earthdata_session()
+
+    def search(self, bbox: List[float], start: str, end: str,
+               max_results: int = 20) -> List[Dict]:
+        params = {
+            'collection_concept_id': self.COLLECTION_ID,
+            'bounding_box': f'{bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]}',
+            'temporal': f'{start}T00:00:00Z/{end}T23:59:59Z',
+            'page_size': max_results,
+        }
+        resp = self.session.get(self.CMR_URL, params=params)
+        if resp.status_code != 200:
+            print(f"  ⚠ ECOSTRESS CMR search failed: {resp.status_code}")
+            return []
+        granules = []
+        for entry in resp.json().get('feed', {}).get('entry', []):
+            for link in entry.get('links', []):
+                href = link.get('href', '')
+                # Prefer the COG GeoTIFF rendition (.tif); fall back to .h5
+                if href.endswith('.tif') or href.endswith('.h5'):
+                    granules.append({
+                        'title': entry.get('title', ''),
+                        'href': href,
+                        'time_start': entry.get('time_start', ''),
+                        'product': 'ecostress_lst',
+                    })
+                    break
+        return granules
+
+    def run(self, bbox: List[float], start: str, end: str,
+            max_results: int = 10) -> List[Path]:
+        print(f"\n{'='*60}")
+        print(f"ECOSTRESS — L2T Land Surface Temperature (thermal)")
+        print(f"  BBOX: {bbox}  |  {start} → {end}")
+        print(f"  Collection: {self.COLLECTION_ID}")
+        print(f"{'='*60}")
+
+        granules = self.search(bbox, start, end, max_results)
+        if not granules:
+            print("  No ECOSTRESS granules (check EARTHDATA_TOKEN, coverage is ISS-irregular)")
+            return []
+        print(f"  Found {len(granules)} granule(s)")
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        downloaded = []
+        for g in granules:
+            fname = Path(g['href']).name
+            dest = self.output_dir / fname
+            if dest.exists() and dest.stat().st_size > 100_000:
+                print(f"  [skip] {fname}")
+                downloaded.append(dest)
+                continue
+            if self.dry_run:
+                print(f"  [dry-run] would download {fname}")
+                continue
+            print(f"  Downloading {fname}...")
+            try:
+                resp = self.session.get(g['href'], stream=True, timeout=300)
+                if resp.status_code == 200:
+                    with open(dest, 'wb') as f:
+                        for chunk in resp.iter_content(chunk_size=1 << 20):
+                            f.write(chunk)
+                    print(f"    ✓ {dest.stat().st_size / 1e6:.1f} MB")
+                    downloaded.append(dest)
+                else:
+                    print(f"    ✗ HTTP {resp.status_code}")
+            except Exception as e:
+                print(f"    ✗ {e}")
+
+        print(f"\n  Total: {len(downloaded)} ECOSTRESS files")
+        return downloaded
+
+
 # ── Source 10: USGS 3DEP LiDAR via The National Map (free, no auth) ──────────
 
 class USGSLiDARDownloader:
@@ -2282,6 +2374,7 @@ def list_sources():
         'landsat_aws':    'AWS Landsat C2 L2 COG — Element84 STAC — Free, no auth (30m+thermal)',
         'modis':          'MODIS MOD11A1/MYD11A1 — 1km thermal daily — Free, Earthdata auth',
         'viirs':          'VIIRS VNP21A1D/VNP21A1N — 1km thermal day/night — Free, Earthdata auth',
+        'ecostress':      'ECOSTRESS L2T LST — 70m ISS thermal (day+night) — Free, Earthdata auth',
         'noaa_coastwatch':'NOAA CoastWatch ERDDAP — Great Lakes GLSEA SST (~2024) — Free, no auth',
         'lidar':          'USGS 3DEP LiDAR — 1m point clouds, DEMs — Free, no auth',
         'fedeo':          'FEDEO CEOS catalog — S2 L1C + L8 L1TP via public S3; CMEMS SSH/SST/colour discovery',
@@ -2393,7 +2486,8 @@ def main():
         'sentinel2': 'sentinel2_aws',
         'sentinel2_aws': 'sentinel2_aws',
         'hls': 'hls',
-        'thermal': 'modis,viirs',
+        'thermal': 'modis,viirs,ecostress',
+        'ecostress': 'ecostress',
         'modis': 'modis',
         'viirs': 'viirs',
         'lidar': 'lidar',
@@ -2471,6 +2565,10 @@ def main():
                 all_downloaded.extend(result)
             elif src == 'icesat2':
                 dl = ICESat2Downloader(dry_run=args.dry_run, output_dir=output_base / 'icesat2')
+                result = dl.run(bbox, start, end, max_results=args.max_results)
+                all_downloaded.extend(result)
+            elif src == 'ecostress':
+                dl = ECOSTRESSDownloader(dry_run=args.dry_run, output_dir=output_base / 'ecostress')
                 result = dl.run(bbox, start, end, max_results=args.max_results)
                 all_downloaded.extend(result)
             elif src == 'fedeo':
