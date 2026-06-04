@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "updated_at": 1780495758,
-  "updated_iso": "2026-06-03T14:09:18Z",
+  "updated_at": 1780585577,
+  "updated_iso": "2026-06-04T15:06:17Z",
   "endpoints": {
     "thinker_endpoint": {
-      "url": "http://10.0.0.201:5200",
-      "source": "probe",
-      "healthy": true
+      "url": "http://127.0.0.1:5002",
+      "source": "none",
+      "healthy": false
     },
     "coder_endpoint": {
       "url": "http://10.0.0.61:5001",
@@ -24,14 +24,14 @@
       "healthy": true
     },
     "draft_endpoint": {
-      "url": "http://10.0.0.201:5200",
-      "source": "probe",
-      "healthy": true
+      "url": "http://10.0.0.201:5571",
+      "source": "none",
+      "healthy": false
     },
     "validator_zaya": {
-      "url": "http://127.0.0.1:5200",
-      "source": "probe",
-      "healthy": true
+      "url": "http://10.0.0.201:5203",
+      "source": "none",
+      "healthy": false
     }
   },
   "routing_state_path": "/data/codebase/repos/wreckhunter2000-1/cesarops-forge-v2/routing_state.json",
@@ -61,7 +61,7 @@
       "model_id": "Mixtral-8x7B-Instruct-v0.1.Q5_K_M.gguf",
       "gpu_uuid": "",
       "gpu_name": "",
-      "timestamp": 1780495758,
+      "timestamp": 1780570111,
       "healthy": true,
       "remote": true
     },
@@ -105,7 +105,7 @@
         "--reasoning",
         "off"
       ],
-      "timestamp": 1780495758,
+      "timestamp": 1780570111,
       "healthy": true
     },
     "127.0.0.1:5203": {
@@ -215,7 +215,7 @@
         "--reasoning",
         "on"
       ],
-      "timestamp": 1780495758,
+      "timestamp": 1780570111,
       "healthy": true
     }
   }

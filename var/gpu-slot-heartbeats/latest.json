@@ -19,7 +19,7 @@
       "model_id": "Mixtral-8x7B-Instruct-v0.1.Q5_K_M.gguf",
       "gpu_uuid": "",
       "gpu_name": "",
-      "timestamp": 1780495765,
+      "timestamp": 1780570111,
       "healthy": true,
       "remote": true
     },
@@ -63,7 +63,7 @@
         "--reasoning",
         "off"
       ],
-      "timestamp": 1780495765,
+      "timestamp": 1780570111,
       "healthy": true
     },
     "127.0.0.1:5203": {
@@ -173,12 +173,12 @@
         "--reasoning",
         "on"
       ],
-      "timestamp": 1780495765,
+      "timestamp": 1780570111,
       "healthy": true
     }
   },
   "by_gpu_uuid": {
     "GPU-b0226e38-4c3f-a408-b7a8-e168c29b2724": "127.0.0.1:5010"
   },
-  "updated_at": 1780495765
+  "updated_at": 1780585577
 }

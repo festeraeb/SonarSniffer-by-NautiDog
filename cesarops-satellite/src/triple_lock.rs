@@ -27,6 +27,7 @@ pub enum SensorFamily {
     Thermal,
     Sar,
     Optical,
+    Glint,
     Temporal,
 }
 
@@ -36,6 +37,7 @@ impl SensorFamily {
             SensorFamily::Thermal => "thermal",
             SensorFamily::Sar => "sar",
             SensorFamily::Optical => "optical",
+            SensorFamily::Glint => "glint",
             SensorFamily::Temporal => "temporal",
         }
     }
@@ -52,8 +54,14 @@ impl SensorFamily {
             SensorFamily::Sar
         } else if c.contains("temporal") || c.contains("persistence") {
             SensorFamily::Temporal
+        } else if c.contains("glint") || c.contains("roughness") {
+            // Glint/roughness is an independent family from clarity — a wreck
+            // modulates surface current → glint texture, which is a different
+            // physics path than the water-column clarity ratio. Operator considers
+            // clarity + glint + thermal = genuine triple-lock.
+            SensorFamily::Glint
         } else {
-            // clarity, glint, shadow, plume, zebra, blue_green, sdb ...
+            // clarity, zebra, shadow, plume, blue_green, sdb ...
             SensorFamily::Optical
         }
     }
@@ -64,6 +72,7 @@ impl SensorFamily {
             SensorFamily::Thermal => knobs.triple_lock_thermal_z,
             SensorFamily::Sar => knobs.triple_lock_sar_z,
             SensorFamily::Optical => knobs.triple_lock_optical_z,
+            SensorFamily::Glint => knobs.triple_lock_optical_z, // same physics as optical
             SensorFamily::Temporal => knobs.triple_lock_temporal_z,
         }
     }
@@ -247,7 +256,7 @@ mod tests {
         assert_eq!(SensorFamily::classify("sar_temporal_persistence"), SensorFamily::Sar);
         assert_eq!(SensorFamily::classify("temporal_persistence_z"), SensorFamily::Temporal);
         assert_eq!(SensorFamily::classify("blue_green_clarity"), SensorFamily::Optical);
-        assert_eq!(SensorFamily::classify("glint_roughness"), SensorFamily::Optical);
+        assert_eq!(SensorFamily::classify("glint_roughness"), SensorFamily::Glint);
     }
 
     #[test]

@@ -1,16 +1,14 @@
 {
-  "mode": "coding",
-  "activated_at": 0,
+  "activated_at": 1780585342,
   "extras": {
-    "layout": "dual-coder-zaya",
-    "routing_preset": "dual-coder-zaya",
     "chat_agent": "gemma",
-    "coder_endpoint": "http://10.0.0.61:5001",
-    "reviewer_endpoint": "http://10.0.0.61:5002",
-    "thinker_endpoint": "http://10.0.0.201:5203",
-    "corrector_endpoint": "http://10.0.0.61:5002",
-    "draft_endpoint": "http://10.0.0.201:5200",
+    "coder_endpoint": "http://127.0.0.1:5001",
+    "corrector_endpoint": "http://10.0.0.201:5571",
+    "draft_endpoint": "http://10.0.0.201:5571",
     "parallel_dual_grade": true,
-    "parallel_dual_coders": true
-  }
+    "reviewer_endpoint": "http://10.0.0.201:5200",
+    "routing_preset": "cesarops-geo-fleet",
+    "thinker_endpoint": "http://127.0.0.1:5002"
+  },
+  "mode": "coding"
 }
