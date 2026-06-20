@@ -1,0 +1,18 @@
+[workspace]
+
+[package]
+name = "sonarsniffer-setup"
+version = "0.8.0"
+edition = "2021"
+description = "Single-file SonarSniffer Windows setup launcher (extract + PowerShell install)"
+
+[[bin]]
+name = "SonarSniffer-Setup"
+path = "src/main.rs"
+
+[dependencies]
+zip = { version = "2", default-features = false, features = ["deflate"] }
+ureq = { version = "2.9", features = ["json"] }
+serde_json = "1.0"
+tungstenite = { version = "0.20", features = ["rustls-tls-native-roots"] }
+url = "2.5"
