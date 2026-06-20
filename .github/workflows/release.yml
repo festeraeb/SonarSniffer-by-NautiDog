@@ -1,0 +1,172 @@
+name: Build Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-windows-cli:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build CLI binaries
+        run: cd sonarsniffer && cargo build --release --no-default-features --bin sonarsniffer-cli --bin parse_cli
+      - name: Package CLI zip
+        run: |
+          mkdir dist
+          copy target\release\sonarsniffer-cli.exe dist\
+          copy target\release\parse_cli.exe dist\
+          xcopy desktop\ui dist\ui\ /E /I /Y
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sonarsniffer-windows-cli
+          path: dist/
+
+  build-windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify single-crate desktop layout
+        shell: pwsh
+        run: ./sonarsniffer/tools/verify_no_mirror.ps1
+      - name: Verify vendored nauticuvs and sonarsniffer path deps
+        shell: pwsh
+        run: |
+          if (-not (Test-Path sonarsniffer/nauticuvs/Cargo.toml)) { throw "nauticuvs not bundled in repo" }
+          Select-String -Path sonarsniffer/desktop/src-tauri/Cargo.toml -Pattern 'path = "../.."' -Quiet
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Tauri CLI
+        run: cd sonarsniffer && cargo install tauri-cli --version "^2.0" --locked
+      - name: Stage sidecars
+        shell: pwsh
+        run: ./sonarsniffer/tools/stage_tauri_sidecars.ps1
+      - name: Cache Tauri bundler tools (NSIS/WiX)
+        uses: actions/cache@v4
+        with:
+          path: sonarsniffer/desktop/src-tauri/target/tools
+          key: tauri-bundler-tools-win-${{ hashFiles('sonarsniffer/desktop/src-tauri/tauri.conf.json') }}
+          restore-keys: |
+            tauri-bundler-tools-win-
+      - name: Build desktop NSIS (primary installer)
+        working-directory: sonarsniffer/desktop/src-tauri
+        shell: pwsh
+        run: |
+          $max = 3
+          for ($i = 1; $i -le $max; $i++) {
+            Write-Host "NSIS build attempt $i/$max"
+            cargo tauri build --verbose --bundles nsis
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            if ($i -lt $max) { Start-Sleep -Seconds 45 }
+          }
+          exit 1
+      - name: Build desktop MSI (optional; WiX can fail on long paths/ICE)
+        working-directory: sonarsniffer/desktop/src-tauri
+        continue-on-error: true
+        run: cargo tauri build --verbose --bundles msi
+      - name: Pack SonarSniffer-Setup.exe
+        shell: pwsh
+        run: ./sonarsniffer/scripts/pack_sonarsniffer_windows_setup.ps1
+      - name: Collect installer artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-installers | Out-Null
+          $bundleRoot = if (Test-Path "sonarsniffer/target/release/bundle") { "sonarsniffer/target/release/bundle" } else { "sonarsniffer/desktop/src-tauri/sonarsniffer/target/release/bundle" }
+          if (Test-Path "$bundleRoot/msi") {
+            Get-ChildItem "$bundleRoot/msi" -Filter *.msi | Copy-Item -Destination dist-installers/
+          }
+          if (Test-Path "$bundleRoot/nsis") {
+            Get-ChildItem "$bundleRoot/nsis" -Recurse -Filter SonarSniffer*.exe | Copy-Item -Destination dist-installers/
+          }
+          if (Test-Path dist/SonarSniffer-Setup.exe) { Copy-Item dist/SonarSniffer-Setup.exe dist-installers/ }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sonarsniffer-windows-installers
+          path: dist-installers/
+
+  build-macos-cli:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build CLI binaries
+        run: cd sonarsniffer && cargo build --release --no-default-features --bin sonarsniffer-cli --bin parse_cli
+      - name: Package CLI zip
+        run: |
+          mkdir dist
+          cp sonarsniffer/target/release/sonarsniffer-cli dist/
+          cp sonarsniffer/target/release/parse_cli dist/
+          cp -R desktop/ui dist/ui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sonarsniffer-macos-cli
+          path: dist/
+
+  build-macos-desktop:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify single-crate desktop layout
+        run: pwsh -File ./sonarsniffer/tools/verify_no_mirror.ps1
+      - name: Verify vendored nauticuvs and sonarsniffer path deps
+        run: test -f sonarsniffer/nauticuvs/Cargo.toml && grep -q 'path = "../.."' sonarsniffer/desktop/src-tauri/Cargo.toml
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Tauri CLI
+        run: cd sonarsniffer && cargo install tauri-cli --version "^2.0" --locked
+      - name: Stage sidecars
+        run: bash sonarsniffer/tools/stage_tauri_sidecars.sh
+      - name: Build desktop DMG
+        working-directory: sonarsniffer/desktop/src-tauri
+        run: cargo tauri build --bundles dmg
+      - name: Collect DMG
+        run: |
+          mkdir dist-dmg
+          if [ -d sonarsniffer/target/release/bundle/dmg ]; then
+            cp sonarsniffer/target/release/bundle/dmg/*.dmg dist-dmg/ || true
+          elif [ -d sonarsniffer/desktop/src-tauri/sonarsniffer/target/release/bundle/dmg ]; then
+            cp sonarsniffer/desktop/src-tauri/sonarsniffer/target/release/bundle/dmg/*.dmg dist-dmg/ || true
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sonarsniffer-macos-dmg
+          path: dist-dmg/
+
+  release:
+    needs:
+      - build-windows-cli
+      - build-windows-desktop
+      - build-macos-cli
+      - build-macos-desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sonarsniffer-windows-cli
+          path: win-cli
+      - uses: actions/download-artifact@v4
+        with:
+          name: sonarsniffer-windows-installers
+          path: win-installers
+      - uses: actions/download-artifact@v4
+        with:
+          name: sonarsniffer-macos-cli
+          path: mac-cli
+      - uses: actions/download-artifact@v4
+        with:
+          name: sonarsniffer-macos-dmg
+          path: mac-dmg
+      - name: Zip CLI artifacts
+        run: |
+          cd win-cli && zip -r ../SonarSniffer-Windows-CLI-x64.zip . && cd ..
+          cd mac-cli && zip -r ../SonarSniffer-macOS-CLI-x64.zip . && cd ..
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            SonarSniffer-Windows-CLI-x64.zip
+            SonarSniffer-macOS-CLI-x64.zip
+            win-installers/*
+            mac-dmg/*
+          generate_release_notes: true
