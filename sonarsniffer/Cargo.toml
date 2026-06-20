@@ -31,7 +31,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 sha2 = "0.10"
 ndarray = "0.16"
 base64 = "0.22"
-rayon = "1"
+
 crossbeam = "0.8"
 flume = "0.12"
 gif = "0.13"
@@ -60,9 +60,23 @@ version = "0.93"
 features = ["features2d", "calib3d"]
 optional = true
 
+[dependencies.wgpu]
+version = "0.20"
+optional = true
+
+[dependencies.web-sys]
+version = "0.3"
+features = ["VideoEncoder", "VideoEncoderConfig", "VideoEncoderInit", "VideoFrame"]
+optional = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rayon = "1"
+
 [features]
 default = ["video-gstreamer"]
 video-gstreamer = ["dep:gstreamer", "dep:gstreamer-app"]
+wasm-video = ["dep:web-sys"]
+gpu-acceleration = ["dep:wgpu"]
 soundtiles = ["dep:opencv"]
 full-license = []
 
