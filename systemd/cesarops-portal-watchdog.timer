@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer for Data Portal Uptime Watchdog
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Unit=cesarops-portal-watchdog.service
+
+[Install]
+WantedBy=timers.target
