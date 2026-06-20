@@ -69,6 +69,10 @@ version = "0.3"
 features = ["VideoEncoder", "VideoEncoderConfig", "VideoEncoderInit", "VideoFrame"]
 optional = true
 
+[dependencies.rav1e]
+version = "0.7"
+optional = true
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1"
 
@@ -76,6 +80,7 @@ rayon = "1"
 default = ["video-gstreamer"]
 video-gstreamer = ["dep:gstreamer", "dep:gstreamer-app"]
 wasm-video = ["dep:web-sys"]
+fallback-video = ["dep:rav1e"]
 gpu-acceleration = ["dep:wgpu"]
 soundtiles = ["dep:opencv"]
 full-license = []
