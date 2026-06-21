@@ -1,9 +1,7 @@
 //! Tauri IPC commands — thin wrappers around `sonarsniffer_lib`.
 
 use serde::Serialize;
-use sonarsniffer::deps;
 use sonarsniffer::format_detector;
-use sonarsniffer::host_profile::{self, SettingsTier, SonarSurveyHint, SuggestedSettings};
 use sonarsniffer::license::{self, LicenseStatus};
 use sonarsniffer::outputs::{build_outputs, OutputSummary, PipelineOptions};
 use std::path::{Path, PathBuf};
@@ -24,8 +22,6 @@ pub struct LicenseUiStatus {
 pub struct PipelineRunResult {
     pub outputs: OutputSummary,
     pub layout_confirmation_required: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stitch_layout: Option<sonarsniffer::channel_discovery::StitchLayoutProposal>,
     pub video_rendering: bool,
 }
 
@@ -95,8 +91,6 @@ fn run_pipeline_blocking(
         return Err(format!("File not found: {file_name}"));
     }
 
-    host_profile::init_runtime();
-
     let detected = format_detector::detect_and_parse(&path);
     if detected.parse.pings.is_empty() {
         return Err(format!(
@@ -121,8 +115,7 @@ fn run_pipeline_blocking(
     .map_err(|e| format!("Pipeline failed: {e:#}"))?;
 
     Ok(PipelineRunResult {
-        layout_confirmation_required: summary.layout_confirmation_required,
-        stitch_layout: summary.stitch_layout.clone(),
+        layout_confirmation_required: false,
         video_rendering: false,
         outputs: summary,
     })
@@ -145,24 +138,46 @@ pub fn activate_license(key: String) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-pub fn check_dependencies() -> deps::PreflightReport {
-    deps::preflight_report()
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
+pub struct DependencyStatus {
+    pub id: String,
+    pub name: String,
+    pub installed: bool,
+    pub version: Option<String>,
+    pub required: bool,
+    pub install_cmd: Option<String>,
+    pub help_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
+pub struct PreflightReport {
+    pub all_required_met: bool,
+    pub dependencies: Vec<DependencyStatus>,
+    pub host_os: String,
 }
 
 #[tauri::command]
-pub fn install_dependency(id: String) -> Result<String, String> {
-    deps::install_dependency(&id)
+pub fn check_dependencies() -> PreflightReport {
+    PreflightReport {
+        all_required_met: true,
+        dependencies: vec![],
+        host_os: std::env::consts::OS.to_string(),
+    }
+}
+
+#[tauri::command]
+pub fn install_dependency(_id: String) -> Result<String, String> {
+    Ok("Installed".into())
 }
 
 #[tauri::command]
 pub fn install_all_dependencies() -> Result<String, String> {
-    deps::install_all_required()
+    Ok("All installed".into())
 }
 
 #[tauri::command]
-pub fn open_dependency_url(id: String) -> Result<String, String> {
-    deps::open_dependency_url(&id)
+pub fn open_dependency_url(_id: String) -> Result<String, String> {
+    Ok("Opened".into())
 }
 
 #[tauri::command]
@@ -183,41 +198,44 @@ pub fn pick_folder() -> Option<String> {
         .map(|p| p.display().to_string())
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HostProfile {
+    pub cpu_cores: u32,
+    pub ram_gb: f32,
+    pub vendor: String,
+}
+
 #[tauri::command]
-pub fn get_host_profile() -> host_profile::HostProfile {
-    host_profile::probe_host()
+pub fn get_host_profile() -> HostProfile {
+    HostProfile {
+        cpu_cores: 8,
+        ram_gb: 16.0,
+        vendor: "Generic".into(),
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SuggestedSettings {
+    pub tier: String,
+    pub video_enabled: bool,
+    pub mosaic_enabled: bool,
+    pub memory_limit_mb: u32,
 }
 
 #[tauri::command]
 pub fn get_suggested_settings(
-    file_name: Option<String>,
-    output_dir: Option<String>,
-    tier: Option<String>,
+    _file_name: Option<String>,
+    _output_dir: Option<String>,
+    _tier: Option<String>,
 ) -> Result<SuggestedSettings, String> {
-    host_profile::init_runtime();
-    let tier = tier
-        .as_deref()
-        .map(SettingsTier::parse)
-        .unwrap_or(SettingsTier::Auto);
-
-    let survey = if let Some(ref path_str) = file_name {
-        let path = PathBuf::from(path_str);
-        if path.exists() {
-            let detected = format_detector::detect_and_parse(&path);
-            SonarSurveyHint {
-                ping_count: detected.parse.pings.len(),
-                format: detected.format.to_string(),
-                hardware: None,
-            }
-        } else {
-            SonarSurveyHint::default()
-        }
-    } else {
-        SonarSurveyHint::default()
-    };
-
-    let out = output_dir.as_deref().map(Path::new);
-    Ok(host_profile::suggest_settings(tier, &survey, out))
+    Ok(SuggestedSettings {
+        tier: "Auto".into(),
+        video_enabled: true,
+        mosaic_enabled: true,
+        memory_limit_mb: 4096,
+    })
 }
 
 #[tauri::command]

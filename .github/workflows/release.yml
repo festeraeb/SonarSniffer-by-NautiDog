@@ -6,25 +6,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows-cli:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build CLI binaries
-        run: cd sonarsniffer && cargo build --release --no-default-features --bin sonarsniffer-cli --bin parse_cli
-      - name: Package CLI zip
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          copy sonarsniffer\target\release\sonarsniffer-cli.exe dist\
-          copy sonarsniffer\target\release\parse_cli.exe dist\
-          xcopy sonarsniffer\desktop\ui dist\ui\ /E /I /Y
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sonarsniffer-windows-cli
-          path: dist/
-
   build-windows-desktop:
     runs-on: windows-latest
     steps:
@@ -86,24 +67,6 @@ jobs:
           name: sonarsniffer-windows-installers
           path: dist-installers/
 
-  build-macos-cli:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build CLI binaries
-        run: cd sonarsniffer && cargo build --release --no-default-features --bin sonarsniffer-cli --bin parse_cli
-      - name: Package CLI zip
-        run: |
-          mkdir -p dist
-          cp sonarsniffer/target/release/sonarsniffer-cli dist/
-          cp sonarsniffer/target/release/parse_cli dist/
-          cp -R sonarsniffer/desktop/ui dist/ui
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sonarsniffer-macos-cli
-          path: dist/
-
   build-macos-desktop:
     runs-on: macos-latest
     steps:
@@ -135,9 +98,7 @@ jobs:
 
   release:
     needs:
-      - build-windows-cli
       - build-windows-desktop
-      - build-macos-cli
       - build-macos-desktop
     runs-on: ubuntu-latest
     permissions:
@@ -145,29 +106,15 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: sonarsniffer-windows-cli
-          path: win-cli
-      - uses: actions/download-artifact@v4
-        with:
           name: sonarsniffer-windows-installers
           path: win-installers
       - uses: actions/download-artifact@v4
         with:
-          name: sonarsniffer-macos-cli
-          path: mac-cli
-      - uses: actions/download-artifact@v4
-        with:
           name: sonarsniffer-macos-dmg
           path: mac-dmg
-      - name: Zip CLI artifacts
-        run: |
-          cd win-cli && zip -r ../SonarSniffer-Windows-CLI-x64.zip . && cd ..
-          cd mac-cli && zip -r ../SonarSniffer-macOS-CLI-x64.zip . && cd ..
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            SonarSniffer-Windows-CLI-x64.zip
-            SonarSniffer-macOS-CLI-x64.zip
             win-installers/*
             mac-dmg/*
           generate_release_notes: true
