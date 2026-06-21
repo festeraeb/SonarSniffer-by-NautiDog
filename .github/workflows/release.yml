@@ -14,8 +14,9 @@ jobs:
       - name: Build CLI binaries
         run: cd sonarsniffer && cargo build --release --no-default-features --bin sonarsniffer-cli --bin parse_cli
       - name: Package CLI zip
+        shell: pwsh
         run: |
-          mkdir dist
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
           copy sonarsniffer\target\release\sonarsniffer-cli.exe dist\
           copy sonarsniffer\target\release\parse_cli.exe dist\
           xcopy sonarsniffer\desktop\ui dist\ui\ /E /I /Y
@@ -94,7 +95,7 @@ jobs:
         run: cd sonarsniffer && cargo build --release --no-default-features --bin sonarsniffer-cli --bin parse_cli
       - name: Package CLI zip
         run: |
-          mkdir dist
+          mkdir -p dist
           cp sonarsniffer/target/release/sonarsniffer-cli dist/
           cp sonarsniffer/target/release/parse_cli dist/
           cp -R sonarsniffer/desktop/ui dist/ui
