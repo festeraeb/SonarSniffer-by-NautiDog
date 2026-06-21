@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SonarSniffer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <!-- Dependency gate overlay -->
+  <div id="depsGate" class="deps-gate hidden">
+    <div class="deps-gate-panel">
+      <h2>Required components missing</h2>
+      <p id="depsGateSummary">SonarSniffer requires GStreamer (video export). Install the items below, then re-check.</p>
+      <ul id="depsList" class="deps-list"></ul>
+      <div class="field-row deps-actions">
+        <button id="installAllDepsBtn" class="btn primary">Install all (automatic)</button>
+        <button id="refreshDepsBtn2" class="btn">Re-check</button>
+      </div>
+      <p id="depsGateMessage" class="muted"></p>
+    </div>
+  </div>
+
+  <!-- Header (CESAROps style — navy, centered branding) -->
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="logo.svg" alt="SonarSniffer" class="header-logo">
+      <div class="header-text">
+        <h1>SonarSniffer</h1>
+        <p class="header-tagline">Professional Sidescan Sonar Processing &amp; Mosaic Engine</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span>NautiDog Sailing</span> &bull; <span>Federated</span> &bull; <span>Offline-First</span>
+    </div>
+    <div class="build-badge" id="buildFlavorBadge">Public Build</div>
+  </header>
+
+  <!-- Navigation bar -->
+  <nav class="navbar">
+    <button class="nav-item active" data-section="pipeline">Pipeline</button>
+    <button class="nav-item" data-section="license">License</button>
+    <button class="nav-item" data-section="deps">Dependencies</button>
+  </nav>
+
+  <!-- Main content -->
+  <main class="content">
+    <!-- Status row (always visible) -->
+    <div class="status-row" id="section-status">
+      <section class="card" id="licenseCard">
+        <div class="card-header">
+          <h3>License</h3>
+        </div>
+        <p id="licenseSummary" class="card-body">Checking license status...</p>
+        <p id="licenseContact" class="muted small"></p>
+        <div class="field-row tight">
+          <input id="licenseKey" type="text" placeholder="Enter license key">
+          <button id="activateLicenseBtn" class="btn">Activate</button>
+        </div>
+        <p id="licenseMessage" class="muted small"></p>
+      </section>
+
+      <section class="card" id="depsCard">
+        <div class="card-header">
+          <h3>Dependencies</h3>
+        </div>
+        <p id="dependencySummary" class="card-body">Checking required runtime...</p>
+        <ul id="depsListInline" class="deps-list compact"></ul>
+        <div class="field-row tight">
+          <button id="installAllDepsBtnInline" class="btn primary">Install missing</button>
+          <button id="refreshDepsBtn" class="btn">Re-check</button>
+        </div>
+        <p id="depsInlineMessage" class="muted small"></p>
+      </section>
+    </div>
+
+    <!-- Pipeline section -->
+    <section class="card full" id="section-pipeline">
+      <div class="card-header">
+        <h3>Run SonarSniffer Pipeline</h3>
+        <span class="muted small">Video export requires GStreamer</span>
+      </div>
+
+      <div class="form-grid">
+        <label class="span-2">
+          <span class="label-text">Input file</span>
+          <div class="field-row">
+            <input id="pipelineInput" type="text" placeholder="Select an RSD / SL2 / SL3 / XTF / DAT / JSF file">
+            <button id="browsePipelineBtn" class="btn">Browse</button>
+          </div>
+        </label>
+        <label>
+          <span class="label-text">Output folder <span class="muted small">(required)</span></span>
+          <div class="field-row">
+            <input id="outputFolder" type="text" placeholder="Choose where outputs are written" required>
+            <button id="browseFolderBtn" class="btn">Browse</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="options-row">
+        <label class="check-label"><input id="enableVideo" type="checkbox" checked> Video export</label>
+        <label class="check-label"><input id="enableMosaic" type="checkbox" checked> Mosaic outputs</label>
+        <label class="check-label"><input id="enableCurvelet" type="checkbox" checked> Curvelet denoise</label>
+        <label class="check-label"><input id="enableDetection" type="checkbox"> Target detection</label>
+        <label>
+          <span class="label-text">Export preset</span>
+          <select id="exportPreset">
+            <option value="" selected>Default (all outputs)</option>
+            <option value="google_earth">Google Earth</option>
+            <option value="reefmaster">ReefMaster-style</option>
+            <option value="publication">Publication</option>
+          </select>
+        </label>
+        <label>
+          <span class="label-text">Video speed</span>
+          <select id="videoSpeedMode">
+            <option value="readable" selected>Readable (~2 pings/s scroll)</option>
+            <option value="survey">Survey speed (match boat)</option>
+            <option value="velocity">Velocity (GPS-weighted)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="options-row">
+        <label class="check-label"><input id="overlayDepth" type="checkbox"> Video: depth</label>
+        <label class="check-label"><input id="overlaySpeed" type="checkbox"> Video: speed</label>
+        <label class="check-label"><input id="overlayGps" type="checkbox"> Video: GPS</label>
+        <label class="check-label"><input id="flipPortWing" type="checkbox"> Flip port wing</label>
+        <label class="check-label"><input id="flipStarWing" type="checkbox"> Flip star wing</label>
+      </div>
+
+      <div id="suggestedSettingsBanner" class="suggested-banner hidden">
+        <div class="suggested-banner-body">
+          <strong id="suggestedTierLabel">Suggested settings</strong>
+          <p id="suggestedNotes" class="muted small"></p>
+        </div>
+        <div class="field-row tight">
+          <button id="applySuggestedBtn" class="btn primary" type="button">Apply suggested</button>
+          <button id="dismissSuggestedBtn" class="btn" type="button">Keep current</button>
+        </div>
+      </div>
+
+      <div id="layoutPicker" class="layout-picker hidden">
+        <h4>Sidescan layout — pick before mosaic &amp; video</h4>
+        <p id="layoutPickerHint" class="muted small"></p>
+        <div id="layoutCandidates" class="layout-candidates"></div>
+        <button id="confirmLayoutBtn" class="btn primary" type="button" disabled>Build with selected layout</button>
+      </div>
+
+      <div id="pipelineProgress" class="progress-panel hidden">
+        <div class="progress-label">
+          <span id="progressStep">Starting…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressBar" class="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="colormap-picker">
+        <span class="label-text">Colormap</span>
+        <div class="colormap-swatches" id="colormapSwatches">
+          <button type="button" class="swatch selected" data-map="amber" title="Amber"><span class="swatch-gradient amber"></span></button>
+          <button type="button" class="swatch" data-map="sonar" title="Sonar Custom"><span class="swatch-gradient sonar"></span></button>
+          <button type="button" class="swatch" data-map="viridis" title="Viridis"><span class="swatch-gradient viridis"></span></button>
+          <button type="button" class="swatch" data-map="magma" title="Magma"><span class="swatch-gradient magma"></span></button>
+          <button type="button" class="swatch" data-map="inferno" title="Inferno"><span class="swatch-gradient inferno"></span></button>
+          <button type="button" class="swatch" data-map="plasma" title="Plasma"><span class="swatch-gradient plasma"></span></button>
+          <button type="button" class="swatch" data-map="ocean" title="Ocean"><span class="swatch-gradient ocean"></span></button>
+          <button type="button" class="swatch" data-map="iron" title="Iron"><span class="swatch-gradient iron"></span></button>
+          <button type="button" class="swatch" data-map="jet" title="Jet"><span class="swatch-gradient jet"></span></button>
+          <button type="button" class="swatch" data-map="grayscale" title="Grayscale"><span class="swatch-gradient grayscale"></span></button>
+        </div>
+      </div>
+
+      <button id="runPipelineBtn" class="btn primary run-btn" disabled>Run SonarSniffer</button>
+      <p id="pipelineComplete" class="complete-link hidden"></p>
+      <pre id="pipelineOutput" class="console"></pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

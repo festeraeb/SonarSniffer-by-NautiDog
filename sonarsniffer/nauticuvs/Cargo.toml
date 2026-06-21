@@ -1,0 +1,22 @@
+[package]
+name = "nauticuvs-full"
+version = "0.1.2-internal"
+edition = "2021"
+publish = false
+
+[dependencies]
+ndarray = "0.16"
+ndarray-npy = "0.7"
+rustfft = "6.2"
+num-complex = "0.4"
+num-traits = "0.2"
+rayon = { version = "1.10", optional = true }
+thiserror = "2"
+
+[features]
+default = []
+parallel = ["rayon"]
+
+[profile.release]
+opt-level = 3
+lto = true
