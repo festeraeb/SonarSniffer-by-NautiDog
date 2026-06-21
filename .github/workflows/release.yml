@@ -16,9 +16,9 @@ jobs:
       - name: Package CLI zip
         run: |
           mkdir dist
-          copy target\release\sonarsniffer-cli.exe dist\
-          copy target\release\parse_cli.exe dist\
-          xcopy desktop\ui dist\ui\ /E /I /Y
+          copy sonarsniffer\target\release\sonarsniffer-cli.exe dist\
+          copy sonarsniffer\target\release\parse_cli.exe dist\
+          xcopy sonarsniffer\desktop\ui dist\ui\ /E /I /Y
       - uses: actions/upload-artifact@v4
         with:
           name: sonarsniffer-windows-cli
@@ -97,7 +97,7 @@ jobs:
           mkdir dist
           cp sonarsniffer/target/release/sonarsniffer-cli dist/
           cp sonarsniffer/target/release/parse_cli dist/
-          cp -R desktop/ui dist/ui
+          cp -R sonarsniffer/desktop/ui dist/ui
       - uses: actions/upload-artifact@v4
         with:
           name: sonarsniffer-macos-cli
