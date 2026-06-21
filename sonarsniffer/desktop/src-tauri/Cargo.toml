@@ -1,0 +1,31 @@
+[package]
+name = "tauri-appsonarsniffer"
+version = "0.8.15"
+description = "SonarSniffer by NautiDog Sailing"
+authors = ["NautiDog Sailing"]
+edition = "2021"
+default-run = "tauri-appsonarsniffer"
+
+[lib]
+name = "tauri_appsonarsniffer_lib"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+sonarsniffer = { path = "../..", package = "sonarsniffer" }
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rfd = "0.15"
+
+[features]
+default = []
+full-license = ["sonarsniffer/full-license"]
+
+[[bin]]
+name = "tauri-appsonarsniffer"
+path = "src/main.rs"
