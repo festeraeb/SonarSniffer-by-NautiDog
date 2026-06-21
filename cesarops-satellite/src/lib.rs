@@ -44,6 +44,9 @@ pub mod temporal;
 pub mod triple_lock;
 pub mod types;
 pub mod weather;
+pub mod swot;
+pub mod ecostress;
+pub mod fish_structure;
 
 pub use types::{
     BBox, Candidate, Knobs, MissionReport, MissionSpec, SarCluster, Stage, WreckTarget,

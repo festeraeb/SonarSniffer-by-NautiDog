@@ -57,7 +57,7 @@ jobs:
           $max = 3
           for ($i = 1; $i -le $max; $i++) {
             Write-Host "NSIS build attempt $i/$max"
-            cargo tauri build --verbose --bundles nsis
+            cargo tauri build --verbose --bundles nsis -- --no-default-features
             if ($LASTEXITCODE -eq 0) { exit 0 }
             if ($i -lt $max) { Start-Sleep -Seconds 45 }
           }
@@ -65,7 +65,7 @@ jobs:
       - name: Build desktop MSI (optional; WiX can fail on long paths/ICE)
         working-directory: sonarsniffer/desktop/src-tauri
         continue-on-error: true
-        run: cargo tauri build --verbose --bundles msi
+        run: cargo tauri build --verbose --bundles msi -- --no-default-features
       - name: Pack SonarSniffer-Setup.exe
         shell: pwsh
         run: ./sonarsniffer/scripts/pack_sonarsniffer_windows_setup.ps1
@@ -119,7 +119,7 @@ jobs:
         run: bash sonarsniffer/tools/stage_tauri_sidecars.sh
       - name: Build desktop DMG
         working-directory: sonarsniffer/desktop/src-tauri
-        run: cargo tauri build --bundles dmg
+        run: cargo tauri build --bundles dmg -- --no-default-features
       - name: Collect DMG
         run: |
           mkdir dist-dmg
