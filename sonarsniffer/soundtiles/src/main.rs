@@ -6,13 +6,13 @@
 //!   soundtiles --input path/to/file.RSD [--channel AUTO] [--tiles 5] [--verbose]
 
 // ── Pull source files from the sibling src-tauri crate without a library dep ──
-#[path = "../../desktop/src-tauri/src/healing_api.rs"]
+#[path = "../../src/healing_api.rs"]
 mod healing_api;
 
-#[path = "../../desktop/src-tauri/src/garmin_rsd_parser.rs"]
+#[path = "../../src/garmin_rsd_parser.rs"]
 mod garmin_rsd_parser;
 
-#[path = "../../desktop/src-tauri/src/mosaic/feature.rs"]
+#[path = "../../src/mosaic/feature.rs"]
 mod feature;
 
 use anyhow::Result;
