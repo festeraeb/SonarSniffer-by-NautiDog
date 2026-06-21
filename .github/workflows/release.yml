@@ -47,9 +47,6 @@ jobs:
         working-directory: sonarsniffer/desktop/src-tauri
         continue-on-error: true
         run: cargo tauri build --verbose --bundles msi -- --no-default-features
-      - name: Pack SonarSniffer-Setup.exe
-        shell: pwsh
-        run: ./sonarsniffer/scripts/pack_sonarsniffer_windows_setup.ps1
       - name: Collect installer artifacts
         shell: pwsh
         run: |
